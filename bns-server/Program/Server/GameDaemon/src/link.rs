@@ -8,7 +8,10 @@
 //! race-sex-job records, jumping characters.
 use crate::db::{Db, NewPc};
 use packet::gamed_link::{Message, PACKET_VERSION};
-use shared::fsd::{compose_new_showcase, decode_make_pc};
+use shared::{
+    fsd::{compose_new_showcase, decode_make_pc},
+    net::{self, FrameReader, Outbox},
+};
 use std::{
     collections::HashMap,
     io,
@@ -18,11 +21,7 @@ use std::{
     },
     time::Duration,
 };
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpStream,
-    sync::{mpsc, oneshot},
-};
+use tokio::{io::AsyncWriteExt, net::TcpStream, sync::oneshot};
 
 /// Start zone of each level-1 `PcInitialSetting` record: geo zone 1101.
 /// Spawn `1101_SP1` (`zonepcspawndata.1101.xml`): position and yaw. ❓ Units.
@@ -40,7 +39,7 @@ pub struct Link {
     world: i16,
     port: i16,
     db: Option<Arc<Db>>,
-    sender: Mutex<Option<mpsc::UnboundedSender<Vec<u8>>>>,
+    sender: Mutex<Option<Outbox>>,
     pending: Mutex<HashMap<u64, Pending>>,
     next: AtomicU64,
 }
@@ -77,13 +76,13 @@ impl Link {
             .lock()
             .unwrap()
             .as_ref()
-            .is_some_and(|sender| sender.send(frame).is_ok())
+            .is_some_and(|sender| sender.try_send(frame).is_ok())
     }
 
     async fn session(self: Arc<Self>, lobby: &str) -> io::Result<()> {
         let stream = TcpStream::connect(lobby).await?;
-        stream.set_nodelay(true)?;
-        let (mut reader, mut writer) = stream.into_split();
+        net::tune(&stream)?;
+        let (reader, mut writer) = stream.into_split();
         let hello = Message::Hello {
             cluster: self.cluster,
             world: self.world,
@@ -93,27 +92,13 @@ impl Link {
         writer
             .write_all(&hello.encode().map_err(io::Error::other)?)
             .await?;
-        let (sender, mut queue) = mpsc::unbounded_channel::<Vec<u8>>();
-        tokio::spawn(async move {
-            while let Some(frame) = queue.recv().await {
-                if writer.write_all(&frame).await.is_err() {
-                    break;
-                }
-            }
-        });
+        let mut reader = FrameReader::new(reader, usize::from(u16::MAX));
+        // A full queue fails the send, as a closed link does.
+        let (sender, _writer_task) = net::spawn_writer(writer, net::LINK_QUEUE);
         loop {
-            let mut head = [0u8; 2];
-            reader.read_exact(&mut head).await?;
-            let size = usize::from(u16::from_le_bytes(head));
-            if size < 4 {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "link frame size",
-                ));
-            }
-            let mut frame = vec![0u8; size];
-            frame[..2].copy_from_slice(&head);
-            reader.read_exact(&mut frame[2..]).await?;
+            let Some(frame) = reader.next().await? else {
+                return Err(io::ErrorKind::UnexpectedEof.into());
+            };
             let message = Message::decode(&frame)
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
             match message {

@@ -9,6 +9,7 @@ use crate::{
     store::Character,
 };
 use packet::gamed_link::{Message, PACKET_VERSION};
+use shared::net::{self, FrameReader, Outbox};
 use shared::np_channel::{ChargeMode, GameFuture};
 use std::{
     collections::HashMap,
@@ -22,9 +23,8 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
-    sync::{mpsc, oneshot},
+    sync::oneshot,
 };
 
 const TRANSACTION_LIMIT: Duration = Duration::from_secs(10);
@@ -36,33 +36,12 @@ pub type Consume = Arc<
         + Sync,
 >;
 
-/// One frame: `size:u16` (the size includes itself), `command:u16`, body.
-pub async fn read_frame(reader: &mut (impl AsyncRead + Unpin)) -> io::Result<Option<Vec<u8>>> {
-    let mut head = [0u8; 2];
-    match reader.read_exact(&mut head).await {
-        Ok(_) => {}
-        Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => return Ok(None),
-        Err(error) => return Err(error),
-    }
-    let size = usize::from(u16::from_le_bytes(head));
-    if size < 4 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "link frame size",
-        ));
-    }
-    let mut frame = vec![0u8; size];
-    frame[..2].copy_from_slice(&head);
-    reader.read_exact(&mut frame[2..]).await?;
-    Ok(Some(frame))
-}
-
 type Pending = oneshot::Sender<Result<CreatedCharacter, i16>>;
 
 #[derive(Default)]
 pub struct LinkGameDaemon {
     /// Live worlds: world id → frame queue of its GameDaemon.
-    worlds: Mutex<HashMap<i16, mpsc::UnboundedSender<Vec<u8>>>>,
+    worlds: Mutex<HashMap<i16, Outbox>>,
     pending: Mutex<HashMap<u64, Pending>>,
     next: AtomicU64,
     /// PC id → account id, for reply 6.
@@ -86,25 +65,21 @@ impl LinkGameDaemon {
     }
 
     async fn connection(self: Arc<Self>, stream: TcpStream, consume: Consume) -> io::Result<()> {
-        stream.set_nodelay(true)?;
-        let (mut reader, mut writer) = stream.into_split();
-        let (sender, mut queue) = mpsc::unbounded_channel::<Vec<u8>>();
-        let writer_task = tokio::spawn(async move {
-            while let Some(frame) = queue.recv().await {
-                if writer.write_all(&frame).await.is_err() {
-                    break;
-                }
-            }
-        });
+        net::tune(&stream)?;
+        let (reader, writer) = stream.into_split();
+        // Link frames have a 16-bit size and no 4000-byte limit (the showcase blob is large).
+        let mut reader = FrameReader::new(reader, usize::from(u16::MAX));
+        // A full queue fails the request, as a closed link does.
+        let (sender, writer_task) = net::spawn_writer(writer, net::LINK_QUEUE);
         let mut hello: Option<i16> = None;
         let mut live: Option<i16> = None;
         let result = async {
-            while let Some(frame) = read_frame(&mut reader).await? {
+            while let Some(frame) = reader.next().await? {
                 let message = Message::decode(&frame)
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
                 let send = |message: Message| {
                     if let Ok(frame) = message.encode() {
-                        let _ = sender.send(frame);
+                        let _ = sender.try_send(frame);
                     }
                 };
                 match message {
@@ -227,7 +202,7 @@ impl GameDaemon for LinkGameDaemon {
             .map_err(|_| 2i16)?;
             let (reply, result) = oneshot::channel();
             self.pending.lock().unwrap().insert(transaction, reply);
-            let result = if sender.send(frame).is_err() {
+            let result = if sender.try_send(frame).is_err() {
                 Err(2)
             } else {
                 match tokio::time::timeout(TRANSACTION_LIMIT, result).await {
