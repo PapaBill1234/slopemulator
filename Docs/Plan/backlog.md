@@ -29,9 +29,20 @@ Add the missing rows in our tool. Account and IP bans go in our login server (St
 | Part | Choice |
 | --- | --- |
 | Front end 1 | In-game GM panel as a client plugin (bnspatch loader, `GPluginInfo`). No `Client.exe` patch. |
-| Drawing | Option A: overlay (ImGui on the client's D3D device). Option B: native client UI widgets (needs UI RE first). Start with A. ❓ D3D version of the 2020 client. |
+| Drawing | Native client UI panel (same look as game windows). No overlay, no ImGui (user choice 2026-11-11). Needs a UI RE card first (see below). |
 | Transport | Use the existing Builder protocol (`builder-port` 40100, `GameBuilderSession`, card gmt-1) where it covers the command. Add new GM packets only for the rest. |
 | Auth | Server checks every GM packet against `Builderright` and account. The client panel is untrusted. Anyone can load a plugin. |
 | Server side | One GM API in our Rust server (all AdminWeb commands + bans). The panel and a later web tool both use it. |
 | Front end 2 | Web tool (axum): optional, later. Use it for offline characters, audit log and work without a game client. |
 | Data (`datafile.bin`) | Live table edit in game, as the GM client `DataBrowser` does (memory only). Server must reload the same table, and other clients need the new file. ❓ Distribution path. |
+
+### gmweb: UI RE card (needed before the panel)
+
+Questions for the card (Client_gm PDB names, then Client 2020):
+
+1. Where panel layouts come from. ❓ UI layout XML inside `xml.dat` / `xml64.dat` (mods edit these).
+2. How a panel class is registered and created in code (factory, name to class map).
+3. How button, list and text-box events reach code.
+4. How a panel is opened (key, command, menu).
+5. Can a plugin add a new panel (new layout + new handler), or must it take over an unused existing panel (for example a GM or debug panel left in the retail client)?
+6. Which existing panels to copy: list, tabs, input box, buttons.
