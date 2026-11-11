@@ -141,6 +141,13 @@ Every STS socket first says who it is. Two forms exist.
 
 Required: ConnType, Process, Program, Build (Program −1 → own program id). A bad `address` rejects the connection.
 
+### 7.1 `Sts/Connect` and `Sts/Ping` from the game client (Rust port)
+
+| Request | Port behaviour | Evidence |
+| --- | --- | --- |
+| `Sts/Connect` | Reply `200 OK` with body `<Reply/>`. The reply has an `s` header only if the request has one. The body fields are not checked ❓. | Same reply as `sts-local` in the live logins of 8 Nov 2026 (`../Sts/07-client-login-wire.md`). The CliGate handler is not decoded ❓. |
+| `Sts/Ping` | No reply. The socket stays open. | `../Sts/02-messages.md` (client has no reply parser for 1002) |
+
 ## 8. Open items
 
 | Item | Status |

@@ -293,6 +293,8 @@ async fn client_logs_in_through_stservers_to_the_character_list() {
             dec: None,
             next_id: 1,
         };
+        // The game sends `Sts/Connect` first (11 §7.1).
+        sts.call("Sts", "Connect", Element::new("Connect")).await;
         let login_name = "tester@example";
         let start = sts
             .call(
