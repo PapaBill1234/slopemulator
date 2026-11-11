@@ -14,7 +14,9 @@ Parity means: the player can play as in the original. It does not mean the same 
 
 Do not copy original code habits: a global lock, a blocking call in a handler, a polling loop, a thread for each connection, a fixed-size buffer copy.
 
-Not allowed: a change that the client can see. Examples: a changed frame order, a skipped message, a changed cooldown.
+Original bugs and exploits: do not port them. Write the correct behaviour. Record the original bug in the spec with the mark "bug, not ported".
+
+Not allowed: any other change that the client can see. Examples: a changed frame order, a skipped message, a changed cooldown.
 
 The original lag has 2 possible sources. We can remove only the first one.
 
