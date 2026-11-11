@@ -228,6 +228,7 @@ impl GameDaemon for LocalGameDaemon {
         _pcid: u64,
         _charge: ChargeMode,
     ) -> GameFuture<'_, Admission> {
-        Box::pin(async { Err(2) })
+        // ❓ Local: no GameDaemon link. Each entry is admitted with no wait.
+        Box::pin(async { Ok(Admission::new(None, || {})) })
     }
 }
