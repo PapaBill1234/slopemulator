@@ -4,7 +4,7 @@ use crate::{
     daemon::{InitSession, LobbyDaemon, LoginToken},
     lists::Lists,
     login::{Delivery, LoginHub},
-    wire::{inner_packet, invalid, read_frame, write_frame},
+    wire::{inner_packet, invalid, read_frame, write_frame, write_frames},
 };
 use bloodlib::{
     crypto::{DhParameters, RsaKey},
@@ -247,10 +247,11 @@ impl Server {
                     Some(delivery) = rx.recv() => {
                         if delivery.close { return Ok(()); }
                         if let Some(key) = delivery.authed { client_key = key; }
+                        let mut frames = Vec::with_capacity(delivery.packets.len());
                         for packet in delivery.packets {
-                            let frame = if delivery.wire { packet } else { session.encrypt(&packet, 4002, false).map_err(protocol)? };
-                            write_frame(&mut writer, &frame).await?;
+                            frames.push(if delivery.wire { packet } else { session.encrypt(&packet, 4002, false).map_err(protocol)? });
                         }
+                        write_frames(&mut writer, &frames).await?;
                         if let Some(key) = delivery.authed { self.hub.enable_broadcast(key); }
                         // Broadcast eligibility starts after the login reply.
                     }
