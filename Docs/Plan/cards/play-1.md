@@ -57,7 +57,7 @@ Read with `python3 tools/spec_index.py <doc>` first. Then read only the line ran
 
 ## Missing RE
 - If a spec lacks a fact, use IDA (MCP `ida`). The StServers databases are under `ida/` (use `list_databases`). Load `tools/ida_lib.py` with `boot(WT)`; it applies the StServers framework names.
-- Reference behaviour: the original StServers run under Wine on this host: `~/Documents/Codex/stsrv-wine/run.sh <Prog>.exe /AppIndex N /Email test@localhost`. Use them to capture real bytes. Stop them with `WINEPREFIX=~/Documents/Codex/stsrv-wine/prefix /usr/lib/x86_64-linux-gnu/wine/wineserver -k`. Never `pkill -f <name>`.
+- Do not run the original StServers (no Wine). Use the specs and IDA only.
 - Write each new fact into the spec at once, with address and ❓ where not verified.
 
 ## Rules
