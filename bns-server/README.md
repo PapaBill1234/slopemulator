@@ -39,7 +39,7 @@ The work goes in 4 phases. Reverse engineering comes first, so that the port use
 | 3 | 2020 server set full reverse engineering (GameDaemon and others) | Waiting |
 | 4 | Port to Rust from the specs | Some parts done (see Status) |
 
-## Status (10 Nov 2026)
+## Status (11 Nov 2026)
 
 | Part | State | Tracker |
 | --- | --- | --- |
@@ -49,6 +49,7 @@ The work goes in 4 phases. Reverse engineering comes first, so that the port use
 | CacheGate, AchievementDaemon, RankingDaemon, SmartCouponDaemon | Ported; parity reviews done | `Docs/Server/<name>/README.md` |
 | STS client login (`sts`) | SRP-6a login server; real-client login not yet verified | `Docs/Platform/Sts/STATUS.md` |
 | StServers (original NP platform) | DbSrv ported. RouteSrv phase 1, CliGate phase 1, route bus client in `sts-core`. AuthSrv analysed | `Docs/Platform/StServers/README.md` |
+| Play path (card `play-1`) | Real client: login, character select and create work. `lobbyd` uses `LobbyDB`. `lobbyd` ↔ `gamedaemon` link (create 20/21/22, world entry 5/6/7). `gamedaemon` creates and loads the PC in `BlGame`. Enter world 23 → 43: no live proof yet | `Docs/Plan/handoffs/play-1.md` |
 | Client 381 reverse engineering | **Done**: 18 chapters (start-up, transport and crypto, STS, LobbyGate, game dispatch, movement, combat, items, quests, social, InfoGate/arena, data files, UI, engine, errors), command and enum tables | `Docs/Client/RE/INDEX.md` |
 | Client data files | Book: 10 chapters (format, protection, schema, loader, versions, server side, tools, one merged XML source for client and server) | `Docs/DataFile/book/00-index.md` |
 | Live client debugger (`ClientDbg`) | Part 1: plugin in the client, host on Linux | `Program/Tools/ClientDbg/README.md` |

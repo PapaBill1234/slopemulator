@@ -10,9 +10,14 @@ packet-ids = { path = "../PacketIds" }
 bloodlib = { path = "../BloodLib" }
 lobbygate = { path = "../LobbyGate" }
 shared = { path = "../Shared" }
-tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "macros", "sync", "time"] }
+tiberius = { version = "0.12", default-features = false, features = ["tds73", "rustls", "chrono"] }
+tokio-util = { version = "0.7", features = ["compat"] }
 rand = "0.8"
 
 [[bin]]
 name = "gamedaemon"
 path = "src/bin/gamedaemon.rs"
+
+[dev-dependencies]
+lobbydaemon = { path = "../LobbyDaemon" }

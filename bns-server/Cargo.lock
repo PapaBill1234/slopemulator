@@ -458,12 +458,15 @@ name = "gamedaemon"
 version = "0.1.0"
 dependencies = [
  "bloodlib",
+ "lobbydaemon",
  "lobbygate",
  "packet",
  "packet-ids",
  "rand",
  "shared",
+ "tiberius",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

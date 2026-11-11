@@ -1,6 +1,7 @@
 //! Offline LobbyDaemon. Each link has an ordered job lane.
 pub mod character;
 pub mod gamed;
+pub mod gamed_link;
 pub mod jobs;
 #[cfg(feature = "mssql")]
 pub mod mssql;

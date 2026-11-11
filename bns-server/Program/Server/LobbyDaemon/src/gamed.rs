@@ -1,4 +1,4 @@
-//! Local world interface. No GameDaemon transport or production eligibility claim.
+//! World interface of LobbyDaemon. The link transport is `gamed_link`.
 use crate::store::Character;
 use std::{
     collections::HashMap,
@@ -168,84 +168,5 @@ impl GameDaemon for StubGameDaemon {
                 ledger.released += 1;
             }))
         })
-    }
-}
-
-/// Stand-in for the GameDaemon link while no GameDaemon server exists
-/// (card play-1). It is not a port of the link (`Docs/Server/LobbyDaemon/07-gamed-link.md`).
-/// Create: the showcase comes from the client make-PC record, as
-/// `CreateCharacterTran` does it in GameDaemon, but without the
-/// `PcInitialSetting` data ❓. World admission fails with reason 2.
-/// ❓ Local: it keeps each make-PC record and hands it to `gamedaemon`
-/// through `shared::local_entry` at world admission.
-#[derive(Default)]
-pub struct LocalGameDaemon {
-    created: Mutex<HashMap<u64, (shared::fsd::MakePc, Vec<u16>)>>,
-}
-
-impl GameDaemon for LocalGameDaemon {
-    fn create_character(
-        &self,
-        request: crate::character::CreateCharacter,
-        pcid: u64,
-        appearance: Vec<u8>,
-    ) -> GameFuture<'_, crate::character::CreatedCharacter> {
-        Box::pin(async move {
-            let Some(pc) = shared::fsd::decode_make_pc(&appearance) else {
-                eprintln!(
-                    "lobbyd: create character, bad make-PC record ({} bytes)",
-                    appearance.len()
-                );
-                return Err(2);
-            };
-            let showcase = shared::fsd::compose_new_showcase(&pc, &request.name, 1);
-            eprintln!(
-                "lobbyd: create character, race {} sex {} job {}, showcase {} bytes",
-                pc.race,
-                pc.sex,
-                pc.job,
-                showcase.len()
-            );
-            let job = i16::from(pc.job);
-            self.created
-                .lock()
-                .unwrap()
-                .insert(pcid, (pc, request.name.clone()));
-            Ok(crate::character::CreatedCharacter {
-                job,
-                level: 1,
-                showcase,
-            })
-        })
-    }
-    fn delete_character(&self, _world: i16, _pcid: u64) -> GameFuture<'_, i16> {
-        Box::pin(async { Ok(1) })
-    }
-    fn restore_character(&self, _world: i16, _pcid: u64) -> GameFuture<'_, ()> {
-        Box::pin(async { Ok(()) })
-    }
-    fn eligibility(&self, _character: &Character) -> Result<Eligibility, i16> {
-        Ok(Eligibility::Ready)
-    }
-    fn restore(&self, _world: i16, _pcid: u64) -> GameFuture<'_, ()> {
-        Box::pin(async { Ok(()) })
-    }
-    fn admit(
-        &self,
-        owner: u64,
-        _world: i16,
-        pcid: u64,
-        _charge: ChargeMode,
-    ) -> GameFuture<'_, Admission> {
-        // ❓ Local: no GameDaemon link. Each entry is admitted with no wait.
-        let created = self.created.lock().unwrap().get(&pcid).cloned();
-        if let Some((pc, name)) = created {
-            let entry = shared::local_entry::LocalEntry { pcid, pc, name };
-            let result = entry.write(owner);
-            eprintln!("lobbyd: world entry hand-off, owner {owner} pcid {pcid}: {result:?}");
-        } else {
-            eprintln!("lobbyd: world entry, no make-PC record for pcid {pcid}");
-        }
-        Box::pin(async { Ok(Admission::new(None, || {})) })
     }
 }
