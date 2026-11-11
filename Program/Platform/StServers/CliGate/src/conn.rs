@@ -293,6 +293,33 @@ impl Conn {
         let body = (!frame.body.is_empty())
             .then(|| Element::parse(&frame.body).ok())
             .flatten();
+        if protocol == "Sts" {
+            // §7.1: the game client sends `Sts/Connect` first and `Sts/Ping` later.
+            return match command.as_str() {
+                "Connect" => {
+                    let reply = if rid != 0 {
+                        reply_ok(rid, Some(&Element::new("Reply")))
+                    } else {
+                        Frame {
+                            start: StartLine::Response {
+                                status: 200,
+                                reason: "OK".into(),
+                            },
+                            headers: Vec::new(),
+                            body: b"<Reply/>".to_vec(),
+                        }
+                    };
+                    if self.send(&reply).await {
+                        Flow::Continue
+                    } else {
+                        Flow::Close
+                    }
+                }
+                // One-way keepalive: no reply.
+                "Ping" => Flow::Continue,
+                _ => self.finish(rid, fail(unknown_command())).await,
+            };
+        }
         let outcome = if protocol == "Auth" {
             match AuthCmd::from_name(command) {
                 Some(cmd) => match self.session.check(cmd) {
