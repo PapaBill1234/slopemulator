@@ -154,6 +154,8 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 | C | Session jobs (start session NP and lobby token, try enter, enter world, kick) | done (`13-jobs-a.md`, `18-jobs-f.md`) |
 | D | Slot, user name, jumping character, play reward, NP schedule jobs | done (`19-jobs-g.md`) |
 | E | Handlers without a job, timers, manage port (`20-handlers.md`) | done |
+| F | `LobbyDB::*` wrappers (`21-lobbydb-wrappers.md`) | done |
+| G | Comparison with build 307 | open |
 
 ## 4. Tool
 
