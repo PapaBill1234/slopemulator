@@ -10,7 +10,7 @@ use lobbydaemon::{
     jobs::Settings,
     np::StubNp,
     protocol,
-    store::{Account, Character, MemoryStore},
+    store::{Account, Character, MemoryStore, Shared},
     Server as Lobby,
 };
 use lobbygate::{
@@ -216,7 +216,7 @@ async fn generated_client_logs_in_through_existing_gate_and_loads_cached_charact
         let gamed = Arc::new(gamed);
         let lobby = Arc::new(
             Lobby::new(
-                store,
+                Shared::new(store),
                 np,
                 Settings {
                     world_token_lifetime: Some(Duration::from_secs(10)),

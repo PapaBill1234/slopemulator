@@ -93,15 +93,13 @@ async fn run<N: Np>(
 ) -> io::Result<()> {
     #[cfg(feature = "mssql")]
     if std::env::var_os("LOBBYD_MSSQL_URL").is_some() {
-        let store = tokio::task::spawn_blocking(lobbydaemon::mssql::MssqlStore::from_env)
-            .await
-            .map_err(io::Error::other)??;
+        let store = lobbydaemon::mssql::MssqlStore::from_env().await?;
         eprintln!("lobbyd: store LobbyDB (SQL Server)");
         return serve(store, np, settings, listener, link, local_game).await;
     }
     eprintln!("lobbyd: store memory (no LobbyDB connection string)");
     serve(
-        MemoryStore::default(),
+        lobbydaemon::store::Shared::new(MemoryStore::default()),
         np,
         settings,
         listener,

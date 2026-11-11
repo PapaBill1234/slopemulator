@@ -1,9 +1,8 @@
 //! Local Store contracts. All bytes and identifiers are generated.
-use lobbydaemon::store::{AccountExp, Character, MemoryStore, ServiceDetail, ServiceKind, Store};
-use std::{
-    io,
-    sync::{Arc, Mutex},
+use lobbydaemon::store::{
+    AccountExp, Character, MemoryStore, ServiceDetail, ServiceKind, Shared, Store, SyncStore,
 };
+use std::io;
 
 fn character(size: usize) -> Character {
     Character {
@@ -124,11 +123,24 @@ fn optional_loads_are_not_implicit_success_and_exp_insert_is_once() {
     store.jumping_creation_quota.insert(id, None);
     assert!(store.load_time_based_play_info(id).unwrap().is_empty());
     assert_eq!(store.load_jumping_creation_quota(id).unwrap(), None);
-    let mut shared = Arc::new(Mutex::new(store));
-    assert_eq!(shared.load_account_exp(id).unwrap(), Some(row));
-    assert!(shared.load_time_based_play_info(id).unwrap().is_empty());
-    assert_eq!(shared.load_jumping_creation_quota(id).unwrap(), None);
-    assert!(shared.load_service_detail(901, ServiceKind::Sex).is_err());
+    // The async adapter gives the same results as the model.
+    let shared = Shared::new(store);
+    tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap()
+        .block_on(async {
+            assert_eq!(shared.load_account_exp(id).await.unwrap(), Some(row));
+            assert!(shared
+                .load_time_based_play_info(id)
+                .await
+                .unwrap()
+                .is_empty());
+            assert_eq!(shared.load_jumping_creation_quota(id).await.unwrap(), None);
+            assert!(shared
+                .load_service_detail(901, ServiceKind::Sex)
+                .await
+                .is_err());
+        });
 }
 #[test]
 fn restoration_commits_cached_fixture_state_once() {

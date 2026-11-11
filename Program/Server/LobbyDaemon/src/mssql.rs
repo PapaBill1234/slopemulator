@@ -2,14 +2,17 @@
 //!
 //! All batches are static. Query binds values through Tiberius' sp_executesql RPC.
 //! No input becomes SQL text. This is not a direct named-procedure TDS RPC.
-//! The synchronous Store boundary uses a dedicated thread and Tokio runtime.
-//! Calls are serialized. There are no automatic retries after ambiguous writes.
+//! Calls run on the runtime of the caller through a connection pool.
+//! There are no automatic retries after ambiguous writes.
 use crate::store::*;
-use std::{fmt, io, sync::mpsc, thread, time::Duration};
+use shared::pool::Pool;
+use std::{fmt, io, sync::Arc, time::Duration};
 use tiberius::{time::chrono::NaiveDateTime, Client, Config, FromSql, Query, Row, Uuid};
-use tokio::{net::TcpStream, runtime::Builder};
-use tokio_util::compat::TokioAsyncWriteCompatExt;
+use tokio::net::TcpStream;
+use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 
+/// Default number of connections to LobbyDB.
+pub const POOL_SIZE: usize = 8;
 const TIMEOUT: Duration = Duration::from_secs(10);
 const RETURN_COLUMN: &str = "__lobbyd_return";
 
@@ -36,20 +39,21 @@ fn driver(_: impl fmt::Display) -> io::Error {
 fn invalid(message: &'static str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
 }
-fn closed() -> io::Error {
-    io::Error::new(io::ErrorKind::BrokenPipe, "LobbyDB worker stopped")
-}
-struct Request {
-    query: Query<'static>,
-    reply: mpsc::SyncSender<io::Result<Vec<Row>>>,
-}
+type Connection = Client<Compat<TcpStream>>;
 /// Connection settings are accepted only from LOBBYD_MSSQL_URL at runtime.
-/// Drop closes the request queue. The worker then drops its connection.
+/// Calls run on the runtime of the caller. A failed, timed-out or cancelled
+/// call drops its connection. The failed request is not sent again.
+#[derive(Clone)]
 pub struct MssqlStore {
-    sender: mpsc::SyncSender<Request>,
+    inner: Arc<Inner>,
+}
+struct Inner {
+    config: Config,
+    pool: Pool<Connection>,
 }
 impl MssqlStore {
-    pub fn from_env() -> io::Result<Self> {
+    /// Pool size: env `LOBBYD_DB_POOL`, default [`POOL_SIZE`].
+    pub async fn from_env() -> io::Result<Self> {
         let url = std::env::var("LOBBYD_MSSQL_URL")
             .map_err(|_| io::Error::new(io::ErrorKind::NotFound, "LOBBYD_MSSQL_URL is not set"))?;
         // Do not accept the driver's implicit server default.
@@ -69,95 +73,53 @@ impl MssqlStore {
             ));
         }
         let config = Config::from_ado_string(&url).map_err(driver)?;
-        let (sender, receiver) = mpsc::sync_channel::<Request>(1);
-        let (ready, startup) = mpsc::sync_channel(1);
-        thread::Builder::new()
-            .name("lobbydb".into())
-            .spawn(move || {
-                let runtime = match Builder::new_current_thread().enable_all().build() {
-                    Ok(runtime) => runtime,
-                    Err(_) => {
-                        let _ = ready.send(Err(driver("runtime")));
-                        return;
-                    }
-                };
-                let connect = || {
-                    let config = config.clone();
-                    runtime.block_on(async {
-                        tokio::time::timeout(TIMEOUT, async {
-                            let tcp = TcpStream::connect(config.get_addr())
-                                .await
-                                .map_err(driver)?;
-                            tcp.set_nodelay(true).map_err(driver)?;
-                            Client::connect(config, tcp.compat_write())
-                                .await
-                                .map_err(driver)
-                        })
-                        .await
-                        .map_err(|_| io::Error::other(SqlStoreError::Timeout))?
-                    })
-                };
-                let mut client = match connect() {
-                    Ok(client) => Some(client),
-                    Err(error) => {
-                        let _ = ready.send(Err(error));
-                        return;
-                    }
-                };
-                if ready.send(Ok(())).is_err() {
-                    return;
-                }
-                while let Ok(request) = receiver.recv() {
-                    // A failed call drops its connection. The next request opens a new one.
-                    // The failed request is not sent again.
-                    let mut live = match client.take() {
-                        Some(live) => live,
-                        None => match connect() {
-                            Ok(live) => live,
-                            Err(error) => {
-                                let _ = request.reply.send(Err(error));
-                                continue;
-                            }
-                        },
-                    };
-                    let result = runtime.block_on(async {
-                        tokio::time::timeout(TIMEOUT, async {
-                            request
-                                .query
-                                .query(&mut live)
-                                .await
-                                .map_err(driver)?
-                                .into_results()
-                                .await
-                                .map_err(driver)
-                        })
-                        .await
-                    });
-                    match result {
-                        Ok(Ok(sets)) => {
-                            client = Some(live);
-                            let _ = request.reply.send(check_return(sets));
-                        }
-                        Ok(Err(error)) => {
-                            let _ = request.reply.send(Err(error));
-                        }
-                        Err(_) => {
-                            let _ = request
-                                .reply
-                                .send(Err(io::Error::other(SqlStoreError::Timeout)));
-                        }
-                    }
-                }
-            })?;
-        startup.recv().map_err(|_| closed())??;
-        Ok(Self { sender })
+        let size = std::env::var("LOBBYD_DB_POOL")
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .filter(|size| *size > 0)
+            .unwrap_or(POOL_SIZE);
+        let store = Self {
+            inner: Arc::new(Inner {
+                config,
+                pool: Pool::new(size),
+            }),
+        };
+        // Fail at startup when the database does not answer.
+        let lease = store.inner.pool.acquire().await;
+        let connection = store.connect().await?;
+        lease.give(connection);
+        Ok(store)
     }
-    fn call(&mut self, query: Query<'static>) -> io::Result<Vec<Row>> {
-        let (reply, receive) = mpsc::sync_channel(1);
-        self.sender
-            .send(Request { query, reply })
-            .map_err(|_| closed())?;
-        receive.recv().map_err(|_| closed())?
+    async fn connect(&self) -> io::Result<Connection> {
+        let config = self.inner.config.clone();
+        let tcp = TcpStream::connect(config.get_addr())
+            .await
+            .map_err(driver)?;
+        tcp.set_nodelay(true).map_err(driver)?;
+        Client::connect(config, tcp.compat_write())
+            .await
+            .map_err(driver)
+    }
+    async fn call(&self, query: Query<'static>) -> io::Result<Vec<Row>> {
+        let mut lease = self.inner.pool.acquire().await;
+        let sets = tokio::time::timeout(TIMEOUT, async move {
+            let mut connection = match lease.take() {
+                Some(connection) => connection,
+                None => self.connect().await?,
+            };
+            let sets = query
+                .query(&mut connection)
+                .await
+                .map_err(driver)?
+                .into_results()
+                .await
+                .map_err(driver)?;
+            lease.give(connection);
+            Ok::<_, io::Error>(sets)
+        })
+        .await
+        .map_err(|_| io::Error::other(SqlStoreError::Timeout))??;
+        check_return(sets)
     }
 }
 fn check_return(mut sets: Vec<Vec<Row>>) -> io::Result<Vec<Row>> {
@@ -295,13 +257,13 @@ fn timestamp(row: &Row, index: usize) -> io::Result<Option<SqlTimestamp>> {
     }))
 }
 impl Store for MssqlStore {
-    fn check_character_name(&mut self, name: &[u16]) -> io::Result<()> {
+    async fn check_character_name(&self, name: &[u16]) -> io::Result<()> {
         let mut q = rpc!("usp_CheckValidityOfCharacterName", "@P1");
         q.bind(character_name(name)?);
-        no_rows(self.call(q)?)
+        no_rows(self.call(q).await?)
     }
-    fn try_character_creation(
-        &mut self,
+    async fn try_character_creation(
+        &self,
         request: crate::character::CreateCharacter,
     ) -> io::Result<u64> {
         if request.account == [0; 16]
@@ -317,13 +279,13 @@ impl Store for MssqlStore {
         q.bind(request.world);
         q.bind(character_name(&request.name)?);
         q.bind(request.right);
-        let row = one(self.call(q)?)?.ok_or_else(|| invalid("missing created PCID"))?;
+        let row = one(self.call(q).await?)?.ok_or_else(|| invalid("missing created PCID"))?;
         let pcid = unsigned(&row, 0)?;
         positive(pcid)?;
         Ok(pcid)
     }
-    fn finish_character_creation(
-        &mut self,
+    async fn finish_character_creation(
+        &self,
         pcid: u64,
         created: crate::character::CreatedCharacter,
     ) -> io::Result<()> {
@@ -344,48 +306,48 @@ impl Store for MssqlStore {
         q.bind(0u8);
         q.bind(false);
         q.bind(created.showcase);
-        no_rows(self.call(q)?)
+        no_rows(self.call(q).await?)
     }
-    fn cancel_character_creation(&mut self, pcid: u64) -> io::Result<()> {
+    async fn cancel_character_creation(&self, pcid: u64) -> io::Result<()> {
         let mut q = rpc!("usp_CancelCharacterCreation", "@P1");
         q.bind(positive(pcid)?);
-        no_rows(self.call(q)?)
+        no_rows(self.call(q).await?)
     }
-    fn try_character_deletion(&mut self, pcid: u64) -> io::Result<()> {
+    async fn try_character_deletion(&self, pcid: u64) -> io::Result<()> {
         let mut q = rpc!("usp_TryCharacterDeletion", "@P1");
         q.bind(positive(pcid)?);
-        no_rows(self.call(q)?)
+        no_rows(self.call(q).await?)
     }
-    fn finish_character_deletion(
-        &mut self,
+    async fn finish_character_deletion(
+        &self,
         pcid: u64,
         seconds: u32,
     ) -> io::Result<Option<SqlTimestamp>> {
         let mut q=Query::new("DECLARE @rc int, @deleted datetime; EXEC @rc = dbo.usp_FinishCharacterDeletion @P1, @P2, @deleted OUTPUT; SELECT @deleted AS DeletionDelayTime; SELECT @rc AS __lobbyd_return;");
         q.bind(positive(pcid)?);
         q.bind(i32::try_from(seconds).map_err(|_| invalid("deletion duration exceeds SQL int"))?);
-        let row =
-            one(self.call(q)?)?.ok_or_else(|| invalid("missing deletion timestamp output"))?;
+        let row = one(self.call(q).await?)?
+            .ok_or_else(|| invalid("missing deletion timestamp output"))?;
         let time = timestamp(&row, 0)?;
         if (seconds == 0) != time.is_none() {
             return Err(invalid("unexpected deletion timestamp NULL"));
         }
         Ok(time)
     }
-    fn cancel_character_deletion(&mut self, pcid: u64) -> io::Result<()> {
+    async fn cancel_character_deletion(&self, pcid: u64) -> io::Result<()> {
         let mut q = rpc!("usp_CancelCharacterDeletion", "@P1");
         q.bind(positive(pcid)?);
-        no_rows(self.call(q)?)
+        no_rows(self.call(q).await?)
     }
-    fn try_character_restoration(&mut self, pcid: u64) -> io::Result<()> {
+    async fn try_character_restoration(&self, pcid: u64) -> io::Result<()> {
         let mut q = rpc!("usp_TryCharacterRestoration", "@P1");
         q.bind(positive(pcid)?);
-        no_rows(self.call(q)?)
+        no_rows(self.call(q).await?)
     }
-    fn load_game_account(&mut self, account: AccountId) -> io::Result<Option<Account>> {
+    async fn load_game_account(&self, account: AccountId) -> io::Result<Option<Account>> {
         let mut q = rpc!("usp_LoadGameAccount", "@P1");
         q.bind(guid(account));
-        let Some(row) = one(self.call(q)?)? else {
+        let Some(row) = one(self.call(q).await?)? else {
             return Ok(None);
         };
         let pcid = optional::<i64>(&row, 3)?.unwrap_or(0);
@@ -405,7 +367,7 @@ impl Store for MssqlStore {
             bot_score: required(&row, 4)?,
         }))
     }
-    fn register_game_account(&mut self, account: Account, ipv4: u32) -> io::Result<()> {
+    async fn register_game_account(&self, account: Account, ipv4: u32) -> io::Result<()> {
         if account.name.len() > 64 {
             return Err(invalid("account name exceeds capacity"));
         }
@@ -416,24 +378,25 @@ impl Store for MssqlStore {
         q.bind(text);
         q.bind(right);
         q.bind(ip_text(ipv4));
-        no_rows(self.call(q)?)
+        no_rows(self.call(q).await?)
     }
-    fn update_last_login(&mut self, account: AccountId, ipv4: u32) -> io::Result<()> {
+    async fn update_last_login(&self, account: AccountId, ipv4: u32) -> io::Result<()> {
         let mut q = rpc!("usp_UpdateLastLogin", "@P1, @P2");
         q.bind(guid(account));
         q.bind(ip_text(ipv4));
-        no_rows(self.call(q)?)
+        no_rows(self.call(q).await?)
     }
-    fn update_last_logout(&mut self, account: AccountId, bot_score: i32) -> io::Result<()> {
+    async fn update_last_logout(&self, account: AccountId, bot_score: i32) -> io::Result<()> {
         let mut q = rpc!("usp_UpdateLastLogout", "@P1, @P2");
         q.bind(guid(account));
         q.bind(bot_score);
-        no_rows(self.call(q)?)
+        no_rows(self.call(q).await?)
     }
-    fn load_character_list(&mut self, account: AccountId) -> io::Result<Vec<Character>> {
+    async fn load_character_list(&self, account: AccountId) -> io::Result<Vec<Character>> {
         let mut q = rpc!("usp_LoadCharacterList", "@P1");
         q.bind(guid(account));
-        self.call(q)?
+        self.call(q)
+            .await?
             .iter()
             .map(|row| {
                 null_character_time(row, 9)?;
@@ -463,13 +426,14 @@ impl Store for MssqlStore {
             })
             .collect()
     }
-    fn load_incomplete_lobby_service(
-        &mut self,
+    async fn load_incomplete_lobby_service(
+        &self,
         account: AccountId,
     ) -> io::Result<Vec<IncompleteService>> {
         let mut q = rpc!("usp_LoadIncompleteLobbyService", "@P1");
         q.bind(guid(account));
-        self.call(q)?
+        self.call(q)
+            .await?
             .iter()
             .map(|row| {
                 Ok(IncompleteService {
@@ -483,15 +447,15 @@ impl Store for MssqlStore {
             })
             .collect()
     }
-    fn finish_character_restoration(&mut self, pcid: u64) -> io::Result<()> {
+    async fn finish_character_restoration(&self, pcid: u64) -> io::Result<()> {
         let mut q = rpc!("usp_FinishCharacterRestoration", "@P1");
         q.bind(positive(pcid)?);
-        no_rows(self.call(q)?)
+        no_rows(self.call(q).await?)
     }
-    fn load_account_exp(&mut self, account: AccountId) -> io::Result<Option<AccountExp>> {
+    async fn load_account_exp(&self, account: AccountId) -> io::Result<Option<AccountExp>> {
         let mut q = rpc!("usp_LoadGameAccountExp", "@P1");
         q.bind(guid(account));
-        one(self.call(q)?)?
+        one(self.call(q).await?)?
             .map(|row| {
                 Ok(AccountExp {
                     exp: required(&row, 1)?,
@@ -501,21 +465,21 @@ impl Store for MssqlStore {
             })
             .transpose()
     }
-    fn insert_account_exp(&mut self, account: AccountId, row: AccountExp) -> io::Result<()> {
+    async fn insert_account_exp(&self, account: AccountId, row: AccountExp) -> io::Result<()> {
         let mut q = rpc!("usp_InsertGameAccountExp", "@P1, @P2, @P3, @P4");
         q.bind(guid(account));
         q.bind(row.exp);
         q.bind(row.quota_per_day);
         q.bind(row.last_update);
-        no_rows(self.call(q)?)
+        no_rows(self.call(q).await?)
     }
-    fn load_jumping_creation_quota(
-        &mut self,
+    async fn load_jumping_creation_quota(
+        &self,
         account: AccountId,
     ) -> io::Result<Option<JumpingCreationQuota>> {
         let mut q = rpc!("usp_LoadJumpingCharacterCreationQuota", "@P1");
         q.bind(guid(account));
-        one(self.call(q)?)?
+        one(self.call(q).await?)?
             .map(|row| {
                 Ok(JumpingCreationQuota {
                     quota: i32::from(required::<u8>(&row, 1)?),
@@ -524,13 +488,14 @@ impl Store for MssqlStore {
             })
             .transpose()
     }
-    fn load_time_based_play_info(
-        &mut self,
+    async fn load_time_based_play_info(
+        &self,
         account: AccountId,
     ) -> io::Result<Vec<TimeBasedPlayInfo>> {
         let mut q = rpc!("usp_LoadGameAccountTimeBasedPlayInfo", "@P1");
         q.bind(guid(account));
-        self.call(q)?
+        self.call(q)
+            .await?
             .iter()
             .map(|row| {
                 Ok(TimeBasedPlayInfo {
@@ -543,8 +508,8 @@ impl Store for MssqlStore {
             })
             .collect()
     }
-    fn load_service_detail(
-        &mut self,
+    async fn load_service_detail(
+        &self,
         service: u64,
         kind: ServiceKind,
     ) -> io::Result<ServiceDetail> {
@@ -556,7 +521,7 @@ impl Store for MssqlStore {
             ServiceKind::Race => rpc!("usp_LoadChangeCharacterRaceService", "@P1"),
         };
         q.bind(positive(service)?);
-        let row = one(self.call(q)?)?
+        let row = one(self.call(q).await?)?
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "service detail row absent"))?;
         // Typed local payloads. Original appearance output propagation stays open.
         Ok(match kind {

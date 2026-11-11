@@ -3,7 +3,9 @@ use lobbydaemon::{
     jobs::{Jobs, Settings, State},
     np::{Np, NpError, StubNp},
     protocol as w,
-    store::{Account, AccountId, Character, IncompleteService, MemoryStore, Store},
+    store::{
+        Account, AccountId, Character, IncompleteService, MemoryStore, Shared, Store, SyncStore,
+    },
 };
 use packet::fragments::FragmentReader;
 use std::{io, time::Duration};
@@ -31,10 +33,13 @@ async fn r14_character_info_reads_full_slot_from_cached_snapshot() {
     let mut other = row.clone();
     other.pcid = 88;
     other.slot[15] ^= 1;
-    j.store.characters.insert(id, vec![other, row.clone()]);
+    j.store
+        .lock()
+        .characters
+        .insert(id, vec![other, row.clone()]);
     let key = initialized(&mut j, t, p).await;
     send(&mut j, 1, start(key, t, p)).await;
-    j.store.characters.clear(); // No reload or write is needed by D38.
+    j.store.lock().characters.clear(); // No reload or write is needed by D38.
     let response = send(&mut j, 1, info_request(key, row.slot)).await;
     assert_eq!(response.len(), 1);
     assert_eq!(
@@ -59,7 +64,7 @@ async fn r14_character_info_reads_full_slot_from_cached_snapshot() {
 async fn r14_character_info_checks_state_slot_session_and_link() {
     let (mut j, t, p) = rig();
     let id = j.np.identities[&(t, p)].as_ref().unwrap().account;
-    j.store.characters.insert(id, vec![character()]);
+    j.store.lock().characters.insert(id, vec![character()]);
     let key = initialized(&mut j, t, p).await;
     info_failure(
         &send(&mut j, 1, info_request(key, [8; 16])).await,
@@ -169,17 +174,17 @@ fn r14_character_info_serializer_rejects_invalid_bounds() {
 async fn r8_anonymous_close_uses_gate_key_and_preserves_authenticated_sessions() {
     let (mut j, t, p) = rig();
     let key = initialized(&mut j, t, p).await;
-    let output = j.close_anonymous(key).unwrap();
+    let output = j.close_anonymous(key).await.unwrap();
     assert_eq!(output[0].link, 1);
     assert_eq!(output[0].packets, vec![w::notice(20, 100).unwrap()]);
     assert_eq!(j.session_count(), 0);
-    assert!(j.close_anonymous(key).unwrap().is_empty());
+    assert!(j.close_anonymous(key).await.unwrap().is_empty());
     let response = send(&mut j, 1, init(101, t, p)).await;
     let Value::U64(key) = w::fields("hqqoo", &response[0]).unwrap()[2] else {
         panic!("key")
     };
     send(&mut j, 1, start(key, t, p)).await;
-    assert!(j.close_anonymous(key).unwrap().is_empty());
+    assert!(j.close_anonymous(key).await.unwrap().is_empty());
     assert_eq!(j.state(key), Some(State::Lobby));
 }
 #[tokio::test]
@@ -190,7 +195,7 @@ async fn r6_invalid_character_bounds_block_login() {
         let mut row = character();
         row.name = vec![65; name_len];
         row.showcase = vec![0; blob_len];
-        j.store.characters.insert(id, vec![row]);
+        j.store.lock().characters.insert(id, vec![row]);
         let key = initialized(&mut j, t, p).await;
         fail(&send(&mut j, 1, start(key, t, p)).await, 11, key, reason);
         assert_eq!(j.session_count(), 0);
@@ -200,7 +205,7 @@ async fn r6_invalid_character_bounds_block_login() {
 #[tokio::test]
 async fn r9_link_limit_and_malformed_frame_rejection() {
     let mut j = Jobs::new(
-        MemoryStore::default(),
+        Shared::new(MemoryStore::default()),
         StubNp::default(),
         Settings {
             max_links: 1,
@@ -210,7 +215,7 @@ async fn r9_link_limit_and_malformed_frame_rejection() {
     .unwrap();
     send(&mut j, 1, hello(58)).await;
     assert_eq!(w::command(&send(&mut j, 2, hello(58)).await[0]).unwrap(), 3);
-    j.disconnect(1);
+    j.disconnect(1).await;
     assert_eq!(w::command(&send(&mut j, 2, hello(58)).await[0]).unwrap(), 2);
     assert!(j.handle(2, &[0, 0, 1, 0]).await.is_err());
     assert!(j.handle(2, &request(0, 0)).await.is_err());
@@ -230,7 +235,7 @@ async fn r4_presence_timeout_and_cancel_release_ownership() {
                     .is_err()
             );
             assert_eq!(j.state(key), Some(State::Init));
-            j.disconnect(1);
+            j.disconnect(1).await;
         } else {
             fail(&send(&mut j, 1, start(key, t, p)).await, 11, key, 2);
         }
@@ -244,7 +249,7 @@ async fn r4_presence_timeout_and_cancel_release_ownership() {
 async fn r10_init_expiry_is_once_and_success_cancels_it() {
     let (np, t, p, _) = StubNp::fixture(10);
     let mut j = Jobs::new(
-        MemoryStore::default(),
+        Shared::new(MemoryStore::default()),
         np,
         Settings {
             init_timeout: Some(Duration::from_secs(2)),
@@ -254,10 +259,10 @@ async fn r10_init_expiry_is_once_and_success_cancels_it() {
     .unwrap();
     let key = initialized(&mut j, t, p).await;
     tokio::time::advance(Duration::from_secs(2)).await;
-    let out = j.expire().unwrap();
+    let out = j.expire().await.unwrap();
     assert_eq!(out.len(), 1);
     assert_eq!(out[0].packets, vec![w::notice(20, 100).unwrap()]);
-    assert!(j.expire().unwrap().is_empty());
+    assert!(j.expire().await.unwrap().is_empty());
     assert_eq!(j.state(key), None);
     let out = send(&mut j, 1, init(101, t, p)).await;
     let Value::U64(key) = w::fields("hqqoo", &out[0]).unwrap()[2] else {
@@ -265,7 +270,7 @@ async fn r10_init_expiry_is_once_and_success_cancels_it() {
     };
     send(&mut j, 1, start(key, t, p)).await;
     tokio::time::advance(Duration::from_secs(3)).await;
-    assert!(j.expire().unwrap().is_empty());
+    assert!(j.expire().await.unwrap().is_empty());
     assert_eq!(j.state(key), Some(State::Lobby));
 }
 #[tokio::test(start_paused = true)]
@@ -288,11 +293,11 @@ async fn r8_init_kick_uses_original_anonymous_close_effect() {
     let (mut j, t, p) = rig();
     let key = initialized(&mut j, t, p).await;
     assert_eq!(
-        j.kick(key, 7).unwrap()[0].packets,
+        j.kick(key, 7).await.unwrap()[0].packets,
         vec![w::notice(20, 100).unwrap()]
     );
-    assert!(j.kick(key, 7).unwrap().is_empty());
-    assert!(j.store.logout_updates.is_empty());
+    assert!(j.kick(key, 7).await.unwrap().is_empty());
+    assert!(j.store.lock().logout_updates.is_empty());
 }
 
 fn retained_init(gate: u64, key: u64, token: u64, ipv4: u32) -> Vec<u8> {
@@ -311,7 +316,7 @@ fn retained_init(gate: u64, key: u64, token: u64, ipv4: u32) -> Vec<u8> {
 async fn r13_retained_rebind_single_use_cache_and_link_checks() {
     let (mut j, t, p) = rig();
     let id = j.np.identities[&(t, p)].as_ref().unwrap().account;
-    j.store.characters.insert(id, vec![character()]);
+    j.store.lock().characters.insert(id, vec![character()]);
     let key = initialized(&mut j, t, p).await;
     fail(&send(&mut j, 1, request(15, key)).await, 17, key, 5);
     send(&mut j, 1, start(key, t, p)).await;
@@ -364,14 +369,14 @@ async fn r13_retained_rebind_single_use_cache_and_link_checks() {
         19,
     );
     fail(&send(&mut j, 1, request(35, key)).await, 37, key, 5);
-    j.store.characters.clear();
-    j.store.services.clear();
-    let updates = j.store.login_updates.clone();
+    j.store.lock().characters.clear();
+    j.store.lock().services.clear();
+    let updates = j.store.lock().login_updates.clone();
     let reply = send(&mut j, 1, request(15, key)).await;
     assert_eq!(w::command(&reply[0]).unwrap(), 16);
     assert_eq!(joined(&reply, "qCiiiii;CiiQiqq;iqiq")[0], Value::U64(key));
     assert_eq!(send(&mut j, 1, request(35, key)).await, old_list);
-    assert_eq!(j.store.login_updates, updates);
+    assert_eq!(j.store.lock().login_updates, updates);
     assert_eq!(j.np.consume(t, p).await, Err(NpError::RejectedToken));
     fail(&send(&mut j, 1, request(15, key)).await, 17, key, 5);
     send(&mut j, 1, request(23, key)).await;
@@ -388,10 +393,10 @@ async fn r13_retained_expiry_boundary_sweep_and_cleanup() {
         tokio::time::advance(Duration::from_secs(2)).await;
         if sweep {
             assert_eq!(
-                j.expire().unwrap()[0].packets,
+                j.expire().await.unwrap()[0].packets,
                 vec![w::kick(key, 8).unwrap()]
             );
-            assert!(j.expire().unwrap().is_empty());
+            assert!(j.expire().await.unwrap().is_empty());
         }
         fail(
             &send(&mut j, 1, retained_init(200, key, token, 7)).await,
@@ -400,7 +405,7 @@ async fn r13_retained_expiry_boundary_sweep_and_cleanup() {
             19,
         );
         assert_eq!(j.session_count(), 0);
-        assert_eq!(j.store.logout_updates.len(), 1);
+        assert_eq!(j.store.lock().logout_updates.len(), 1);
         j.np.login_presence(id, 999).await.unwrap();
     }
 }
@@ -421,7 +426,7 @@ async fn r13_retained_binding_collision_and_missing_session() {
     fail(&send(&mut j, 1, request(15, key)).await, 17, key, 4);
     fail(&send(&mut j, 1, request(12, 200)).await, 14, 200, 2);
 }
-type Rig = Jobs<MemoryStore, StubNp>;
+type Rig = Jobs<Shared<MemoryStore>, StubNp>;
 fn packet(f: &str, v: &[Value]) -> Vec<u8> {
     w::packet(f, v).unwrap()
 }
@@ -460,7 +465,7 @@ fn start(key: u64, t: [u8; 16], p: [u8; 16]) -> Vec<u8> {
 fn rig() -> (Rig, [u8; 16], [u8; 16]) {
     let (np, t, p, _) = StubNp::fixture(10);
     (
-        Jobs::new(MemoryStore::default(), np, Settings::default()).unwrap(),
+        Jobs::new(Shared::new(MemoryStore::default()), np, Settings::default()).unwrap(),
         t,
         p,
     )
@@ -630,7 +635,7 @@ async fn r4_stub_rejects_unknown_replay_and_wrong_presence_owner() {
 async fn r5_nonempty_services_fail_and_release_presence() {
     let (mut j, t, p) = rig();
     let id = j.np.identities[&(t, p)].as_ref().unwrap().account;
-    j.store.services.insert(
+    j.store.lock().services.insert(
         id,
         vec![IncompleteService {
             id: 1,
@@ -656,17 +661,17 @@ async fn r12_kind6_recovery_caches_without_completing_service() {
         item_data: 69,
         state: 1,
     };
-    j.store.services.insert(id, vec![row.clone()]);
+    j.store.lock().services.insert(id, vec![row.clone()]);
     let key = initialized(&mut j, t, p).await;
     assert_eq!(
         w::command(&send(&mut j, 1, start(key, t, p)).await[0]).unwrap(),
         10
     );
     assert_eq!(j.pending_services(key), Some([row.clone()].as_slice()));
-    assert_eq!(j.store.services[&id], vec![row]);
+    assert_eq!(j.store.lock().services[&id], vec![row]);
     send(&mut j, 1, request(23, key)).await;
     assert!(j.pending_services(key).is_none());
-    assert_eq!(j.store.services[&id].len(), 1);
+    assert_eq!(j.store.lock().services[&id].len(), 1);
 }
 #[tokio::test]
 async fn r8_original_d22_reason_conversion() {
@@ -685,7 +690,7 @@ async fn r8_original_d22_reason_conversion() {
         let key = initialized(&mut j, t, p).await;
         send(&mut j, 1, start(key, t, p)).await;
         assert_eq!(
-            j.kick(key, reason).unwrap()[0].packets,
+            j.kick(key, reason).await.unwrap()[0].packets,
             vec![w::kick(key, wire_reason).unwrap()]
         );
     }
@@ -694,16 +699,16 @@ async fn r8_original_d22_reason_conversion() {
 async fn r5_r6_register_required_loads_cache_and_fragmented_character_list() {
     let (mut j, t, p) = rig();
     let id = j.np.identities[&(t, p)].as_ref().unwrap().account;
-    j.store.characters.insert(id, vec![character(); 12]);
+    j.store.lock().characters.insert(id, vec![character(); 12]);
     let key = initialized(&mut j, t, p).await;
     fail(&send(&mut j, 1, request(35, key)).await, 37, key, 5);
     let ok = send(&mut j, 1, start(key, t, p)).await;
     assert_eq!(w::command(&ok[0]).unwrap(), 10);
     assert_eq!(joined(&ok, &w::START[2..])[2], Value::Id(id));
-    assert_eq!(j.store.accounts[&id].right, 1);
+    assert_eq!(j.store.lock().accounts[&id].right, 1);
     assert_eq!(j.state(key), Some(State::Lobby));
-    assert_eq!(j.store.login_updates, vec![(id, 7)]);
-    j.store.characters.clear();
+    assert_eq!(j.store.lock().login_updates, vec![(id, 7)]);
+    j.store.lock().characters.clear();
     let list = send(&mut j, 1, request(35, key)).await;
     assert!(list.len() > 1);
     let got = joined(&list, &w::CHARACTERS[2..]);
@@ -737,7 +742,7 @@ async fn r7_close_lookup_logout_notice_and_idempotence() {
             }
             assert_eq!(j.session_count(), 0);
             assert!(send(&mut j, 1, request(cmd, lookup)).await.is_empty());
-            assert_eq!(j.store.logout_updates.len(), usize::from(authed));
+            assert_eq!(j.store.lock().logout_updates.len(), usize::from(authed));
         }
     }
 }
@@ -758,17 +763,17 @@ async fn r8_d20_d21_d22_fixtures_and_kick_once() {
     let (mut j, t, p) = rig();
     let key = initialized(&mut j, t, p).await;
     send(&mut j, 1, start(key, t, p)).await;
-    let got = j.kick(key, 7).unwrap();
+    let got = j.kick(key, 7).await.unwrap();
     assert_eq!(got[0].link, 1);
     assert_eq!(got[0].packets, vec![w::kick(key, 7).unwrap()]);
-    assert!(j.kick(key, 7).unwrap().is_empty());
-    assert_eq!(j.store.logout_updates.len(), 1);
+    assert!(j.kick(key, 7).await.unwrap().is_empty());
+    assert_eq!(j.store.lock().logout_updates.len(), 1);
 }
 #[tokio::test]
 async fn r9_capacity_disconnect_and_limits() {
     let (np, t, p, _) = StubNp::fixture(10);
     let mut j = Jobs::new(
-        MemoryStore::default(),
+        Shared::new(MemoryStore::default()),
         np,
         Settings {
             max_sessions: 1,
@@ -779,12 +784,12 @@ async fn r9_capacity_disconnect_and_limits() {
     let key = initialized(&mut j, t, p).await;
     fail(&send(&mut j, 1, init(101, t, p)).await, 8, 101, 6);
     send(&mut j, 1, start(key, t, p)).await;
-    j.disconnect(1);
+    j.disconnect(1).await;
     assert_eq!(j.session_count(), 0);
-    assert_eq!(j.store.logout_updates.len(), 1);
+    assert_eq!(j.store.lock().logout_updates.len(), 1);
     assert!(j.handle(1, &init(100, t, p)).await.is_err());
     assert!(Jobs::new(
-        MemoryStore::default(),
+        Shared::new(MemoryStore::default()),
         StubNp::default(),
         Settings {
             np_timeout: Duration::ZERO,
@@ -820,7 +825,7 @@ async fn r13_retained_and_rebound_cleanup_release_presence_once() {
         for trigger in 0..3 {
             let (np, t, p, id) = StubNp::fixture(31);
             let mut j = Jobs::new(
-                MemoryStore::default(),
+                Shared::new(MemoryStore::default()),
                 np,
                 Settings {
                     init_timeout: Some(Duration::from_secs(2)),
@@ -844,7 +849,7 @@ async fn r13_retained_and_rebound_cleanup_release_presence_once() {
             match trigger {
                 0 => {
                     tokio::time::advance(Duration::from_secs(if rebound { 2 } else { 5 })).await;
-                    let outputs = j.expire().unwrap();
+                    let outputs = j.expire().await.unwrap();
                     assert_eq!(outputs.len(), 1);
                     assert_eq!(
                         outputs[0].packets,
@@ -854,14 +859,14 @@ async fn r13_retained_and_rebound_cleanup_release_presence_once() {
                             w::kick(key, 8).unwrap()
                         }]
                     );
-                    assert!(j.expire().unwrap().is_empty());
+                    assert!(j.expire().await.unwrap().is_empty());
                 }
                 1 => {
-                    j.disconnect(1);
-                    j.disconnect(1);
+                    j.disconnect(1).await;
+                    j.disconnect(1).await;
                 }
                 _ => {
-                    let outputs = j.kick(key, 7).unwrap();
+                    let outputs = j.kick(key, 7).await.unwrap();
                     assert_eq!(
                         outputs[0].packets,
                         vec![if rebound {
@@ -870,11 +875,11 @@ async fn r13_retained_and_rebound_cleanup_release_presence_once() {
                             w::kick(key, 7).unwrap()
                         }]
                     );
-                    assert!(j.kick(key, 7).unwrap().is_empty());
+                    assert!(j.kick(key, 7).await.unwrap().is_empty());
                 }
             }
             assert_eq!(j.session_count(), 0);
-            assert_eq!(j.store.logout_updates.len(), 1);
+            assert_eq!(j.store.lock().logout_updates.len(), 1);
             j.np.login_presence(id.account, 999).await.unwrap();
         }
     }
@@ -884,7 +889,7 @@ async fn r13_retained_and_rebound_cleanup_release_presence_once() {
 async fn r13_retained_start_cancels_rebound_init_deadline() {
     let (np, t, p, _) = StubNp::fixture(32);
     let mut j = Jobs::new(
-        MemoryStore::default(),
+        Shared::new(MemoryStore::default()),
         np,
         Settings {
             init_timeout: Some(Duration::from_secs(2)),
@@ -901,9 +906,9 @@ async fn r13_retained_start_cancels_rebound_init_deadline() {
     assert_eq!(w::command(&reply[0]).unwrap(), 16);
     assert!(j.next_expiry().is_none());
     tokio::time::advance(Duration::from_secs(5)).await;
-    assert!(j.expire().unwrap().is_empty());
+    assert!(j.expire().await.unwrap().is_empty());
     assert_eq!(j.state(key), Some(State::Lobby));
-    assert!(j.store.logout_updates.is_empty());
+    assert!(j.store.lock().logout_updates.is_empty());
 }
 
 #[derive(Default)]
@@ -911,7 +916,7 @@ struct FaultStore {
     inner: MemoryStore,
     fail: &'static str,
 }
-impl Store for FaultStore {
+impl SyncStore for FaultStore {
     fn load_game_account(&mut self, id: AccountId) -> io::Result<Option<Account>> {
         if self.fail == "account" {
             Err(io::Error::other("generated failure"))
@@ -979,7 +984,7 @@ async fn r5_required_store_failures_and_best_effort_updates() {
                 },
             );
         }
-        let mut j = Jobs::new(store, np, Settings::default()).unwrap();
+        let mut j = Jobs::new(Shared::new(store), np, Settings::default()).unwrap();
         let key = initialized(&mut j, t, p).await;
         let result = send(&mut j, 1, start(key, t, p)).await;
         if reason != 0 {
@@ -987,9 +992,9 @@ async fn r5_required_store_failures_and_best_effort_updates() {
             assert_eq!(j.session_count(), 0);
         } else {
             assert_eq!(w::command(&result[0]).unwrap(), 10);
-            assert_eq!(j.store.inner.login_updates.len(), 1);
+            assert_eq!(j.store.lock().inner.login_updates.len(), 1);
             send(&mut j, 1, request(23, key)).await;
-            assert_eq!(j.store.inner.logout_updates, vec![(id.account, 4)]);
+            assert_eq!(j.store.lock().inner.logout_updates, vec![(id.account, 4)]);
         }
         j.np.login_presence(id.account, 999).await.unwrap();
     }

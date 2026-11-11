@@ -4,11 +4,11 @@ use lobbydaemon::{
     jobs::{Jobs, Settings, State},
     np::StubNp,
     protocol as w,
-    store::{Character, MemoryStore},
+    store::{Character, MemoryStore, Shared},
 };
 use std::{sync::Arc, time::Duration};
 
-type Rig = Jobs<MemoryStore, StubNp>;
+type Rig = Jobs<Shared<MemoryStore>, StubNp>;
 fn packet(f: &str, v: &[Value]) -> Vec<u8> {
     w::packet(f, v).unwrap()
 }
@@ -74,7 +74,7 @@ async fn rig(
     );
     let g = Arc::new(g);
     let mut j = Jobs::new(
-        store,
+        Shared::new(store),
         np,
         Settings {
             world_token_lifetime: Some(Duration::from_secs(10)),
@@ -142,7 +142,7 @@ async fn rejection_does_not_reserve_and_can_retry() {
     *j.np.world_results.values_mut().next().unwrap() = Ok(ChargeMode::Free);
     token(&send(&mut j, request(key)).await);
     failure(&send(&mut j, request(key)).await, key, 5);
-    j.disconnect(1);
+    j.disconnect(1).await;
     assert_eq!(g.active(), 0);
 }
 #[tokio::test(start_paused = true)]
@@ -150,18 +150,18 @@ async fn restoration_commits_store_once_even_after_platform_failure() {
     let (mut j, g, key) = rig(Eligibility::Restore, false, Duration::ZERO).await;
     *j.np.world_results.values_mut().next().unwrap() = Err(111);
     failure(&send(&mut j, request(key)).await, key, 111);
-    assert_eq!(j.store.restored, vec![77]);
+    assert_eq!(j.store.lock().restored, vec![77]);
     *j.np.world_results.values_mut().next().unwrap() = Ok(ChargeMode::Trial);
     token(&send(&mut j, request(key)).await);
-    assert_eq!(j.store.restored, vec![77]);
+    assert_eq!(j.store.lock().restored, vec![77]);
     assert_eq!(g.restored(), 1);
-    j.kick(key, 7).unwrap();
+    j.kick(key, 7).await.unwrap();
     assert_eq!(g.active(), 0);
 }
 #[tokio::test(start_paused = true)]
 async fn restoration_store_failure_blocks_entry() {
     let (mut j, g, key) = rig(Eligibility::Restore, false, Duration::ZERO).await;
-    j.store.restoration_allowed.clear();
+    j.store.lock().restoration_allowed.clear();
     failure(&send(&mut j, request(key)).await, key, 2);
     assert_eq!(g.active(), 0);
     assert_eq!(j.state(key), Some(State::Lobby));
@@ -225,9 +225,9 @@ async fn exact_expiry_and_wrong_world_consume_cleanup() {
         send(&mut j, request(key)).await;
         tokio::time::advance(Duration::from_secs(10)).await;
         assert!(j.promote_world(key).is_err());
-        assert_eq!(j.expire().unwrap().len(), 1);
+        assert_eq!(j.expire().await.unwrap().len(), 1);
         assert_eq!(g.active(), 0);
-        assert!(j.expire().unwrap().is_empty());
+        assert!(j.expire().await.unwrap().is_empty());
     }
     let (mut j, g, key) = rig(Eligibility::Ready, false, Duration::ZERO).await;
     let t = token(&send(&mut j, request(key)).await);

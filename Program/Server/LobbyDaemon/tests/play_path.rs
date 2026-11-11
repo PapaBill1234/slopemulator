@@ -18,7 +18,7 @@ use helpers::{config, connect_client, keys, receive, send};
 use lobbydaemon::{
     jobs::Settings,
     np::StubNp,
-    store::{Account, Character, MemoryStore},
+    store::{Account, Character, MemoryStore, Shared},
     Server as Lobby,
 };
 use lobbygate::{daemon::TcpLobbyDaemon, server::Server as Gate};
@@ -274,7 +274,7 @@ async fn client_logs_in_through_stservers_to_the_character_list() {
         let lobby_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
         let cfg = config(lobby_listener.local_addr().unwrap().port());
         let np = GateNp::new(gg_addr, "bns", 0, StubNp::default());
-        let lobby = Arc::new(Lobby::new(store, np, Settings::default()).unwrap());
+        let lobby = Arc::new(Lobby::new(Shared::new(store), np, Settings::default()).unwrap());
         let (_stop, shutdown) = watch::channel(false);
         tokio::spawn(lobby.clone().serve(lobby_listener, shutdown.clone()));
         let daemon = TcpLobbyDaemon::start(&cfg, shutdown.clone()).await.unwrap();

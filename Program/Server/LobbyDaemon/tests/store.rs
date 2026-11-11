@@ -1,5 +1,5 @@
 //! Generated persistence fixtures. No SQL connection is used.
-use lobbydaemon::store::{Account, MemoryStore, Store};
+use lobbydaemon::store::{Account, MemoryStore, SyncStore};
 
 fn account() -> Account {
     Account {

@@ -7,11 +7,11 @@ use lobbydaemon::{
     jobs::{Jobs, Settings, State},
     np::{initial_name_reason, StubNp},
     protocol as w,
-    store::{Account, MemoryStore, Store},
+    store::{Account, MemoryStore, Shared, SyncStore},
 };
 use packet::fragments::FragmentReader;
 use std::{sync::Arc, time::Duration};
-type Rig = Jobs<MemoryStore, StubNp>;
+type Rig = Jobs<Shared<MemoryStore>, StubNp>;
 const SLOT: [u8; 16] = [91; 16];
 fn game(
     create: Option<i16>,
@@ -66,7 +66,7 @@ async fn send(j: &mut Rig, p: Vec<u8>) -> Vec<Vec<u8>> {
 async fn rig() -> (Rig, u64) {
     let (np, t, p, _) = StubNp::fixture(85);
     let mut j = Jobs::new(
-        MemoryStore::default(),
+        Shared::new(MemoryStore::default()),
         np,
         Settings {
             character_policy: Some(policy()),
@@ -227,7 +227,7 @@ async fn create_validation_and_store_errors_do_not_add_rows() {
         ("finish_create", 1),
     ] {
         let (mut j, key) = rig().await;
-        j.store.character_failures.insert(op, code);
+        j.store.lock().character_failures.insert(op, code);
         assert_failure(&send(&mut j, create(key)).await, 46, 2);
         assert!(list(&mut j, key).await.is_empty());
     }
@@ -237,7 +237,14 @@ async fn game_create_rejection_rolls_back_and_ids_do_not_repeat() {
     let (mut j, key) = rig().await;
     j = j.with_game_daemon(game(Some(9), None, None, 0));
     assert_failure(&send(&mut j, create(key)).await, 46, 2);
-    assert!(j.store.characters.values().flatten().next().is_none());
+    assert!(j
+        .store
+        .lock()
+        .characters
+        .values()
+        .flatten()
+        .next()
+        .is_none());
     j = j.with_game_daemon(Arc::new(StubGameDaemon::default()));
     send(&mut j, create(key)).await;
     assert_eq!(list(&mut j, key).await[0][0], Value::U64(2));
@@ -261,7 +268,7 @@ async fn delete_rejection_and_db_failure_recovery() {
     for op in ["try_delete", "finish_delete"] {
         let (mut j, key) = rig().await;
         send(&mut j, create(key)).await;
-        j.store.character_failures.insert(op, 1);
+        j.store.lock().character_failures.insert(op, 1);
         assert_failure(&send(&mut j, request(47, key)).await, 49, 2);
         assert_eq!(
             list(&mut j, key).await[0][6],
@@ -273,7 +280,7 @@ async fn delete_rejection_and_db_failure_recovery() {
     j = j.with_game_daemon(game(None, Some(3), None, 0));
     assert_failure(&send(&mut j, request(47, key)).await, 49, 2);
     assert_eq!(list(&mut j, key).await[0][6], Value::I8(1));
-    j.store.character_failures.insert("cancel_delete", 1);
+    j.store.lock().character_failures.insert("cancel_delete", 1);
     assert_failure(&send(&mut j, request(47, key)).await, 49, 2);
     j = j.with_game_daemon(game(None, None, Some(35), 0));
     assert_eq!(
@@ -287,7 +294,7 @@ async fn restoration_failures_leave_recoverable_state_five() {
         let (mut j, key) = rig().await;
         send(&mut j, create(key)).await;
         send(&mut j, request(47, key)).await;
-        j.store.character_failures.insert(op, 1);
+        j.store.lock().character_failures.insert(op, 1);
         assert_failure(&send(&mut j, request(51, key)).await, 53, 2);
         if op == "finish_restore" {
             assert_eq!(
@@ -336,7 +343,7 @@ async fn initial_name_success_and_all_platform_maps() {
     ] {
         assert_eq!(initial_name_reason(np_code), wire);
         let (mut j, key) = rig().await;
-        let account = *j.store.accounts.keys().next().unwrap();
+        let account = *j.store.lock().accounts.keys().next().unwrap();
         let name: Vec<u16> = "User307".encode_utf16().collect();
         j.np.initial_names
             .insert((account, name.clone()), Err(np_code));
@@ -368,7 +375,7 @@ async fn initial_name_success_and_all_platform_maps() {
     assert_failure(&send(&mut j, req.clone()).await, 105, 5);
     j.begin_initial_name(key).unwrap();
     assert_failure(&send(&mut j, req.clone()).await, 105, 7);
-    let account = *j.store.accounts.keys().next().unwrap();
+    let account = *j.store.lock().accounts.keys().next().unwrap();
     j.np.initial_names.insert((account, name.clone()), Ok(()));
     let out = send(&mut j, req).await;
     assert_eq!(
@@ -409,20 +416,23 @@ async fn creation_restoration_and_initial_name_timeouts() {
     j = j.with_game_daemon(game(None, None, None, 6));
     assert_failure(&send(&mut j, create(key)).await, 46, 2);
     assert!(list(&mut j, key).await.is_empty());
-    assert_eq!(j.store.character_states[&1], InternalState::Creating);
+    assert_eq!(j.store.lock().character_states[&1], InternalState::Creating);
     let (mut j, key) = rig().await;
     send(&mut j, create(key)).await;
     send(&mut j, request(47, key)).await;
     j = j.with_game_daemon(game(None, None, None, 6));
     assert_failure(&send(&mut j, request(51, key)).await, 53, 2);
-    assert_eq!(j.store.character_states[&1], InternalState::Restoring);
+    assert_eq!(
+        j.store.lock().character_states[&1],
+        InternalState::Restoring
+    );
     assert_failure(&send(&mut j, request(54, key)).await, 56, 2);
     j = j.with_game_daemon(Arc::new(StubGameDaemon::default()));
     assert_eq!(
         w::command(&send(&mut j, request(54, key)).await[0]).unwrap(),
         55
     );
-    let account = *j.store.accounts.keys().next().unwrap();
+    let account = *j.store.lock().accounts.keys().next().unwrap();
     let name: Vec<u16> = "User307".encode_utf16().collect();
     j.np.initial_names.insert((account, name.clone()), Ok(()));
     j.np.delay = Duration::from_secs(6);
@@ -447,7 +457,7 @@ async fn immediate_delete_reply_and_list_are_consistent() {
     let mut config = policy();
     config.deletion_wait_seconds = 0;
     let mut j = Jobs::new(
-        MemoryStore::default(),
+        Shared::new(MemoryStore::default()),
         np,
         Settings {
             character_policy: Some(config),
@@ -495,7 +505,14 @@ async fn immediate_delete_reply_and_list_are_consistent() {
         [Value::I8(0), Value::U32(0)]
     );
     assert!(list(&mut j, key).await.is_empty());
-    assert!(j.store.characters.values().flatten().next().is_none());
+    assert!(j
+        .store
+        .lock()
+        .characters
+        .values()
+        .flatten()
+        .next()
+        .is_none());
 }
 #[tokio::test]
 async fn wrong_link_and_initial_name_state_block_mutations() {
@@ -537,7 +554,7 @@ async fn wrong_link_and_initial_name_state_block_mutations() {
         .await
         .is_empty());
     }
-    assert!(j.store.characters.is_empty());
+    assert!(j.store.lock().characters.is_empty());
     let req = packet(
         "hqs",
         &[

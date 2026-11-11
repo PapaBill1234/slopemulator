@@ -122,10 +122,10 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 name: name.clone(),
                 right: 1,
             };
-            if self.store.check_character_name(name).is_err() {
+            if self.store.check_character_name(name).await.is_err() {
                 return failure(2);
             }
-            let Ok(pcid) = self.store.try_character_creation(request.clone()) else {
+            let Ok(pcid) = self.store.try_character_creation(request.clone()).await else {
                 return failure(2);
             };
             self.sessions
@@ -154,7 +154,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 Ok(Ok(created)) if created.showcase.len() <= 512 => created,
                 other => {
                     if matches!(other, Ok(Err(_))) {
-                        let _ = self.store.cancel_character_creation(pcid);
+                        let _ = self.store.cancel_character_creation(pcid).await;
                     }
                     self.sessions
                         .get_mut(&key)
@@ -167,6 +167,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
             if self
                 .store
                 .finish_character_creation(pcid, created.clone())
+                .await
                 .is_err()
             {
                 self.sessions
@@ -200,7 +201,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
         let internal = self.character_states.get(&c.pcid).copied();
         if cmd == 47 {
             if internal != Some(CState::Normal)
-                || self.store.try_character_deletion(c.pcid).is_err()
+                || self.store.try_character_deletion(c.pcid).await.is_err()
             {
                 return failure(2);
             }
@@ -213,7 +214,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
             {
                 Ok(Ok(_level)) => {}
                 Ok(Err(_)) => {
-                    if self.store.cancel_character_deletion(c.pcid).is_ok() {
+                    if self.store.cancel_character_deletion(c.pcid).await.is_ok() {
                         self.set_character_state(key, c.pcid, CState::Normal);
                     }
                     return Ok(vec![reply(
@@ -235,6 +236,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
             if self
                 .store
                 .finish_character_deletion(c.pcid, seconds)
+                .await
                 .is_err()
             {
                 return Ok(vec![reply(fail, key, slot, 3, 2)?]);
@@ -272,7 +274,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
                     .deletion_deadlines
                     .get(&c.pcid)
                     .is_none_or(|d| *d <= Instant::now())
-                || self.store.try_character_restoration(c.pcid).is_err()
+                || self.store.try_character_restoration(c.pcid).await.is_err()
             {
                 return failure(2);
             }
@@ -298,9 +300,9 @@ impl<S: Store, N: Np> Jobs<S, N> {
             return Ok(vec![reply(fail, key, slot, 3, 2)?]);
         }
         let done = if cmd == 54 && internal == Some(CState::Deleting) {
-            self.store.cancel_character_deletion(c.pcid)
+            self.store.cancel_character_deletion(c.pcid).await
         } else {
-            self.store.finish_character_restoration(c.pcid)
+            self.store.finish_character_restoration(c.pcid).await
         };
         if done.is_err() {
             return Ok(vec![reply(fail, key, slot, 3, 2)?]);

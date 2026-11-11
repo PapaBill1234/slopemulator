@@ -3,7 +3,7 @@ use lobbydaemon::{
     jobs::Settings,
     np::{Identity, Np, NpFuture, StubNp},
     protocol as w,
-    store::{AccountId, MemoryStore},
+    store::{AccountId, MemoryStore, Shared},
     Server,
 };
 use std::{net::Ipv4Addr, sync::Arc, time::Duration};
@@ -96,7 +96,7 @@ async fn r9_lanes_keep_order_without_blocking_other_links_and_share_capacity() {
     });
     let server = Arc::new(
         Server::new(
-            MemoryStore::default(),
+            Shared::new(MemoryStore::default()),
             np.clone(),
             Settings {
                 max_sessions: 2,
@@ -150,7 +150,7 @@ async fn r10_scheduled_expiry_preserves_partial_frame_and_releases_capacity() {
     let (np, t, p, _) = StubNp::fixture(40);
     let server = Arc::new(
         Server::new(
-            MemoryStore::default(),
+            Shared::new(MemoryStore::default()),
             np,
             Settings {
                 init_timeout: Some(Duration::from_millis(30)),

@@ -54,6 +54,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 .map_err(|_| 104i16)??;
                 self.store
                     .finish_character_restoration(character.pcid)
+                    .await
                     .map_err(|_| 2i16)?;
                 self.sessions
                     .get_mut(&key)

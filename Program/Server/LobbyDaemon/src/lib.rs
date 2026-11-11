@@ -28,10 +28,10 @@ use tokio::{
     task::JoinSet,
 };
 
-type Lane<S, N> = Arc<Mutex<Jobs<Arc<SyncMutex<S>>, Arc<N>>>>;
+type Lane<S, N> = Arc<Mutex<Jobs<S, Arc<N>>>>;
 type Link<S, N> = (mpsc::Sender<Vec<Vec<u8>>>, Lane<S, N>);
 pub struct Server<S, N> {
-    store: Arc<SyncMutex<S>>,
+    store: S,
     np: Arc<N>,
     gamed: Arc<dyn gamed::GameDaemon>,
     settings: Settings,
@@ -43,7 +43,6 @@ pub struct Server<S, N> {
 }
 impl<S: Store, N: Np> Server<S, N> {
     pub fn new(store: S, np: N, settings: Settings) -> io::Result<Self> {
-        let store = Arc::new(SyncMutex::new(store));
         let np = Arc::new(np);
         // Validate the same settings as a standalone job lane.
         Jobs::new(store.clone(), np.clone(), settings.clone())?;
@@ -103,14 +102,14 @@ impl<S: Store, N: Np> Server<S, N> {
     pub async fn close_anonymous(&self, key: u64) -> io::Result<()> {
         if let Some(lane) = self.lane(key).await {
             let mut jobs = lane.lock().await;
-            self.deliver(jobs.close_anonymous(key)?).await?;
+            self.deliver(jobs.close_anonymous(key).await?).await?;
         }
         Ok(())
     }
     pub async fn kick(&self, key: u64, reason: i8) -> io::Result<()> {
         if let Some(lane) = self.lane(key).await {
             let mut jobs = lane.lock().await;
-            self.deliver(jobs.kick(key, reason)?).await?;
+            self.deliver(jobs.kick(key, reason).await?).await?;
         }
         Ok(())
     }
@@ -156,7 +155,7 @@ impl<S: Store, N: Np> Server<S, N> {
                             result = server.connection(link, stream, lane.clone()) => result,
                         };
                         server.links.lock().await.remove(&link);
-                        lane.lock().await.disconnect(link);
+                        lane.lock().await.disconnect(link).await;
                         result
                     });
                 }
@@ -181,7 +180,7 @@ impl<S: Store, N: Np> Server<S, N> {
             while let Some(packet) = reader.next().await? {
                 let mut jobs = lane.lock().await;
                 // Expire before dispatch too, so traffic cannot extend a deadline.
-                self.deliver(jobs.expire()?).await?;
+                self.deliver(jobs.expire().await?).await?;
                 let output = jobs.handle(link, &packet).await?;
                 self.deliver(output).await?;
             }
@@ -194,7 +193,7 @@ impl<S: Store, N: Np> Server<S, N> {
             loop {
                 tick.tick().await;
                 let mut jobs = lane.lock().await;
-                self.deliver(jobs.expire()?).await?;
+                self.deliver(jobs.expire().await?).await?;
             }
             #[allow(unreachable_code)]
             Ok::<(), io::Error>(())
