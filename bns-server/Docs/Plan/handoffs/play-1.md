@@ -133,3 +133,32 @@ Verified live: SRP login, RC4 switch, `Sts/Connect` reply, the post-login reques
 Rust: `shared::fsd` (`decode_make_pc`, `compose_new_showcase`). ❓ The local record sets level 1 and all other fields to zero. The original fills them from data tables.
 
 Limit: `lobbyd` keeps characters in memory. A restart removes them.
+
+## 10. Enter world, first try (11 Nov 2026)
+
+`gamedaemon` now answers commands 31 and 42. No live result yet.
+
+| Client command | Server reply | Source |
+| --- | --- | --- |
+| 23 | 24; reads the character record | `shared::local_entry` |
+| 31 | 32 (fragments), then 41 | `Packet::world_entry`, `Packet::zone_entry` |
+| 42 (key = key of 41) | 43 | `Packet::zone_entry` |
+
+New facts (build 348 GameDaemon, PDB names):
+
+| Fact | Source |
+| --- | --- |
+| PC object id = `(1 << 48) + index`. Index is 1..19999 (`MaxIndex` 20000, mask `0xFFFF`, shift 0, type 1). | `World::initPcManager` 0x1403EDDC0, `GameObjectIdManager::Make` 0x14001D090 |
+| Command 41 fields: zone id `q`, channel `h`, GeoZone record id `i`, spawn action key `i`, world clock byte `c`, arena wait cancel `c`, zone broadcast block `K`, x, y, z, yaw, PC transition count, summon transition count. In build 348 the command number is 39. | `PcSpawnAction::prepareSpawn` 0x1404B4E50 |
+| Each level-1 `PcInitialSetting` record gives zone 1101. Spawn `1101_SP1`: position -3199, 9241, 599; yaw 45. ❓ Units. | `pcinitialsettingdata.xml`, `zonepcspawndata.1101.xml` (build 381 data) |
+| Level-1 record 1 of `pcdata.xml`: max-hp 303, speed 62. | build 381 data |
+
+Local choices (not parity):
+
+| Choice | ❓ |
+| --- | --- |
+| `lobbyd` writes the make-PC record to `logs/play/entry/<owner>.pc` at world admission. `gamedaemon` reads it at command 23 by client key, or takes the newest file. | ❓ owner = client key has no live proof |
+| One fixed PC object id (index 1). Runtime zone id = 1101. Channel 1. Spawn key 1. | ❓ |
+| Broadcast block: 16 zero bytes in commands 32 and 41. | ❓ size and use |
+| All properties except world, race, sex, job, appearance, name, zone, position, yaw, level, hp, max-hp, speed are zero. Skill pages are empty. | ❓ |
+| No reply to command 929. No sync packets after 32. No ping 17. | ❓ |

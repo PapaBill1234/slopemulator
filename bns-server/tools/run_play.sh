@@ -27,6 +27,8 @@ LOBBYGATE_PORT="${LOBBYGATE_PORT:-10900}"
 COMMON="--config $CFG/StServer.ini --route-ini $CFG/Route.ini"
 
 # name | port to wait for | command
+# Local character hand-off from lobbyd to gamedaemon (not parity). Not in git.
+ENTRY_DIR="$ROOT/logs/play/entry"
 SERVICES=(
   "RouteSrv|6605|$BIN/RouteSrv --config $CFG/Route.ini --listen 127.0.0.1:6605 --server-id 1"
   "AuthSrv||$BIN/AuthSrv $COMMON --accounts $ACCOUNTS --server-id 2"
@@ -35,13 +37,13 @@ SERVICES=(
   "PlayStubs||$BIN/PlayStubs $COMMON --server-id 5"
   "CliGate|$CLIGATE_PORT|$BIN/CliGate $COMMON --listen 0.0.0.0:$CLIGATE_PORT --server-id 6"
   "GameGate|6601|$BIN/GameGate $COMMON --listen 127.0.0.1:6601 --server-id 7"
-  "LobbyDaemon|21801|$BIN/lobbydaemon 21801 --gamegate 127.0.0.1:6601 --game-code bns --world 1,1,Play,$PUBLIC_IP,$GAME_PORT"
+  "LobbyDaemon|21801|env BNS_LOCAL_ENTRY_DIR=$ENTRY_DIR $BIN/lobbydaemon 21801 --gamegate 127.0.0.1:6601 --game-code bns --world 1,1,Play,$PUBLIC_IP,$GAME_PORT"
   "LobbyGate|$LOBBYGATE_PORT|env LOBBYGATE_DEBUG=1 $BIN/lobbygate --config-dir $LOBBYGATE_CONFIG_DIR --handshake-key $HANDSHAKE_KEY"
 )
 # DbSrv is not on the play path yet (AuthSrv reads a file). It starts only with tools/play/Db.ini.
 [ -f "$CFG/Db.ini" ] && SERVICES=("DbSrv|10901|$BIN/DbSrv --config $CFG/Db.ini --db AcctDb --listen 127.0.0.1:10901" "${SERVICES[@]}")
 # GameDaemon has no server binary before stage 7.
-[ -x "$BIN/gamedaemon" ] && SERVICES+=("GameDaemon|$GAME_PORT|$BIN/gamedaemon --listen 0.0.0.0:$GAME_PORT --handshake-key $HANDSHAKE_KEY --lobby 127.0.0.1:21801")
+[ -x "$BIN/gamedaemon" ] && SERVICES+=("GameDaemon|$GAME_PORT|env BNS_LOCAL_ENTRY_DIR=$ENTRY_DIR $BIN/gamedaemon --listen 0.0.0.0:$GAME_PORT --handshake-key $HANDSHAKE_KEY --lobby 127.0.0.1:21801")
 
 port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
 

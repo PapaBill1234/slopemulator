@@ -176,14 +176,18 @@ impl GameDaemon for StubGameDaemon {
 /// Create: the showcase comes from the client make-PC record, as
 /// `CreateCharacterTran` does it in GameDaemon, but without the
 /// `PcInitialSetting` data ❓. World admission fails with reason 2.
+/// ❓ Local: it keeps each make-PC record and hands it to `gamedaemon`
+/// through `shared::local_entry` at world admission.
 #[derive(Default)]
-pub struct LocalGameDaemon;
+pub struct LocalGameDaemon {
+    created: Mutex<HashMap<u64, (shared::fsd::MakePc, Vec<u16>)>>,
+}
 
 impl GameDaemon for LocalGameDaemon {
     fn create_character(
         &self,
         request: crate::character::CreateCharacter,
-        _pcid: u64,
+        pcid: u64,
         appearance: Vec<u8>,
     ) -> GameFuture<'_, crate::character::CreatedCharacter> {
         Box::pin(async move {
@@ -202,8 +206,13 @@ impl GameDaemon for LocalGameDaemon {
                 pc.job,
                 showcase.len()
             );
+            let job = i16::from(pc.job);
+            self.created
+                .lock()
+                .unwrap()
+                .insert(pcid, (pc, request.name.clone()));
             Ok(crate::character::CreatedCharacter {
-                job: i16::from(pc.job),
+                job,
                 level: 1,
                 showcase,
             })
@@ -223,12 +232,20 @@ impl GameDaemon for LocalGameDaemon {
     }
     fn admit(
         &self,
-        _owner: u64,
+        owner: u64,
         _world: i16,
-        _pcid: u64,
+        pcid: u64,
         _charge: ChargeMode,
     ) -> GameFuture<'_, Admission> {
         // ❓ Local: no GameDaemon link. Each entry is admitted with no wait.
+        let created = self.created.lock().unwrap().get(&pcid).cloned();
+        if let Some((pc, name)) = created {
+            let entry = shared::local_entry::LocalEntry { pcid, pc, name };
+            let result = entry.write(owner);
+            eprintln!("lobbyd: world entry hand-off, owner {owner} pcid {pcid}: {result:?}");
+        } else {
+            eprintln!("lobbyd: world entry, no make-PC record for pcid {pcid}");
+        }
         Box::pin(async { Ok(Admission::new(None, || {})) })
     }
 }

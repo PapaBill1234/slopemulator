@@ -9,6 +9,7 @@ packet = { path = "../Packet" }
 packet-ids = { path = "../PacketIds" }
 bloodlib = { path = "../BloodLib" }
 lobbygate = { path = "../LobbyGate" }
+shared = { path = "../Shared" }
 tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "macros"] }
 rand = "0.8"
 

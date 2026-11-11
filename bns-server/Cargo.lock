@@ -462,6 +462,7 @@ dependencies = [
  "packet",
  "packet-ids",
  "rand",
+ "shared",
  "tokio",
 ]
 
