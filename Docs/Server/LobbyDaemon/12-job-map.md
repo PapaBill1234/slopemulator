@@ -26,7 +26,7 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 | DepositMileageJob | Mana14 Game100 | 5 91 92 | DepositMileageJob ~DepositMileageJob init depositReq depositAck depositExpire Callback | 3098 | `15-jobs-c.md` (partial ❓) |
 | DepositPcCafeMileageJobManageCallback | — |  | OnError OnSuccess OnFail OnTimeout | 234 | open |
 | EndWaitGameWorldJob | — | 0 3 | init endWait | 696 | `13-jobs-a.md` |
-| EnterGameWorldJob | Game5 | 0 117 | Initialize init enterGameWorld | 3337 | open |
+| EnterGameWorldJob | Game5 | 0 117 | Initialize init enterGameWorld | 3337 | `18-jobs-f.md` |
 | ExtendJumpingCharacterCreationQuotaJob | Lobb100 Game69 | 30 | ExtendJumpingCharacterCreationQuotaJob ~ExtendJumpingCharacterCreationQuotaJob init checkAccountInventoryItem checkAccountInventoryItemOk checkAccountInventoryItemFail checkAccountInventoryItemTimeout registerServiceEntry tryConsumeAccountInventoryItem tryConsumeAccountInventoryItemOk tryConsumeAccountInventoryItemFail tryConsumeAccountInventoryItemTimeout extendJumpingCharacterCreationQuota finConsumeAccountInventoryItem finConsumeAccountInventoryItemOk finConsumeAccountInventoryItemFail finConsumeAccountInventoryItemTimeout finServiceEntry sendFailReason | 4826 | open |
 | GetChargeInfoJob | Lobb60 | 17 52 53 | GetChargeInfoJob init requestChargeGetInfo responseChargeGetInfo expireChargeGetInfo | 1424 | `15-jobs-c.md` (partial ❓) |
 | GetGoodsCountJob | Lobb64 | 19 | GetGoodsCountJob ~GetGoodsCountJob init getGoodsCountReq getGoodsCountOk getGoodsCountFail getGoodsCountTimeout | 1162 | `14-jobs-b.md` |
@@ -34,7 +34,7 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 | GiveupWaitGameWorldJob | Lobb31 | 0 16 | Initialize init giveupWait | 411 | `13-jobs-a.md` |
 | InitCliSessionWlobbyTokenJob | Lobb12 | 0 14 | Initialize init initOk | 574 | `13-jobs-a.md` |
 | InitCliSessionWnpTokenJob | — | 7 | init | 584 | `13-jobs-a.md` |
-| KickJob | Mana5 | 1 | Demander KickJob ~KickJob init kick worldKickReq worldKickOk worldKickFail worldKickExpire | 1877 | open |
+| KickJob | Mana5 | 1 | Demander KickJob ~KickJob init kick worldKickReq worldKickOk worldKickFail worldKickExpire | 1877 | `18-jobs-f.md` |
 | LeaveGameWorldJob | Game8 | 0 119 | Initialize init leaveGameWorld | 823 | `13-jobs-a.md` |
 | ListGoodsJob | Lobb67 | 20 | ListGoodsJob ~ListGoodsJob init listGoodsReq listGoodsOk listGoodsFail listGoodsTimeout | 1169 | `14-jobs-b.md` |
 | ListLobbyServiceItemJob | Lobb73 | 22 | ListLobbyServiceItemJob ~ListLobbyServiceItemJob init listLobbyServiceItemReq listLobbyServiceItemOk listLobbyServiceItemFail listLobbyServiceItemTimeout | 1281 | `15-jobs-c.md` (partial ❓) |
@@ -51,12 +51,12 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 | SecondPasswordIsVerifiedJob | — | 64 65 130 | init requestIsVerified responseIsVerified expireIsVerified | 1011 | `14-jobs-b.md` |
 | SetupNpScheduleInfoJob | — | 0 6 | SetupNpScheduleInfoJob ~SetupNpScheduleInfoJob tryListCurrentPromotions listCurrentPromotionsAck tryGetPromotionPolicy getPromotionPolicyAck | 3920 | open |
 | StartChargeJob | Game30 | 54 55 120 | Initialize init requestStartCharge responseStartCharge expireStartCharge | 1156 | `14-jobs-b.md` |
-| StartCliSessionWlobbyTokenJob | Lobb15 | 15 | Initialize init getGradeLevelReq getGradeLevelResponse getGradeLevelExpire listAllGradesReq listAllGradesResponse listAllGradesExpire start | 2518 | open |
-| StartCliSessionWnpTokenJob | — | 8 | StartCliSessionWnpTokenJob ~StartCliSessionWnpTokenJob init consumeToken consumeTokenResponse consumeTokenExpire listUserLastPresencesReq listUserLastPresencesResponse listUserLastPresencesExpire listSlotsReq listSlotsResponse listSlotsExpire createSlotsReq createSlotsResponse createSlotsExpire setSlotDataReq setSlotDataResponse setSlotDataExpire presenceLoginReq presenceLoginResponse presenceLoginExpire getUserProfileReq getUserProfileResponse getUserProfileExpire getGameTimeReq getGameTimeResponse getGameTimeExpire getGradeLevelReq getGradeLevelResponse getGradeLevelExpire listAllGradesReq listAllGradesResponse listAllGradesExpire listUserBansReq listUserBansResponse listUserBansExpire getRMSInquiryReq getRMSInquiryResponse getRMSInquiryExpire getUserPromotionStatusReq getUserPromotionStatusResponse getUserPromotionStatusExpire loginAccount checkIntialUserName | 16469 | open |
+| StartCliSessionWlobbyTokenJob | Lobb15 | 15 | Initialize init getGradeLevelReq getGradeLevelResponse getGradeLevelExpire listAllGradesReq listAllGradesResponse listAllGradesExpire start | 2518 | `18-jobs-f.md` |
+| StartCliSessionWnpTokenJob | — | 8 | StartCliSessionWnpTokenJob ~StartCliSessionWnpTokenJob init consumeToken consumeTokenResponse consumeTokenExpire listUserLastPresencesReq listUserLastPresencesResponse listUserLastPresencesExpire listSlotsReq listSlotsResponse listSlotsExpire createSlotsReq createSlotsResponse createSlotsExpire setSlotDataReq setSlotDataResponse setSlotDataExpire presenceLoginReq presenceLoginResponse presenceLoginExpire getUserProfileReq getUserProfileResponse getUserProfileExpire getGameTimeReq getGameTimeResponse getGameTimeExpire getGradeLevelReq getGradeLevelResponse getGradeLevelExpire listAllGradesReq listAllGradesResponse listAllGradesExpire listUserBansReq listUserBansResponse listUserBansExpire getRMSInquiryReq getRMSInquiryResponse getRMSInquiryExpire getUserPromotionStatusReq getUserPromotionStatusResponse getUserPromotionStatusExpire loginAccount checkIntialUserName | 16469 | `18-jobs-f.md` |
 | StopChargeJob | Game33 | 56 57 121 | Initialize init requestChargeStop responseChargeStop expireChargeStop | 1089 | `14-jobs-b.md` |
 | TakeAccountTimeBasedPlayRewardJob | — | 103 104 143 | init takeAccountTimeBasedPlayRewardReq takeAccountTimeBasedPlayRewardResponse takeAccountTimeBasedPlayRewardExpire sendOk sendFail | 3174 | open |
 | TakeGoodsJob | Lobb70 | 21 | TakeGoodsJob ~TakeGoodsJob init takeGoodsReq takeGoodsOk takeGoodsFail takeGoodsTimeout | 1196 | `14-jobs-b.md` |
-| TryEnterGameWorldJob | Lobb24 | 13 | TryEnterGameWorldJob ~TryEnterGameWorldJob Initialize init restorePcReq restorePcOk restorePcFail restorePcExpired checkSecondPasswordStatus checkSecondPasswordStatusResponse checkSecondPasswordStatusExpire checkSecondPasswordVerified checkSecondPasswordVerifiedResponse checkSecondPasswordVerifiedExpire requestGetSlot responseGetSlot expireGetSlot requestChargeGetInfo responseChargeGetInfo expireChargeGetInfo tryEnterGameWorld issueGameWorldToken | 7138 | open |
+| TryEnterGameWorldJob | Lobb24 | 13 | TryEnterGameWorldJob ~TryEnterGameWorldJob Initialize init restorePcReq restorePcOk restorePcFail restorePcExpired checkSecondPasswordStatus checkSecondPasswordStatusResponse checkSecondPasswordStatusExpire checkSecondPasswordVerified checkSecondPasswordVerifiedResponse checkSecondPasswordVerifiedExpire requestGetSlot responseGetSlot expireGetSlot requestChargeGetInfo responseChargeGetInfo expireChargeGetInfo tryEnterGameWorld issueGameWorldToken | 7138 | `18-jobs-f.md` |
 | UpgradeJumpingCharacterStateJob | Game72 Game75 | 0 | UpgradeJumpingCharacterStateJob init upgradeJumpingCharacterState | 1453 | open |
 
 ## 2. Handlers without a job
@@ -151,7 +151,7 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 | --- | --- | --- |
 | A | Jobs under 3,000 tokens | done (`13`–`15`); small jobs of C and D are open |
 | B | Character jobs (create, delete, cancel, recover, rename, appearance, sex, race) | done (`16-jobs-d.md`, `17-jobs-e.md`) |
-| C | Session jobs (init, start, enter, leave, wait, kick, logout) | open |
+| C | Session jobs (start session NP and lobby token, try enter, enter world, kick) | done (`13-jobs-a.md`, `18-jobs-f.md`) |
 | D | Account inventory, slot, grade, charge, auction, mileage jobs | open |
 | E | Handlers without a job, timers, manage port | open |
 
