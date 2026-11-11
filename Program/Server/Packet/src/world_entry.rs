@@ -217,7 +217,7 @@ impl EnterWorldOk {
     /// Native allocation groups are indivisible. Fragment headers remain outside
     /// the logical body; first mark=total bytes, middle=-1, last continuation=0.
     pub fn encode_fragments(&self) -> Result<Vec<Vec<u8>>, PacketError> {
-        let mut out = EntryFragments::default();
+        let mut out = Fragments::new(32);
         let h = &self.header;
         let mut prefix = h.world_id.to_le_bytes().to_vec();
         prefix.extend(h.object_id.to_le_bytes());
@@ -331,13 +331,21 @@ fn counted_bytes(bytes: &[u8]) -> Result<Vec<u8>, PacketError> {
     out.extend(bytes);
     Ok(out)
 }
-#[derive(Default)]
-struct EntryFragments {
+/// Fragment writer for one command. Each `push` is one indivisible group.
+pub struct Fragments {
+    command: u16,
     chunks: Vec<Vec<u8>>,
     total: usize,
 }
-impl EntryFragments {
-    fn push(&mut self, bytes: Vec<u8>) -> Result<(), PacketError> {
+impl Fragments {
+    pub fn new(command: u16) -> Self {
+        Self {
+            command,
+            chunks: Vec::new(),
+            total: 0,
+        }
+    }
+    pub fn push(&mut self, bytes: Vec<u8>) -> Result<(), PacketError> {
         if bytes.len() > MAX_PACKET - 8 {
             return Err(PacketError::ComposeOverflow);
         }
@@ -359,7 +367,7 @@ impl EntryFragments {
             .extend(bytes);
         Ok(())
     }
-    fn finish(mut self) -> Result<Vec<Vec<u8>>, PacketError> {
+    pub fn finish(mut self) -> Result<Vec<Vec<u8>>, PacketError> {
         let last = self
             .chunks
             .len()
@@ -368,7 +376,7 @@ impl EntryFragments {
         for (index, chunk) in self.chunks.iter_mut().enumerate() {
             let size = chunk.len() as u16;
             chunk[..2].copy_from_slice(&size.to_le_bytes());
-            chunk[2..4].copy_from_slice(&32u16.to_le_bytes());
+            chunk[2..4].copy_from_slice(&self.command.to_le_bytes());
             let mark = if index == 0 {
                 self.total as i32
             } else if index == last {

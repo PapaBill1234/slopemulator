@@ -161,4 +161,18 @@ Local choices (not parity):
 | One fixed PC object id (index 1). Runtime zone id = 1101. Channel 1. Spawn key 1. | ❓ |
 | Broadcast block: 16 zero bytes in commands 32 and 41. | ❓ size and use |
 | All properties except world, race, sex, job, appearance, name, zone, position, yaw, level, hp, max-hp, speed are zero. Skill pages are empty. | ❓ |
-| No reply to command 929. No sync packets after 32. No ping 17. | ❓ |
+| No sync packets after 32. No ping 17. | ❓ |
+
+## 11. Command 929 → 930 (11 Nov 2026, live)
+
+Live result: the game Hello 11/12 works with the LobbyGate handshake layout. The client then sends 929 and waits.
+
+| Fact | Source |
+| --- | --- |
+| 930 descriptor `hihhiCb;`: major version `h`, minor `h`, revision `i`, count, counted UTF-8 elements. | 381 builder 0x140087D40; 348 `ContentsRuleConfig::MakeListPacket` 0x140089C50 |
+| Build 381: major 74, minor 0. Revision = `dword_140EE586C`. Build 348: major 65, command 896. | same |
+| Elements: XML header (`module="contents-rule-config"`, `release-side="client"`), one `<option name='N' value='V'/>` for each of 167 rules, `</config>`. | same |
+| Rule types (table 0x140ECAD88, 56 bytes each): 1 `%d` (98), 2 `%I64d` (9), 4 bool `yes`/`no` (56), 6 string (4). | same |
+| Failure reply in 348 is command 897, reason 2086. | `HandleGame_ContentsRuleListReq` 0x14036DF60 |
+
+Local: `gamedaemon --contents-rule <file>` reads `ContentsRule.gamed.config.xml` at start. ❓ File order, revision 0, no defaults for absent options, no 30 s rate limit.

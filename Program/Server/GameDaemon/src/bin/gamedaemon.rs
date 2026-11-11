@@ -5,7 +5,8 @@
 //! Enter world: 31 → 32 (fragments) and 41; 42 → 43. Spec: 10-session-handlers.md.
 //! ❓ Not parity: the token is not consumed through LobbyDaemon (no link). `--lobby` is not used yet.
 //! ❓ Not parity: the character comes from `shared::local_entry`, not from the game DB.
-//! ❓ Command 929 and the sync packets after 32 have no reply yet.
+//! 929 → 930: rule list from `--contents-rule <ContentsRule.gamed.config.xml>`.
+//! ❓ The sync packets after 32 have no reply yet.
 use bloodlib::{
     crypto::{DhParameters, RsaKey},
     frames::{decode_client, encode_client, ClientDecrypt, ClientEncrypt},
@@ -15,8 +16,8 @@ use bloodlib::{
 use lobbygate::wire::{inner_packet, read_frame, write_frame};
 use packet::{
     world_entry::{
-        property_code, CraftUnion, CreatureProperties, EnterWorldOk, EntryHeader, PropertyValue,
-        SlateItem, SlatePage,
+        property_code, CraftUnion, CreatureProperties, EnterWorldOk, EntryHeader, Fragments,
+        PropertyValue, SlateItem, SlatePage,
     },
     zone_entry::{EnterZoneOk, PrepareZone},
 };
@@ -146,6 +147,58 @@ fn prepare_zone() -> io::Result<Vec<u8>> {
     .map_err(bad)
 }
 
+/// Command 930 `hihhiCb;` (build 381 builder 0x140087D40; build 348
+/// `ContentsRuleConfig::MakeListPacket` 0x140089C50). Body: major version 74, minor 0,
+/// revision `i`, count, then counted UTF-8 elements: XML header, one `<option>` for
+/// each rule, `</config>`. Type 4 (bool) prints `yes` or `no`.
+/// ❓ Local: file order, not definition-table order (0x140ECAD88). Revision 0.
+/// ❓ Local: an option that the file does not have is absent; the original sends its default.
+fn rule_list(config: &str) -> io::Result<Vec<Vec<u8>>> {
+    let mut elements = vec![String::from(
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?><config major-version=\"74\" \
+         minor-version=\"0\" module=\"contents-rule-config\" \
+         release-module=\"LocalizationData\" release-side=\"client\">",
+    )];
+    // Remove XML comments. A comment can hold an option that is not active.
+    let mut text = String::new();
+    let mut source = config;
+    while let Some((before, after)) = source.split_once("<!--") {
+        text.push_str(before);
+        source = after.split_once("-->").map_or("", |(_, tail)| tail);
+    }
+    text.push_str(source);
+    let mut rest = text.as_str();
+    while let Some(start) = rest.find("<option name=\"") {
+        rest = &rest[start + 14..];
+        let Some((name, tail)) = rest.split_once("\" value=\"") else {
+            break;
+        };
+        let Some((value, tail)) = tail.split_once('"') else {
+            break;
+        };
+        rest = tail;
+        let value = match value {
+            "y" | "yes" => "yes",
+            "n" | "no" => "no",
+            other => other,
+        };
+        elements.push(format!("<option name='{name}' value='{value}'/>"));
+    }
+    elements.push(String::from("</config>"));
+    let mut out = Fragments::new(930);
+    let mut head = 74u16.to_le_bytes().to_vec();
+    head.extend(0u16.to_le_bytes());
+    head.extend(0u32.to_le_bytes());
+    head.extend((elements.len() as u16).to_le_bytes());
+    out.push(head).map_err(bad)?;
+    for element in elements {
+        let mut row = (element.len() as u16).to_le_bytes().to_vec();
+        row.extend(element.into_bytes());
+        out.push(row).map_err(bad)?;
+    }
+    out.finish().map_err(bad)
+}
+
 /// Command 11 `hhqsqb` → command 12 `hb`. The blob layout is the LobbyGate layout.
 fn hello(key: &RsaKey, frame: &[u8]) -> io::Result<(Vec<u8>, SessionPacketCrypt)> {
     let decoded = decode_client(
@@ -187,7 +240,11 @@ fn hello(key: &RsaKey, frame: &[u8]) -> io::Result<(Vec<u8>, SessionPacketCrypt)
     Ok((reply, SessionPacketCrypt::new(dh.session_key)))
 }
 
-async fn connection(key: Arc<RsaKey>, stream: TcpStream) -> io::Result<()> {
+async fn connection(
+    key: Arc<RsaKey>,
+    rules: Arc<Vec<Vec<u8>>>,
+    stream: TcpStream,
+) -> io::Result<()> {
     stream.set_nodelay(true)?;
     let (mut reader, mut writer) = stream.into_split();
     let Some(frame) = read_frame(&mut reader).await? else {
@@ -237,6 +294,7 @@ async fn connection(key: Arc<RsaKey>, stream: TcpStream) -> io::Result<()> {
                 }
                 None => eprintln!("gamed: command 31 without a character record, no reply"),
             },
+            929 => replies.extend(rules.iter().cloned()),
             // 42 `hiuuuh` → 43 `hq`. ❓ The spawn context is the PC object id here.
             42 => {
                 let key = packet
@@ -272,12 +330,13 @@ async fn connection(key: Arc<RsaKey>, stream: TcpStream) -> io::Result<()> {
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let mut args = std::env::args().skip(1);
-    let (mut listen, mut key_path) = (None, None);
+    let (mut listen, mut key_path, mut rule_path) = (None, None, None);
     while let Some(arg) = args.next() {
         let value = args.next().ok_or_else(|| bad("missing option value"))?;
         match arg.as_str() {
             "--listen" => listen = Some(value),
             "--handshake-key" => key_path = Some(value),
+            "--contents-rule" => rule_path = Some(value),
             "--lobby" => {}
             _ => {
                 return Err(bad(
@@ -289,14 +348,20 @@ async fn main() -> io::Result<()> {
     let listen = listen.ok_or_else(|| bad("--listen is necessary"))?;
     let key_path = key_path.ok_or_else(|| bad("--handshake-key is necessary"))?;
     let key = Arc::new(lobbygate::server::load_handshake_key(key_path.as_ref())?);
+    // No file: no reply to command 929 (the client then waits).
+    let rules = Arc::new(match rule_path {
+        Some(path) => rule_list(&std::fs::read_to_string(path)?)?,
+        None => Vec::new(),
+    });
+    eprintln!("gamed: rule list, {} fragments", rules.len());
     let listener = TcpListener::bind(&listen).await?;
     eprintln!("gamed: listening on {listen}");
     loop {
         let (stream, peer) = listener.accept().await?;
         eprintln!("gamed: client {peer}");
-        let key = key.clone();
+        let (key, rules) = (key.clone(), rules.clone());
         tokio::spawn(async move {
-            let result = connection(key, stream).await;
+            let result = connection(key, rules, stream).await;
             eprintln!("gamed: client {peer} closed: {result:?}");
         });
     }
@@ -323,6 +388,14 @@ mod tests {
         assert!(fragments.iter().all(|f| f[2..4] == 32u16.to_le_bytes()));
         // Header: world `h`, object id `q` at offset 8 + 2.
         assert_eq!(fragments[0][10..18], PC_OBJECT_ID.to_le_bytes());
+        let rules = rule_list(
+            "<!-- <option name=\"x\" value=\"1\"/> -->\n<option name=\"a-b\" value=\"y\"/>",
+        )
+        .unwrap();
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0][16..18], 3u16.to_le_bytes());
+        assert_eq!(rules[0][2..4], 930u16.to_le_bytes());
+        assert!(rules[0].ends_with(b"<option name='a-b' value='yes'/>\x09\0</config>"));
         let prepare = prepare_zone().unwrap();
         assert_eq!(prepare[2..4], 41u16.to_le_bytes());
     }
