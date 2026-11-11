@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 quick-xml = "0.38"
+shared = { path = "../Shared" }
 tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros"] }
 
 [dev-dependencies]

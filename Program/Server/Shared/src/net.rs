@@ -114,7 +114,7 @@ impl Outbox {
     }
 
     /// Put a frame in the queue. Waits while the queue is full (backpressure on a daemon link).
-    pub async fn send(&self, frame: impl Into<Bytes>) -> Result<(), SendError> {
+    pub async fn send_wait(&self, frame: impl Into<Bytes>) -> Result<(), SendError> {
         self.0
             .send(frame.into())
             .await

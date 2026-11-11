@@ -1,5 +1,4 @@
 //! Tokio listeners and the independent update/Ping timers.
-use crate::protocol;
 use crate::service::{Daemon, GameConn, ManagerConn, Out};
 use crate::store::Store;
 use std::collections::HashMap;
@@ -8,11 +7,10 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{mpsc, watch};
+use tokio::sync::watch;
 
-type Sink = mpsc::UnboundedSender<Vec<u8>>;
+type Sink = shared::net::Outbox;
 /// CheckPingTimer::HandleEvent rearms after each check (0x140002650).
 pub const PING_CHECK_INTERVAL: Duration = Duration::from_millis(3000);
 
@@ -80,19 +78,19 @@ impl<S: Store> Server<S> {
             match o {
                 Out::Reply(p) => {
                     if let Some(sink) = reply {
-                        let _ = sink.send(p);
+                        let _ = sink.try_send(p);
                     }
                 }
                 Out::Cluster(c, p) => {
                     let clusters = self.clusters.lock().unwrap_or_else(|e| e.into_inner());
                     if let Some(channel) = clusters.get(&c) {
-                        let _ = channel.sink.send(p);
+                        let _ = channel.sink.try_send(p);
                     }
                 }
                 Out::Managers(p) => {
                     let managers = self.managers.lock().unwrap_or_else(|e| e.into_inner());
                     for sink in managers.values() {
-                        let _ = sink.send(p.clone());
+                        let _ = sink.try_send(p.clone());
                     }
                 }
                 Out::Expired {
@@ -134,14 +132,15 @@ impl<S: Store> Server<S> {
     }
 
     async fn game_connection(self: Arc<Self>, stream: TcpStream, mut conn: GameConn) {
-        let (mut reader, writer) = stream.into_split();
+        let (reader, writer) = stream.into_split();
+        let mut reader = shared::net::FrameReader::new(reader, shared::net::MAX_TRUSTED_FRAME);
         let (out, writer_task) = spawn_writer(writer);
         let (close, mut closing) = watch::channel(false);
         // Keep a local sender so removal without socket closure does not wake this branch.
         loop {
             let packet = tokio::select! {
                 _ = closing.changed() => break,
-                packet = protocol::read(&mut reader) => packet,
+                packet = reader.next() => packet,
             };
             let Ok(Some(packet)) = packet else {
                 break;
@@ -182,10 +181,11 @@ impl<S: Store> Server<S> {
     }
 
     async fn manager_connection(self: Arc<Self>, stream: TcpStream, id: u64) {
-        let (mut reader, writer) = stream.into_split();
+        let (reader, writer) = stream.into_split();
+        let mut reader = shared::net::FrameReader::new(reader, shared::net::MAX_TRUSTED_FRAME);
         let (out, writer_task) = spawn_writer(writer);
         let mut conn = ManagerConn::default();
-        while let Ok(Some(packet)) = protocol::read(&mut reader).await {
+        while let Ok(Some(packet)) = reader.next().await {
             let was_hello = conn.hello;
             let result = self.daemon.manager_packet(&mut conn, &packet);
             if !was_hello && conn.hello {
@@ -206,16 +206,7 @@ impl<S: Store> Server<S> {
 }
 
 fn spawn_writer(
-    mut writer: tokio::net::tcp::OwnedWriteHalf,
-) -> (Sink, tokio::task::JoinHandle<()>) {
-    let (tx, mut rx) = mpsc::unbounded_channel::<Vec<u8>>();
-    let task = tokio::spawn(async move {
-        while let Some(packet) = rx.recv().await {
-            if writer.write_all(&packet).await.is_err() {
-                break;
-            }
-        }
-        let _ = writer.shutdown().await;
-    });
-    (tx, task)
+    writer: tokio::net::tcp::OwnedWriteHalf,
+) -> (Sink, tokio::task::JoinHandle<std::io::Result<()>>) {
+    shared::net::spawn_writer(writer, shared::net::LINK_QUEUE)
 }
