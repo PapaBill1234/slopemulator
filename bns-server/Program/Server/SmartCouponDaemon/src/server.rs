@@ -14,7 +14,7 @@ type Sink = shared::net::Outbox;
 /// Shared runtime state around the protocol core.
 pub struct Server<S, N> {
     pub daemon: Arc<Daemon<S, N>>,
-    work: mpsc::UnboundedSender<Work>,
+    work: mpsc::Sender<Work>,
     manager: Arc<Mutex<Option<(u64, Sink)>>>,
     next_id: AtomicU64,
 }
@@ -22,36 +22,41 @@ pub struct Server<S, N> {
 impl<S: Store, N: Np> Server<S, N> {
     /// Start the game-event worker. Start-up work runs first.
     pub fn start(daemon: Arc<Daemon<S, N>>, startup: Vec<Work>) -> Arc<Self> {
-        let (work, mut rx) = mpsc::unbounded_channel::<Work>();
+        // Bounded queue (rule H6). Full queue: the daemon connection waits.
+        let (work, mut rx) = mpsc::channel::<Work>(shared::net::LINK_QUEUE);
         let manager: Arc<Mutex<Option<(u64, Sink)>>> = Arc::default();
         let server = Arc::new(Self {
             daemon: daemon.clone(),
-            work: work.clone(),
+            work,
             manager: manager.clone(),
             next_id: AtomicU64::new(1),
         });
-        for job in startup {
-            let _ = work.send(job);
-        }
         tokio::spawn(async move {
-            while let Some(job) = rx.recv().await {
+            let run = async |job: Work| {
                 for packet in daemon.process(job).await {
                     let sink = manager.lock().unwrap_or_else(|e| e.into_inner()).clone();
                     if let Some((_, sink)) = sink {
                         let _ = sink.try_send(packet);
                     }
                 }
+            };
+            // Start-up work does not go through the queue. Its size has no limit.
+            for job in startup {
+                run(job).await;
+            }
+            while let Some(job) = rx.recv().await {
+                run(job).await;
             }
         });
         server
     }
 
-    fn dispatch(&self, handled: Handled, out: &Sink) -> bool {
+    async fn dispatch(&self, handled: Handled, out: &Sink) -> bool {
         for packet in handled.replies {
             let _ = out.try_send(packet);
         }
         for job in handled.work {
-            let _ = self.work.send(job);
+            let _ = self.work.send(job).await;
         }
         !handled.close
     }
@@ -91,7 +96,7 @@ impl<S: Store, N: Np> Server<S, N> {
                 frame = reader.next() => {
                     let Ok(Some(packet)) = frame else { break };
                     let handled = self.daemon.daemon_packet(&mut conn, &packet);
-                    if !self.dispatch(handled, &out) {
+                    if !self.dispatch(handled, &out).await {
                         break;
                     }
                 }
@@ -114,7 +119,7 @@ impl<S: Store, N: Np> Server<S, N> {
             if !was_hello && conn.hello {
                 *self.manager.lock().unwrap_or_else(|e| e.into_inner()) = Some((id, out.clone()));
             }
-            if !self.dispatch(handled, &out) {
+            if !self.dispatch(handled, &out).await {
                 break;
             }
         }
