@@ -59,18 +59,23 @@ impl Fixture {
             accounts,
             owned: Vec::new(),
         };
-        let mut store = MssqlStore::from_env().expect("SQL Store startup failed; details withheld");
+        let store = fixture
+            .runtime
+            .block_on(MssqlStore::from_env())
+            .expect("SQL Store startup failed; details withheld");
         for id in accounts {
-            assert!(store
-                .load_game_account(id)
+            assert!(fixture
+                .runtime
+                .block_on(store.load_game_account(id))
                 .expect("account preflight failed")
                 .is_none());
         }
         // Track only preflight-absent IDs. The guard exists before each write.
         for id in accounts {
             fixture.owned.push(id);
-            store
-                .register_game_account(
+            fixture
+                .runtime
+                .block_on(store.register_game_account(
                     Account {
                         id,
                         name: generated_name(id).encode_utf16().collect(),
@@ -80,7 +85,7 @@ impl Fixture {
                         bot_score: 0,
                     },
                     0,
-                )
+                ))
                 .expect("generated registration failed");
         }
         Some((fixture, store))
@@ -168,7 +173,7 @@ impl Drop for Fixture {
 #[test]
 fn sql_character_lifecycle_outputs_and_cleanup() {
     use lobbydaemon::character::{CreateCharacter, CreatedCharacter};
-    let Some((mut f, mut store)) = Fixture::new() else {
+    let Some((mut f, store)) = Fixture::new() else {
         return;
     };
     let account = f.accounts[0];
@@ -180,21 +185,29 @@ fn sql_character_lifecycle_outputs_and_cleanup() {
         right: 1,
     };
     let pending = request(rand::random());
-    store.check_character_name(&pending.name).unwrap();
-    let cancelled = store.try_character_creation(pending).unwrap();
-    store.cancel_character_creation(cancelled).unwrap();
-    let pcid = store
-        .try_character_creation(request(rand::random()))
+    f.runtime
+        .block_on(store.check_character_name(&pending.name))
         .unwrap();
-    store
-        .finish_character_creation(
+    let cancelled = f
+        .runtime
+        .block_on(store.try_character_creation(pending))
+        .unwrap();
+    f.runtime
+        .block_on(store.cancel_character_creation(cancelled))
+        .unwrap();
+    let pcid = f
+        .runtime
+        .block_on(store.try_character_creation(request(rand::random())))
+        .unwrap();
+    f.runtime
+        .block_on(store.finish_character_creation(
             pcid,
             CreatedCharacter {
                 job: 1,
                 level: 1,
                 showcase: vec![7; 512],
             },
-        )
+        ))
         .unwrap();
     let state = |f: &mut Fixture, pcid: u64| {
         let id = pcid as i64;
@@ -206,25 +219,42 @@ fn sql_character_lifecycle_outputs_and_cleanup() {
         .unwrap()
     };
     assert_eq!(state(&mut f, pcid), 2);
-    store.try_character_deletion(pcid).unwrap();
+    f.runtime
+        .block_on(store.try_character_deletion(pcid))
+        .unwrap();
     assert_eq!(state(&mut f, pcid), 3);
-    store.cancel_character_deletion(pcid).unwrap();
+    f.runtime
+        .block_on(store.cancel_character_deletion(pcid))
+        .unwrap();
     assert_eq!(state(&mut f, pcid), 2);
     for _ in 0..2 {
-        store.try_character_deletion(pcid).unwrap();
-        let timestamp = store
-            .finish_character_deletion(pcid, 3600)
+        f.runtime
+            .block_on(store.try_character_deletion(pcid))
+            .unwrap();
+        let timestamp = f
+            .runtime
+            .block_on(store.finish_character_deletion(pcid, 3600))
             .unwrap()
             .unwrap();
         assert!((1..=12).contains(&timestamp.month));
         assert_eq!(state(&mut f, pcid), 4);
-        store.try_character_restoration(pcid).unwrap();
+        f.runtime
+            .block_on(store.try_character_restoration(pcid))
+            .unwrap();
         assert_eq!(state(&mut f, pcid), 5);
-        store.finish_character_restoration(pcid).unwrap();
+        f.runtime
+            .block_on(store.finish_character_restoration(pcid))
+            .unwrap();
         assert_eq!(state(&mut f, pcid), 2);
     }
-    store.try_character_deletion(pcid).unwrap();
-    assert!(store.finish_character_deletion(pcid, 0).unwrap().is_none());
+    f.runtime
+        .block_on(store.try_character_deletion(pcid))
+        .unwrap();
+    assert!(f
+        .runtime
+        .block_on(store.finish_character_deletion(pcid, 0))
+        .unwrap()
+        .is_none());
     assert_eq!(state(&mut f, pcid), 6);
     // The guard deletes generated character data, life stories and accounts.
     // Do not provoke procedure errors that can write unscoped error-log rows.
@@ -232,36 +262,79 @@ fn sql_character_lifecycle_outputs_and_cleanup() {
 
 #[test]
 fn sql_account_characters_logout_optional_and_blob_boundaries() {
-    let Some((mut f, mut store)) = Fixture::new() else {
+    let Some((mut f, store)) = Fixture::new() else {
         return;
     };
     let id = f.accounts[0];
-    assert_eq!(store.load_game_account(id).unwrap().unwrap().id, id);
-    store.update_last_login(id, 0).unwrap();
-    store.update_last_logout(id, 29).unwrap();
-    assert_eq!(store.load_game_account(id).unwrap().unwrap().bot_score, 29);
-    assert!(store.load_incomplete_lobby_service(id).unwrap().is_empty());
-    assert!(store.load_character_list(id).unwrap().is_empty());
-    assert!(store.load_account_exp(id).unwrap().is_none());
+    assert_eq!(
+        f.runtime
+            .block_on(store.load_game_account(id))
+            .unwrap()
+            .unwrap()
+            .id,
+        id
+    );
+    f.runtime.block_on(store.update_last_login(id, 0)).unwrap();
+    f.runtime
+        .block_on(store.update_last_logout(id, 29))
+        .unwrap();
+    assert_eq!(
+        f.runtime
+            .block_on(store.load_game_account(id))
+            .unwrap()
+            .unwrap()
+            .bot_score,
+        29
+    );
+    assert!(f
+        .runtime
+        .block_on(store.load_incomplete_lobby_service(id))
+        .unwrap()
+        .is_empty());
+    assert!(f
+        .runtime
+        .block_on(store.load_character_list(id))
+        .unwrap()
+        .is_empty());
+    assert!(f
+        .runtime
+        .block_on(store.load_account_exp(id))
+        .unwrap()
+        .is_none());
     let exp = AccountExp {
         exp: 307,
         quota_per_day: 17,
         last_update: 381,
     };
-    store.insert_account_exp(id, exp.clone()).unwrap();
-    assert_eq!(store.load_account_exp(id).unwrap(), Some(exp));
-    assert!(store.load_jumping_creation_quota(id).unwrap().is_none());
+    f.runtime
+        .block_on(store.insert_account_exp(id, exp.clone()))
+        .unwrap();
+    assert_eq!(
+        f.runtime.block_on(store.load_account_exp(id)).unwrap(),
+        Some(exp)
+    );
+    assert!(f
+        .runtime
+        .block_on(store.load_jumping_creation_quota(id))
+        .unwrap()
+        .is_none());
     let guid = Uuid::from_bytes_le(id);
     f.query("INSERT INTO dbo.JumpingCharacterCreationQuota (GameAccountID, CreationQuota, CreationCount) VALUES (@P1, 3, 1)", &[&guid]);
     assert_eq!(
-        store
-            .load_jumping_creation_quota(id)
+        f.runtime
+            .block_on(store.load_jumping_creation_quota(id))
             .unwrap()
             .unwrap()
             .quota,
         3
     );
-    assert_eq!(store.load_time_based_play_info(id).unwrap().len(), 2);
+    assert_eq!(
+        f.runtime
+            .block_on(store.load_time_based_play_info(id))
+            .unwrap()
+            .len(),
+        2
+    );
     let pcid = f.character(2, 0) as i64;
     // All four conflicting blob columns use the same generated boundary lengths.
     let service = pcid;
@@ -269,14 +342,16 @@ fn sql_account_characters_logout_optional_and_blob_boundaries() {
     for length in [0, 511, 512, 513, 4096] {
         let bytes = vec![7u8; length];
         f.query("UPDATE dbo.CharacterData SET ShowcaseData=@P2 WHERE PCID=@P1; UPDATE dbo.CharacterCosmesis SET NewAppearanceData=@P2 WHERE PCID=@P1; UPDATE dbo.ChangeCharacterSex SET NewAppearanceData=@P2 WHERE PCID=@P1; UPDATE dbo.ChangeCharacterRace SET NewAppearanceData=@P2 WHERE PCID=@P1", &[&pcid, &bytes]);
-        let list = store.load_character_list(id);
+        let list = f.runtime.block_on(store.load_character_list(id));
         if length <= 512 {
             assert_eq!(list.unwrap()[0].showcase, bytes);
         } else {
             assert_eq!(list.unwrap_err().kind(), std::io::ErrorKind::InvalidData);
         }
         for kind in [ServiceKind::Cosmesis, ServiceKind::Sex, ServiceKind::Race] {
-            let detail = store.load_service_detail(service as u64, kind);
+            let detail = f
+                .runtime
+                .block_on(store.load_service_detail(service as u64, kind));
             if length > 512 {
                 assert_eq!(detail.unwrap_err().kind(), std::io::ErrorKind::InvalidData);
                 continue;
@@ -352,10 +427,12 @@ fn game(pcid: u64, slot: AccountId, eligibility: Eligibility) -> Arc<StubGameDae
 }
 #[test]
 fn sql_retained_login_world_restoration_and_kick_score() {
-    let Some((mut f, mut store)) = Fixture::new() else {
+    let Some((mut f, store)) = Fixture::new() else {
         return;
     };
-    store.update_last_logout(f.accounts[0], 29).unwrap();
+    f.runtime
+        .block_on(store.update_last_logout(f.accounts[0], 29))
+        .unwrap();
     let pcid = f.character(5, 512);
     let (np, t, p, _, _) = f.np(pcid);
     let slot = f.accounts[0];
@@ -424,11 +501,11 @@ fn sql_retained_login_world_restoration_and_kick_score() {
     assert!(rows[0]
         .get::<tiberius::time::chrono::NaiveDateTime, _>(1)
         .is_none());
-    j.kick(key, 7).unwrap();
+    f.runtime.block_on(j.kick(key, 7)).unwrap();
     assert_eq!(j.session_count(), 0);
     assert_eq!(
-        j.store
-            .load_game_account(f.accounts[0])
+        f.runtime
+            .block_on(j.store.load_game_account(f.accounts[0]))
             .unwrap()
             .unwrap()
             .bot_score,

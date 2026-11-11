@@ -3,7 +3,12 @@
 //! Game tokens issued on the STS listener are consumed by lobbyd through
 //! `sts::np_adapter::AuthorityNp`. Presence, names and world entry use the
 //! empty `StubNp` backend. Loopback only. No account data is printed.
-use lobbydaemon::{jobs::Settings, np::StubNp, store::MemoryStore, Server};
+use lobbydaemon::{
+    jobs::Settings,
+    np::StubNp,
+    store::{MemoryStore, Shared},
+    Server,
+};
 use std::{
     io,
     net::{Ipv4Addr, SocketAddrV4},
@@ -70,7 +75,11 @@ async fn main() -> io::Result<()> {
         "lobbyd-sts: sts on {sts_addr}, lobbyd on {}",
         lobby.local_addr()?
     );
-    let server = Arc::new(Server::new(MemoryStore::default(), np, settings)?);
+    let server = Arc::new(Server::new(
+        Shared::new(MemoryStore::default()),
+        np,
+        settings,
+    )?);
     let (stop, shutdown) = watch::channel(false);
     let mut task = tokio::spawn(server.serve(lobby, shutdown));
     tokio::select! {

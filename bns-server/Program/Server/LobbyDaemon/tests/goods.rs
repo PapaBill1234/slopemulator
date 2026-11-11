@@ -4,9 +4,9 @@ use lobbydaemon::{
     jobs::{Jobs, Settings},
     np::StubNp,
     protocol as w,
-    store::MemoryStore,
+    store::{MemoryStore, Shared},
 };
-type Rig = Jobs<MemoryStore, StubNp>;
+type Rig = Jobs<Shared<MemoryStore>, StubNp>;
 fn packet(f: &str, v: &[Value]) -> Vec<u8> {
     w::packet(f, v).unwrap()
 }
@@ -26,7 +26,7 @@ fn hello() -> Vec<u8> {
 }
 async fn rig() -> (Rig, u64) {
     let (np, t, p, _) = StubNp::fixture(85);
-    let mut j = Jobs::new(MemoryStore::default(), np, Settings::default()).unwrap();
+    let mut j = Jobs::new(Shared::new(MemoryStore::default()), np, Settings::default()).unwrap();
     send(&mut j, 1, hello()).await;
     let init = send(
         &mut j,

@@ -7,7 +7,11 @@ use bloodlib::{
 };
 use helpers::{config, connect_client, keys, receive, send};
 use lobbydaemon::{
-    character::CharacterPolicy, jobs::Settings, np::StubNp, protocol, store::MemoryStore,
+    character::CharacterPolicy,
+    jobs::Settings,
+    np::StubNp,
+    protocol,
+    store::{MemoryStore, Shared},
     Server as Lobby,
 };
 use lobbygate::{
@@ -47,7 +51,7 @@ async fn encrypted_character_create_delete_wait_cancel() {
         let cfg = config(listener.local_addr().unwrap().port());
         let lobby = Arc::new(
             Lobby::new(
-                MemoryStore::default(),
+                Shared::new(MemoryStore::default()),
                 np,
                 Settings {
                     character_policy: Some(CharacterPolicy {

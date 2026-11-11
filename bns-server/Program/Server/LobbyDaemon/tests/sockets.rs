@@ -1,5 +1,11 @@
 use bloodlib::packet::Value;
-use lobbydaemon::{jobs::Settings, np::StubNp, protocol as w, store::MemoryStore, Server};
+use lobbydaemon::{
+    jobs::Settings,
+    np::StubNp,
+    protocol as w,
+    store::{MemoryStore, Shared},
+    Server,
+};
 use std::{net::Ipv4Addr, sync::Arc, time::Duration};
 use tokio::{
     io::AsyncWriteExt,
@@ -29,7 +35,9 @@ async fn hello(s: &mut TcpStream) {
 #[tokio::test]
 async fn partial_read_survives_kick_output_and_disconnect_releases_sessions() {
     let (np, t, p, _) = StubNp::fixture(7);
-    let server = Arc::new(Server::new(MemoryStore::default(), np, Settings::default()).unwrap());
+    let server = Arc::new(
+        Server::new(Shared::new(MemoryStore::default()), np, Settings::default()).unwrap(),
+    );
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
     let address = listener.local_addr().unwrap();
     let (stop, shutdown) = watch::channel(false);
@@ -104,7 +112,9 @@ async fn partial_read_survives_kick_output_and_disconnect_releases_sessions() {
 async fn shutdown_cancels_pending_np_without_retained_init_session() {
     let (mut np, t, p, _) = StubNp::fixture(8);
     np.delay = Duration::from_secs(60);
-    let server = Arc::new(Server::new(MemoryStore::default(), np, Settings::default()).unwrap());
+    let server = Arc::new(
+        Server::new(Shared::new(MemoryStore::default()), np, Settings::default()).unwrap(),
+    );
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
     let address = listener.local_addr().unwrap();
     let (stop, shutdown) = watch::channel(false);

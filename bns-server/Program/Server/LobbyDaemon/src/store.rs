@@ -1,5 +1,5 @@
 //! Local persistence boundary. No SQL connection or sample data is used.
-use std::{collections::HashMap, io};
+use std::{collections::HashMap, future::Future, io};
 mod characters;
 
 pub use shared::np_channel::AccountId;
@@ -143,7 +143,8 @@ fn check_blob(bytes: &[u8]) -> io::Result<()> {
 
 /// Updates are best-effort in Jobs. Required load failures block fresh login.
 /// Optional methods reject by default. They do not enable optional login features.
-pub trait Store: Send + 'static {
+/// Synchronous model of the storage. Use it for in-memory stores only.
+pub trait SyncStore: Send + 'static {
     fn check_character_name(&mut self, _name: &[u16]) -> io::Result<()> {
         Err(unsupported())
     }
@@ -212,87 +213,176 @@ pub trait Store: Send + 'static {
 }
 
 // Share short synchronous Store calls, never an NP wait.
-impl<S: Store> Store for std::sync::Arc<std::sync::Mutex<S>> {
-    fn check_character_name(&mut self, name: &[u16]) -> io::Result<()> {
-        self.lock().unwrap().check_character_name(name)
-    }
+/// Async storage interface of the jobs. A call does not block a runtime thread.
+/// Each implementation is cheap to clone and safe to share between tasks.
+pub trait Store: Clone + Send + Sync + 'static {
+    fn check_character_name(&self, name: &[u16]) -> impl Future<Output = io::Result<()>> + Send;
     fn try_character_creation(
-        &mut self,
+        &self,
+        request: crate::character::CreateCharacter,
+    ) -> impl Future<Output = io::Result<u64>> + Send;
+    fn finish_character_creation(
+        &self,
+        pcid: u64,
+        created: crate::character::CreatedCharacter,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    fn cancel_character_creation(&self, pcid: u64) -> impl Future<Output = io::Result<()>> + Send;
+    fn try_character_deletion(&self, pcid: u64) -> impl Future<Output = io::Result<()>> + Send;
+    fn finish_character_deletion(
+        &self,
+        pcid: u64,
+        seconds: u32,
+    ) -> impl Future<Output = io::Result<Option<SqlTimestamp>>> + Send;
+    fn cancel_character_deletion(&self, pcid: u64) -> impl Future<Output = io::Result<()>> + Send;
+    fn try_character_restoration(&self, pcid: u64) -> impl Future<Output = io::Result<()>> + Send;
+    fn load_service_detail(
+        &self,
+        id: u64,
+        kind: ServiceKind,
+    ) -> impl Future<Output = io::Result<ServiceDetail>> + Send;
+    fn load_account_exp(
+        &self,
+        id: AccountId,
+    ) -> impl Future<Output = io::Result<Option<AccountExp>>> + Send;
+    fn insert_account_exp(
+        &self,
+        id: AccountId,
+        row: AccountExp,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    fn load_time_based_play_info(
+        &self,
+        id: AccountId,
+    ) -> impl Future<Output = io::Result<Vec<TimeBasedPlayInfo>>> + Send;
+    fn load_jumping_creation_quota(
+        &self,
+        id: AccountId,
+    ) -> impl Future<Output = io::Result<Option<JumpingCreationQuota>>> + Send;
+    fn finish_character_restoration(
+        &self,
+        pcid: u64,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    fn load_game_account(
+        &self,
+        id: AccountId,
+    ) -> impl Future<Output = io::Result<Option<Account>>> + Send;
+    fn register_game_account(
+        &self,
+        account: Account,
+        ipv4: u32,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    fn update_last_login(
+        &self,
+        id: AccountId,
+        ipv4: u32,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    fn update_last_logout(
+        &self,
+        id: AccountId,
+        bot_score: i32,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    fn load_character_list(
+        &self,
+        id: AccountId,
+    ) -> impl Future<Output = io::Result<Vec<Character>>> + Send;
+    fn load_incomplete_lobby_service(
+        &self,
+        id: AccountId,
+    ) -> impl Future<Output = io::Result<Vec<IncompleteService>>> + Send;
+}
+/// Adapter for an in-memory [`SyncStore`]. The lock is never held across `.await`.
+pub struct Shared<S>(std::sync::Arc<std::sync::Mutex<S>>);
+impl<S> Shared<S> {
+    pub fn new(store: S) -> Self {
+        Self(std::sync::Arc::new(std::sync::Mutex::new(store)))
+    }
+    pub fn lock(&self) -> std::sync::MutexGuard<'_, S> {
+        self.0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+}
+impl<S> Clone for Shared<S> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+impl<S: SyncStore> Store for Shared<S> {
+    async fn check_character_name(&self, name: &[u16]) -> io::Result<()> {
+        self.lock().check_character_name(name)
+    }
+    async fn try_character_creation(
+        &self,
         request: crate::character::CreateCharacter,
     ) -> io::Result<u64> {
-        self.lock().unwrap().try_character_creation(request)
+        self.lock().try_character_creation(request)
     }
-    fn finish_character_creation(
-        &mut self,
+    async fn finish_character_creation(
+        &self,
         pcid: u64,
         created: crate::character::CreatedCharacter,
     ) -> io::Result<()> {
-        self.lock()
-            .unwrap()
-            .finish_character_creation(pcid, created)
+        self.lock().finish_character_creation(pcid, created)
     }
-    fn cancel_character_creation(&mut self, pcid: u64) -> io::Result<()> {
-        self.lock().unwrap().cancel_character_creation(pcid)
+    async fn cancel_character_creation(&self, pcid: u64) -> io::Result<()> {
+        self.lock().cancel_character_creation(pcid)
     }
-    fn try_character_deletion(&mut self, pcid: u64) -> io::Result<()> {
-        self.lock().unwrap().try_character_deletion(pcid)
+    async fn try_character_deletion(&self, pcid: u64) -> io::Result<()> {
+        self.lock().try_character_deletion(pcid)
     }
-    fn finish_character_deletion(
-        &mut self,
+    async fn finish_character_deletion(
+        &self,
         pcid: u64,
         seconds: u32,
     ) -> io::Result<Option<SqlTimestamp>> {
-        self.lock()
-            .unwrap()
-            .finish_character_deletion(pcid, seconds)
+        self.lock().finish_character_deletion(pcid, seconds)
     }
-    fn cancel_character_deletion(&mut self, pcid: u64) -> io::Result<()> {
-        self.lock().unwrap().cancel_character_deletion(pcid)
+    async fn cancel_character_deletion(&self, pcid: u64) -> io::Result<()> {
+        self.lock().cancel_character_deletion(pcid)
     }
-    fn try_character_restoration(&mut self, pcid: u64) -> io::Result<()> {
-        self.lock().unwrap().try_character_restoration(pcid)
+    async fn try_character_restoration(&self, pcid: u64) -> io::Result<()> {
+        self.lock().try_character_restoration(pcid)
     }
-    fn load_service_detail(&mut self, id: u64, kind: ServiceKind) -> io::Result<ServiceDetail> {
-        self.lock().unwrap().load_service_detail(id, kind)
+    async fn load_service_detail(&self, id: u64, kind: ServiceKind) -> io::Result<ServiceDetail> {
+        self.lock().load_service_detail(id, kind)
     }
-    fn load_account_exp(&mut self, id: AccountId) -> io::Result<Option<AccountExp>> {
-        self.lock().unwrap().load_account_exp(id)
+    async fn load_account_exp(&self, id: AccountId) -> io::Result<Option<AccountExp>> {
+        self.lock().load_account_exp(id)
     }
-    fn insert_account_exp(&mut self, id: AccountId, row: AccountExp) -> io::Result<()> {
-        self.lock().unwrap().insert_account_exp(id, row)
+    async fn insert_account_exp(&self, id: AccountId, row: AccountExp) -> io::Result<()> {
+        self.lock().insert_account_exp(id, row)
     }
-    fn load_time_based_play_info(&mut self, id: AccountId) -> io::Result<Vec<TimeBasedPlayInfo>> {
-        self.lock().unwrap().load_time_based_play_info(id)
+    async fn load_time_based_play_info(&self, id: AccountId) -> io::Result<Vec<TimeBasedPlayInfo>> {
+        self.lock().load_time_based_play_info(id)
     }
-    fn load_jumping_creation_quota(
-        &mut self,
+    async fn load_jumping_creation_quota(
+        &self,
         id: AccountId,
     ) -> io::Result<Option<JumpingCreationQuota>> {
-        self.lock().unwrap().load_jumping_creation_quota(id)
+        self.lock().load_jumping_creation_quota(id)
     }
-    fn finish_character_restoration(&mut self, pcid: u64) -> io::Result<()> {
-        self.lock().unwrap().finish_character_restoration(pcid)
+    async fn finish_character_restoration(&self, pcid: u64) -> io::Result<()> {
+        self.lock().finish_character_restoration(pcid)
     }
-    fn load_game_account(&mut self, id: AccountId) -> io::Result<Option<Account>> {
-        self.lock().unwrap().load_game_account(id)
+    async fn load_game_account(&self, id: AccountId) -> io::Result<Option<Account>> {
+        self.lock().load_game_account(id)
     }
-    fn register_game_account(&mut self, account: Account, ipv4: u32) -> io::Result<()> {
-        self.lock().unwrap().register_game_account(account, ipv4)
+    async fn register_game_account(&self, account: Account, ipv4: u32) -> io::Result<()> {
+        self.lock().register_game_account(account, ipv4)
     }
-    fn update_last_login(&mut self, id: AccountId, ipv4: u32) -> io::Result<()> {
-        self.lock().unwrap().update_last_login(id, ipv4)
+    async fn update_last_login(&self, id: AccountId, ipv4: u32) -> io::Result<()> {
+        self.lock().update_last_login(id, ipv4)
     }
-    fn update_last_logout(&mut self, id: AccountId, bot_score: i32) -> io::Result<()> {
-        self.lock().unwrap().update_last_logout(id, bot_score)
+    async fn update_last_logout(&self, id: AccountId, bot_score: i32) -> io::Result<()> {
+        self.lock().update_last_logout(id, bot_score)
     }
-    fn load_character_list(&mut self, id: AccountId) -> io::Result<Vec<Character>> {
-        self.lock().unwrap().load_character_list(id)
+    async fn load_character_list(&self, id: AccountId) -> io::Result<Vec<Character>> {
+        self.lock().load_character_list(id)
     }
-    fn load_incomplete_lobby_service(
-        &mut self,
+    async fn load_incomplete_lobby_service(
+        &self,
         id: AccountId,
     ) -> io::Result<Vec<IncompleteService>> {
-        self.lock().unwrap().load_incomplete_lobby_service(id)
+        self.lock().load_incomplete_lobby_service(id)
     }
 }
 
@@ -315,7 +405,7 @@ pub struct MemoryStore {
     pub login_updates: Vec<(AccountId, u32)>,
     pub logout_updates: Vec<(AccountId, i32)>,
 }
-impl Store for MemoryStore {
+impl SyncStore for MemoryStore {
     fn check_character_name(&mut self, name: &[u16]) -> io::Result<()> {
         self.check_name(name)
     }
