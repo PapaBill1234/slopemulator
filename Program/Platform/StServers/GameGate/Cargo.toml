@@ -1,0 +1,21 @@
+[package]
+name = "gamegate"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "GameGate of the StServers port: daemon gate for LobbyDaemon and GameDaemon, and the daemon-side client."
+
+[dependencies]
+sts-core = { path = "../StsCore" }
+sts = { path = "../../Sts" }
+shared = { path = "../../../Server/Shared" }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "signal"] }
+
+[dev-dependencies]
+routesrv = { path = "../RouteSrv" }
+authsrv = { path = "../AuthSrv" }
+gameaccountsrv = { path = "../GameAccountSrv" }
+
+[[bin]]
+name = "GameGate"
+path = "src/main.rs"

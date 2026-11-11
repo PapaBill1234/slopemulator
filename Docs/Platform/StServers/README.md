@@ -37,15 +37,15 @@ Scoring: Ported = 100 %, In progress = 50 %, all other states = 0 %.
 
 | Measure | Count | Percent |
 | --- | --- | --- |
-| **Rust port parity** | 1 ported + 5 in progress of 49 | **7 %** |
+| **Rust port parity** | 1 ported + 6 in progress of 49 | **8 %** |
 | Ported (DbSrv) | 1 of 49 | 2 % |
-| In progress (RouteSrv, CliGate, AuthSrv, GameAccountSrv, SlotSrv) | 5 of 49 | 10 % |
-| Analysed or decompiled (no Rust yet) | 3 of 49 | 6 % |
+| In progress (RouteSrv, CliGate, AuthSrv, GameAccountSrv, SlotSrv, GameGate) | 6 of 49 | 12 % |
+| Analysed or decompiled (no Rust yet) | 2 of 49 | 4 % |
 | Not started | 40 of 49 | 82 % |
 | By process count (DbSrv runs 33 instances) | 33 of 81 processes ported | 41 % ❓ misleading, one binary |
 
 ```
-Port parity  [###-----------------------------------------------] 7 %
+Port parity  [####----------------------------------------------] 8 %
 Analysis     [#########-----------------------------------------] 18 %
 ```
 
@@ -59,7 +59,7 @@ The percent changes when a service reaches "Ported". RouteSrv is next.
 | RouteSrv | **In progress** | Phase 1 crate `routesrv` (19 tests): Connect, service commands, Direct/Key/Block routing, reply relay. ❓ key hash, provider codes and command reply shapes are local choices. Not yet: forward scope, multi-router, TLS. Spec `13-routesrv.md`, crate `Program/Platform/StServers/RouteSrv/README.md` |
 | CliGate | **In progress** | Phase 1 crate `cligate` (22 tests): forward of `GameAccount/ListMyAccounts`, `Slot/ListSlots`, `VirtualCurrency/GetBalance`, `Auth/GetMyUserInfo` for a logged-in user; login flow, logout, idle and auth timeouts, key routing through RouteSrv. Spec `11-cligate-protocol.md`. The `sts` crate still covers the client login path today |
 | AuthSrv | **In progress** | Phase 1 crate `authsrv` (5 tests): LoginStart, KeyData, LoginFinish, RequestToken, RequestGameToken, ConsumeGameToken, route bus registration. Accounts come from a TSV file, not from DbSrv. Spec `15-authsrv.md`, crate `Program/Platform/StServers/AuthSrv/README.md` |
-| GameGate | Analysed (partial) | Daemon gate for LobbyGate/GameDaemon, 74 commands |
+| GameGate | **In progress** | Token path only: Connect, forward of `Auth/ConsumeGameToken`, daemon-side client `GateNp` used by `lobbyd --gamegate` (1 bus test). Crate `Program/Platform/StServers/GameGate/README.md` |
 | GameAccountSrv | **In progress** | Login path only: `ListAccounts`, `ListMyAccounts` from a TSV file (2 tests). Crate `Program/Platform/StServers/GameAccountSrv` |
 | SlotSrv | **In progress** | Login path only: `ListSlots` with an empty list (1 test). Crate `Program/Platform/StServers/SlotSrv` |
 | SessionGateSrv, SpawnSrv | Decompiled | SessionGateSrv is not on the game client login path (`PlayStubs/README.md`) |

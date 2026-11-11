@@ -8,6 +8,7 @@ publish = false
 bloodlib = { path = "../BloodLib" }
 packet = { path = "../Packet" }
 shared = { path = "../Shared" }
+gamegate = { path = "../../Platform/StServers/GameGate" }
 sts = { path = "../../Platform/Sts", features = ["listener", "np-adapter"], optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "signal"] }
 

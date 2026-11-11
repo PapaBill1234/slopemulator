@@ -4,6 +4,7 @@
 pub mod conn;
 pub mod connect;
 pub mod error;
+pub mod guid;
 pub mod ini;
 pub mod route;
 pub mod route_client;
