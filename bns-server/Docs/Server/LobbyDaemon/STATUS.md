@@ -1,3 +1,16 @@
+# LobbyDaemon step 1 of the full port (analysis) — report
+
+| Batch | Spec | State |
+| --- | --- | --- |
+| A to D | `12-job-map.md`, `13` to `19` (45 job classes) | done |
+| E | `20-handlers.md` | done |
+| F | `21-lobbydb-wrappers.md` | done |
+| G | `22-compare-307.md`, `fn-map-307.json` | done |
+
+- Build 307 against build 348: 1813 of 1864 named function pairs have the same strings, callees and constants.
+- Open ❓: `22-compare-307.md` §7. Largest item: the caller maps from `dbrtn` to wire codes.
+- Next step: Rust port from the specs.
+
 # LobbyDaemon step 11 — report
 
 Step 11 is partial. New work stopped at turn 25. The opt-in local character flow passes.

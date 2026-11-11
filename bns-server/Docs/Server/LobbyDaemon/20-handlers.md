@@ -1,5 +1,7 @@
 # 20 — Batch E: handlers without a job, timers, manage port
 
+Build 307: read `22-compare-307.md` first. It removes 2 handlers and 1 timer and gives the 307 packet formats.
+
 Source: build 348 (PDB). All facts are ❓ for build 307 until the bodies are compared. Index: `12-job-map.md`. Command numbers: `command-tables.json`. Terms (NP OK, tasks `a/b`): `18-jobs-f.md`.
 
 Common codes in this file: 2 = bad packet or internal error, 4 = no such session or index, 5 = session not found or client key mismatch (gamed side).

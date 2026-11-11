@@ -155,7 +155,7 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 | D | Slot, user name, jumping character, play reward, NP schedule jobs | done (`19-jobs-g.md`) |
 | E | Handlers without a job, timers, manage port (`20-handlers.md`) | done |
 | F | `LobbyDB::*` wrappers (`21-lobbydb-wrappers.md`) | done |
-| G | Comparison with build 307 | open |
+| G | Comparison with build 307 (`22-compare-307.md`, `fn-map-307.json`) | done |
 
 ## 4. Tool
 
