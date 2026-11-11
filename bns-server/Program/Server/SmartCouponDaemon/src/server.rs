@@ -1,17 +1,15 @@
 //! Tokio listeners: daemon port (GameDaemons) and manage port (manager).
 use crate::np::Np;
-use crate::protocol;
 use crate::service::{Daemon, DaemonConn, Handled, ManagerConn, Work};
 use crate::store::Store;
 use std::io;
 use std::net::{IpAddr, Ipv4Addr};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 
-type Sink = mpsc::UnboundedSender<Vec<u8>>;
+type Sink = shared::net::Outbox;
 
 /// Shared runtime state around the protocol core.
 pub struct Server<S, N> {
@@ -40,7 +38,7 @@ impl<S: Store, N: Np> Server<S, N> {
                 for packet in daemon.process(job).await {
                     let sink = manager.lock().unwrap_or_else(|e| e.into_inner()).clone();
                     if let Some((_, sink)) = sink {
-                        let _ = sink.send(packet);
+                        let _ = sink.try_send(packet);
                     }
                 }
             }
@@ -50,7 +48,7 @@ impl<S: Store, N: Np> Server<S, N> {
 
     fn dispatch(&self, handled: Handled, out: &Sink) -> bool {
         for packet in handled.replies {
-            let _ = out.send(packet);
+            let _ = out.try_send(packet);
         }
         for job in handled.work {
             let _ = self.work.send(job);
@@ -84,12 +82,13 @@ impl<S: Store, N: Np> Server<S, N> {
     }
 
     async fn daemon_connection(self: Arc<Self>, stream: TcpStream, mut conn: DaemonConn) {
-        let (mut reader, writer) = stream.into_split();
+        let (reader, writer) = stream.into_split();
+        let mut reader = shared::net::FrameReader::new(reader, shared::net::MAX_TRUSTED_FRAME);
         let (out, writer_task) = spawn_writer(writer);
         let closer = conn.closer.clone();
         loop {
             tokio::select! {
-                frame = protocol::read(&mut reader) => {
+                frame = reader.next() => {
                     let Ok(Some(packet)) = frame else { break };
                     let handled = self.daemon.daemon_packet(&mut conn, &packet);
                     if !self.dispatch(handled, &out) {
@@ -105,10 +104,11 @@ impl<S: Store, N: Np> Server<S, N> {
     }
 
     async fn manager_connection(self: Arc<Self>, stream: TcpStream, id: u64) {
-        let (mut reader, writer) = stream.into_split();
+        let (reader, writer) = stream.into_split();
+        let mut reader = shared::net::FrameReader::new(reader, shared::net::MAX_TRUSTED_FRAME);
         let (out, writer_task) = spawn_writer(writer);
         let mut conn = ManagerConn::default();
-        while let Ok(Some(packet)) = protocol::read(&mut reader).await {
+        while let Ok(Some(packet)) = reader.next().await {
             let was_hello = conn.hello;
             let handled = self.daemon.manager_packet(&mut conn, &packet);
             if !was_hello && conn.hello {
@@ -130,16 +130,7 @@ impl<S: Store, N: Np> Server<S, N> {
 }
 
 fn spawn_writer(
-    mut writer: tokio::net::tcp::OwnedWriteHalf,
-) -> (Sink, tokio::task::JoinHandle<()>) {
-    let (tx, mut rx) = mpsc::unbounded_channel::<Vec<u8>>();
-    let task = tokio::spawn(async move {
-        while let Some(packet) = rx.recv().await {
-            if writer.write_all(&packet).await.is_err() {
-                break;
-            }
-        }
-        let _ = writer.shutdown().await;
-    });
-    (tx, task)
+    writer: tokio::net::tcp::OwnedWriteHalf,
+) -> (Sink, tokio::task::JoinHandle<std::io::Result<()>>) {
+    shared::net::spawn_writer(writer, shared::net::LINK_QUEUE)
 }

@@ -2,21 +2,20 @@
 //! connector per CacheD (port id 2, reconnect after 5000 ms).
 use crate::config::CachedInfo;
 use crate::gate::{Flow, Gate, Out, Peer};
-use crate::protocol;
 use std::collections::HashMap;
 use std::io;
 use std::net::SocketAddrV4;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tokio::io::{AsyncRead, AsyncWriteExt};
+use tokio::io::AsyncRead;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{mpsc, Notify};
+use tokio::sync::Notify;
 
 /// Session::tryReconnect delay.
 pub const RECONNECT_DELAY: Duration = Duration::from_millis(5000);
 
-type Sink = mpsc::UnboundedSender<Vec<u8>>;
+type Sink = shared::net::Outbox;
 
 struct Conn {
     sink: Sink,
@@ -34,17 +33,8 @@ pub struct Server {
     max_public: Option<usize>,
 }
 
-fn spawn_writer(mut writer: tokio::net::tcp::OwnedWriteHalf) -> Sink {
-    let (tx, mut rx) = mpsc::unbounded_channel::<Vec<u8>>();
-    tokio::spawn(async move {
-        while let Some(p) = rx.recv().await {
-            if writer.write_all(&p).await.is_err() {
-                break;
-            }
-        }
-        let _ = writer.shutdown().await;
-    });
-    tx
+fn spawn_writer(writer: tokio::net::tcp::OwnedWriteHalf) -> Sink {
+    shared::net::spawn_writer(writer, shared::net::LINK_QUEUE).0
 }
 
 impl Server {
@@ -65,12 +55,12 @@ impl Server {
             match o {
                 Out::Send(Peer::Client(id), p) => {
                     if let Some(c) = self.clients.lock().unwrap().get(&id) {
-                        let _ = c.sink.send(p);
+                        let _ = c.sink.try_send(p);
                     }
                 }
                 Out::Send(Peer::Cached(wid), p) => {
                     if let Some(c) = self.cached.lock().unwrap().get(&wid) {
-                        let _ = c.sink.send(p);
+                        let _ = c.sink.try_send(p);
                     }
                 }
                 Out::Close(Peer::Client(id)) => {
@@ -91,12 +81,12 @@ impl Server {
     async fn pump(
         &self,
         peer: Peer,
-        mut reader: impl AsyncRead + Unpin,
+        mut reader: shared::net::FrameReader<impl AsyncRead + Unpin>,
         close: Arc<Notify>,
     ) -> io::Result<()> {
         loop {
             let frame = tokio::select! {
-                f = protocol::read(&mut reader) => f?,
+                f = reader.next() => f?,
                 _ = close.notified() => return Ok(()),
             };
             let Some(frame) = frame else { return Ok(()) };
@@ -128,6 +118,7 @@ impl Server {
     async fn client(&self, stream: TcpStream) {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let (reader, writer) = stream.into_split();
+        let reader = shared::net::FrameReader::new(reader, i16::MAX as usize);
         let close = Arc::new(Notify::new());
         let conn = Conn {
             sink: spawn_writer(writer),
@@ -182,6 +173,7 @@ impl Server {
             if let Ok(stream) = connected {
                 let _ = stream.set_nodelay(true); // rule H5
                 let (reader, writer) = stream.into_split();
+                let reader = shared::net::FrameReader::new(reader, i16::MAX as usize);
                 let close = Arc::new(Notify::new());
                 let conn = Conn {
                     sink: spawn_writer(writer),

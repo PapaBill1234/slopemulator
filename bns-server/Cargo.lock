@@ -10,6 +10,7 @@ dependencies = [
  "lmxb",
  "packet",
  "quick-xml",
+ "shared",
  "tokio",
 ]
 
@@ -169,6 +170,7 @@ name = "cachegate"
 version = "0.1.0"
 dependencies = [
  "quick-xml",
+ "shared",
  "tokio",
 ]
 
@@ -870,6 +872,7 @@ dependencies = [
  "bloodlib",
  "packet",
  "quick-xml",
+ "shared",
  "tokio",
 ]
 
@@ -1157,6 +1160,7 @@ version = "0.1.0"
 dependencies = [
  "bloodlib",
  "quick-xml",
+ "shared",
  "tokio",
 ]
 
