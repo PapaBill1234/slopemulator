@@ -176,7 +176,7 @@ Refactor one crate at a time. Parity tests must pass before and after each step.
 | --- | --- |
 | 1 | Add spans and counters (M1, M2). Measure login and enter world. Write the numbers to `Docs/Architecture/baseline.md`. |
 | 2 | Shared `net` module (`Program/Server/Shared/src/net.rs`): framed reader, batching writer, bounded queues (H2 to H7). Move each daemon to it. Done 2026-11-11: all game daemons and gates read and write through it or through one batched write (`LobbyGate/src/wire.rs` `write_frames` for client frames); all sockets have `TCP_NODELAY`; no unbounded frame queue is left in `Program/Server`. Not moved, by decision: StServers (`Program/Platform`, login only, other frame form). Open: the client frame reader of LobbyGate and GameDaemon moves into the module when GameDaemon gets its connection tasks (step 5); spans and counters (M1, M2). |
-| 3 | Database pools (D1 to D4) in GameDaemon and LobbyDaemon. |
+| 3 | Database pools (D1 to D4) in GameDaemon and LobbyDaemon. State 2026-11-11: pool type in `Program/Server/Shared/src/pool.rs`; GameDaemon uses it (`GAMED_DB_POOL`, default 8). LobbyDaemon: the worker opens a new connection after a failed call (before: the store stopped for good). Open in LobbyDaemon: the `Store` trait is synchronous, sits behind one lock and blocks a runtime thread for each call; it becomes async with the pool when the job core is rewritten (step 4). Open: rule D4 (ordered queue for each character) comes with the shards (step 5); today each caller waits for its own call. |
 | 4 | Split handlers into pure domain functions (section 3). Remove locks (O1 to O4). |
 | 5 | Shards and tick loop in GameDaemon (section 6). |
 | 6 | Release profile, edition 2024, benches (M3). |
