@@ -1182,6 +1182,21 @@ Target source: `0x1400712C0`, job byte +113. Guide 348: `0x140072640`.
 | ❓ Kick success/fail/timeout final state policy | `0x140085DD0`, `0x140085F10`, `0x140086070` |
 | ❓ Live protocol interoperation | No network use was permitted |
 
+## Rust port and GameDaemon 381 facts (11 Nov 2026)
+
+| Item | Fact | Source |
+| --- | --- | --- |
+| Codec | `Program/Server/Packet/src/gamed_link.rs` (1, 2, 3, 4, 5, 6, 7, 20, 21, 22) | — |
+| LobbyDaemon side | `Program/Server/LobbyDaemon/src/gamed_link.rs` | — |
+| GameDaemon side | `Program/Server/GameDaemon/src/link.rs` | — |
+| 1 format `hhhhh` | Same in build 381 | GameDaemon 381 `0x14099BD50`, users `0x14013D340`, `0x140173360` |
+| 5 format `hqqqi` | Same in build 381 | GameDaemon 381 `0x1409449E4` |
+| 20 format `hqqobisbQh` | transaction, PC id, account id, blob ≤ 64 ❓, `i` ❓ client IPv4, name ≤ 33 units, make-PC record ≤ 256, is-jumping, top level | GameDaemon 381 `0x14099D280`, handler `0x14013F0F0` |
+| 21 format `hqhhb` | transaction, job, level, showcase record | GameDaemon 381 `0x1409A8D88`, sender `0x140149920` |
+| 22 format `hqE` | transaction, reason (25, 2, 3, 4, 26, 1) | GameDaemon 381 `CreateCharacterTran` `0x14006F1B0` |
+| ❓ packet_version in 381 | Not verified. The port uses 83 on both sides | — |
+| ❓ 6 in 381 | Not verified. The port uses the 307 field list | — |
+
 ## Out-of-scope boundaries
 
 | Scope | Address |

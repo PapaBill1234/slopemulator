@@ -1,5 +1,6 @@
-//! `lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--world <id>,<cluster>,<name>,<ip>,<port>]...`
+//! `lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--world-port <port>] [--world <id>,<cluster>,<name>,<ip>,<port>]...`
 //! Without `--gamegate` the empty stub rejects all tokens.
+//! `--world-port`: loopback listener of the GameDaemon link (07-gamed-link.md).
 use gamegate::np_client::GateNp;
 use lobbydaemon::{jobs::Settings, np::StubNp, protocol::WorldInfo, store::MemoryStore, Server};
 use shared::np_channel::Np;
@@ -10,7 +11,7 @@ use std::{
 };
 use tokio::{net::TcpListener, sync::watch};
 
-const USAGE: &str = "usage: lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--world <id>,<cluster>,<name>,<ip>,<port>]...";
+const USAGE: &str = "usage: lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--world-port <port>] [--world <id>,<cluster>,<name>,<ip>,<port>]...";
 
 fn usage() -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, USAGE)
@@ -37,6 +38,7 @@ fn world(spec: &str) -> io::Result<WorldInfo> {
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let mut port = 0u16;
+    let mut world_port: Option<u16> = None;
     let mut gate: Option<SocketAddr> = None;
     let mut game_code = String::from("bns");
     let mut settings = Settings::default();
@@ -46,6 +48,7 @@ async fn main() -> io::Result<()> {
         match arg.as_str() {
             "--gamegate" => gate = Some(value()?.parse().map_err(|_| usage())?),
             "--game-code" => game_code = value()?,
+            "--world-port" => world_port = Some(value()?.parse().map_err(|_| usage())?),
             "--world" => {
                 settings.worlds.push(world(&value()?)?);
                 if settings.worlds.len() > 16 {
@@ -57,6 +60,10 @@ async fn main() -> io::Result<()> {
     }
     // Loopback only.
     let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port)).await?;
+    let link = match world_port {
+        Some(port) => Some(TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port)).await?),
+        None => None,
+    };
     match gate {
         Some(gate) => {
             println!(
@@ -68,11 +75,11 @@ async fn main() -> io::Result<()> {
             backend.presence_replace = true;
             backend.world_default = Some(shared::np_channel::ChargeMode::Free);
             let np = GateNp::new(gate, game_code, 302, backend);
-            run(np, settings, listener, true).await
+            run(np, settings, listener, link, true).await
         }
         None => {
             println!("lobbyd local stub listens on {}", listener.local_addr()?);
-            run(StubNp::default(), settings, listener, false).await
+            run(StubNp::default(), settings, listener, link, false).await
         }
     }
 }
@@ -81,6 +88,7 @@ async fn run<N: Np>(
     np: N,
     settings: Settings,
     listener: TcpListener,
+    link: Option<TcpListener>,
     local_game: bool,
 ) -> io::Result<()> {
     #[cfg(feature = "mssql")]
@@ -89,10 +97,18 @@ async fn run<N: Np>(
             .await
             .map_err(io::Error::other)??;
         eprintln!("lobbyd: store LobbyDB (SQL Server)");
-        return serve(store, np, settings, listener, local_game).await;
+        return serve(store, np, settings, listener, link, local_game).await;
     }
     eprintln!("lobbyd: store memory (no LobbyDB connection string)");
-    serve(MemoryStore::default(), np, settings, listener, local_game).await
+    serve(
+        MemoryStore::default(),
+        np,
+        settings,
+        listener,
+        link,
+        local_game,
+    )
+    .await
 }
 
 async fn serve<S: lobbydaemon::store::Store, N: Np>(
@@ -100,9 +116,9 @@ async fn serve<S: lobbydaemon::store::Store, N: Np>(
     np: N,
     settings: Settings,
     listener: TcpListener,
+    link: Option<TcpListener>,
     local_game: bool,
 ) -> io::Result<()> {
-    // With `--gamegate` (play stack) characters are made locally: no GameDaemon server exists.
     let mut settings = settings;
     if local_game {
         // ❓ Local value. The original lifetime is not known.
@@ -117,10 +133,26 @@ async fn serve<S: lobbydaemon::store::Store, N: Np>(
         });
     }
     let mut server = Server::new(store, np, settings)?;
-    if local_game {
-        server = server.with_game_daemon(Arc::new(lobbydaemon::gamed::LocalGameDaemon::default()));
+    // With `--world-port` the GameDaemon link makes characters and consumes world tokens.
+    let gamed = link
+        .as_ref()
+        .map(|_| Arc::new(lobbydaemon::gamed_link::LinkGameDaemon::default()));
+    if let Some(gamed) = &gamed {
+        server = server.with_game_daemon(gamed.clone());
     }
     let server = Arc::new(server);
+    if let (Some(gamed), Some(link)) = (gamed, link) {
+        eprintln!("lobbyd: gamed link listens on {}", link.local_addr()?);
+        let target = server.clone();
+        let consume: lobbydaemon::gamed_link::Consume = Arc::new(move |key, token, ipv4, world| {
+            let target = target.clone();
+            Box::pin(async move { target.consume_world(key, token, ipv4, world).await })
+        });
+        tokio::spawn(async move {
+            let result = gamed.serve(link, consume).await;
+            eprintln!("lobbyd: gamed link listener stopped: {result:?}");
+        });
+    }
     let (stop, shutdown) = watch::channel(false);
     let mut task = tokio::spawn(server.serve(listener, shutdown));
     tokio::select! {

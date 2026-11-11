@@ -1,10 +1,11 @@
-//! `gamedaemon --listen <addr:port> --handshake-key <file> [--lobby <addr:port>]`
+//! `gamedaemon --listen <addr:port> --handshake-key <file> [--lobby <addr:port>] [--world <cluster>,<world>]`
 //!
 //! Client listener of the play stack (card world-1). Spec: Docs/Server/GameDaemon/04, 05.
 //! Done: Hello 11/12 (RSA handshake, then AES-128 session), token 23 → 24, log of each command.
 //! Enter world: 31 → 32 (fragments) and 41; 42 → 43. Spec: 10-session-handlers.md.
-//! ❓ Not parity: the token is not consumed through LobbyDaemon (no link). `--lobby` is not used yet.
-//! ❓ Not parity: the character comes from `shared::local_entry`, not from the game DB.
+//! `--lobby`: LobbyDaemon link (07-gamed-link.md). Command 23 consumes the world token there.
+//! Game DB: `BlGame`, connection string in the environment variable `GAMED_MSSQL_URL`.
+//! Command 31 loads the PC with `usp_LoadCreatureProperty`.
 //! 929 → 930: rule list from `--contents-rule <ContentsRule.gamed.config.xml>`.
 //! ❓ The sync packets after 32 have no reply yet.
 use bloodlib::{
@@ -12,6 +13,10 @@ use bloodlib::{
     frames::{decode_client, encode_client, ClientDecrypt, ClientEncrypt},
     packet::{compose, decompose, DecodeLimits, Value},
     session::SessionPacketCrypt,
+};
+use gamedaemon::{
+    db::{Db, Pc},
+    link::Link,
 };
 use lobbygate::wire::{inner_packet, read_frame, write_frame};
 use packet::{
@@ -22,7 +27,6 @@ use packet::{
     zone_entry::{EnterZoneOk, PrepareZone},
 };
 use rand::rngs::OsRng;
-use shared::local_entry::LocalEntry;
 use std::{io, sync::Arc};
 use tokio::net::{TcpListener, TcpStream};
 
@@ -36,11 +40,6 @@ fn hex(data: &[u8]) -> String {
     data.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-/// Start zone of each level-1 `PcInitialSetting` record: geo zone 1101.
-/// Spawn `1101_SP1` (`zonepcspawndata.1101.xml`): position and yaw. ❓ Units.
-const START_ZONE: u32 = 1101;
-const START_POSITION: [i16; 3] = [-3199, 9241, 599];
-const START_YAW: u16 = 45;
 /// PC object id: type 1 in bits 48.., index in bits 0..16
 /// (build 348 `World::initPcManager` 0x1403EDDC0, `GameObjectIdManager::Make` 0x14001D090).
 /// ❓ Local: one fixed index. The original takes the next free index (1..19999).
@@ -65,7 +64,7 @@ fn number(id: u16, value: u64) -> PropertyValue {
 /// Command 32 for a new level-1 character. Property ids: 10-session-handlers.md, section gw1.
 /// ❓ All properties not named here are zero. Max hp 303 and speed 62 come from `pcdata.xml`
 /// record 1 (level 1); the original selects the record by race, sex, job and level.
-fn enter_world(entry: &LocalEntry) -> io::Result<Vec<Vec<u8>>> {
+fn enter_world(entry: &Pc) -> io::Result<Vec<Vec<u8>>> {
     let values: [PropertyValue; 422] = std::array::from_fn(|index| number(index as u16 + 1, 0));
     let mut properties = CreatureProperties::new(values).map_err(bad)?;
     let mut set = |id: u16, value: u64| properties.set(id, number(id, value)).map_err(bad);
@@ -76,13 +75,13 @@ fn enter_world(entry: &LocalEntry) -> io::Result<Vec<Vec<u8>>> {
     for (index, byte) in entry.pc.appearance.iter().enumerate() {
         set(5 + index as u16, (*byte).into())?;
     }
-    set(98, START_ZONE.into())?;
-    set(99, START_POSITION[0] as u16 as u64)?;
-    set(100, START_POSITION[1] as u16 as u64)?;
-    set(101, START_POSITION[2] as u16 as u64)?;
-    set(102, START_YAW.into())?;
-    set(103, 1)?; // level
-    set(107, 303)?; // hp
+    set(98, entry.zone.into())?;
+    set(99, entry.position[0] as u16 as u64)?;
+    set(100, entry.position[1] as u16 as u64)?;
+    set(101, entry.position[2] as u16 as u64)?;
+    set(102, entry.yaw.into())?;
+    set(103, entry.level.into())?;
+    set(107, entry.hp)?;
     set(244, 303)?; // max-hp
     set(250, 62)?; // speed
     properties
@@ -129,17 +128,17 @@ fn enter_world(entry: &LocalEntry) -> io::Result<Vec<Vec<u8>>> {
 
 /// Command 41. Field names: build 348 `PcSpawnAction::prepareSpawn` 0x1404B4E50.
 /// ❓ Local: runtime zone id = geo zone id, channel 1, world clock byte 0.
-fn prepare_zone() -> io::Result<Vec<u8>> {
+fn prepare_zone(entry: &Pc) -> io::Result<Vec<u8>> {
     PrepareZone {
-        runtime_zone_id: START_ZONE.into(),
+        runtime_zone_id: entry.zone.into(),
         channel: 1,
-        geo_zone_id: START_ZONE,
+        geo_zone_id: entry.zone,
         correlation: SPAWN_KEY,
         config_byte: 0,
         action_flag: 0,
         zone_block: BROADCAST_BLOCK.to_vec(),
-        position: START_POSITION,
-        yaw: START_YAW,
+        position: entry.position,
+        yaw: entry.yaw,
         pc_transition: 1,
         summon_transition: 0,
     }
@@ -243,9 +242,16 @@ fn hello(key: &RsaKey, frame: &[u8]) -> io::Result<(Vec<u8>, SessionPacketCrypt)
 async fn connection(
     key: Arc<RsaKey>,
     rules: Arc<Vec<Vec<u8>>>,
+    link: Option<Arc<Link>>,
+    db: Option<Arc<Db>>,
     stream: TcpStream,
 ) -> io::Result<()> {
     stream.set_nodelay(true)?;
+    // Same form as LobbyGate sends it to LobbyDaemon (`LobbyGate/src/server.rs`).
+    let address = match stream.peer_addr()?.ip() {
+        std::net::IpAddr::V4(ip) => u32::from_le_bytes(ip.octets()),
+        std::net::IpAddr::V6(_) => 0,
+    };
     let (mut reader, mut writer) = stream.into_split();
     let Some(frame) = read_frame(&mut reader).await? else {
         return Ok(());
@@ -253,7 +259,8 @@ async fn connection(
     let (reply, mut session) = hello(&key, &frame)?;
     write_frame(&mut writer, &reply).await?;
     eprintln!("gamed: hello ok");
-    let mut entry: Option<LocalEntry> = None;
+    let mut entry: Option<Pc> = None;
+    let mut pcid: Option<u64> = None;
     while let Some(frame) = read_frame(&mut reader).await? {
         let (plain, _) = session.decrypt(&frame, 4000).map_err(bad)?;
         let packet = inner_packet(&plain)?;
@@ -262,13 +269,22 @@ async fn connection(
         let mut replies = Vec::new();
         match cmd {
             // 23 `hhqq` world, client key, lobby token → 24 `hQiQih` (10-session-handlers.md §23).
+            // The link sends 5 `hqqqi`; LobbyDaemon replies 6 (PC id) or 7 (reason).
+            // ❓ Failure form of 24: the reason is in the last field. Not verified.
             23 => {
-                if packet.len() >= 14 {
+                let mut reason = 2i16;
+                if let (Some(link), true) = (&link, packet.len() >= 22) {
                     let client_key = u64::from_le_bytes(packet[6..14].try_into().unwrap());
-                    entry = LocalEntry::read(client_key);
+                    let token = u64::from_le_bytes(packet[14..22].try_into().unwrap());
+                    match link.enter(client_key, token, address).await {
+                        Ok(id) => {
+                            pcid = Some(id);
+                            reason = 0;
+                        }
+                        Err(code) => reason = code,
+                    }
                     eprintln!(
-                        "gamed: client key {client_key}, character {:?}",
-                        entry.as_ref().map(|e| e.pcid)
+                        "gamed: client key {client_key}, character {pcid:?}, reason {reason}"
                     );
                 }
                 replies.push(
@@ -280,20 +296,28 @@ async fn connection(
                             Value::I32(0),
                             Value::I8(0),
                             Value::I32(0),
-                            Value::I16(0),
+                            Value::I16(reason),
                         ],
                     )
                     .map_err(bad)?,
                 );
             }
             // 31 `hic` client version, character → 32 fragments, then 41.
-            31 => match &entry {
-                Some(entry) => {
-                    replies.extend(enter_world(entry)?);
-                    replies.push(prepare_zone()?);
+            31 => {
+                if let (Some(db), Some(id), None) = (&db, pcid, &entry) {
+                    match db.load(id).await {
+                        Ok(pc) => entry = pc,
+                        Err(error) => eprintln!("gamed: load of PC {id} failed: {}", error.kind()),
+                    }
                 }
-                None => eprintln!("gamed: command 31 without a character record, no reply"),
-            },
+                match &entry {
+                    Some(entry) => {
+                        replies.extend(enter_world(entry)?);
+                        replies.push(prepare_zone(entry)?);
+                    }
+                    None => eprintln!("gamed: command 31 without a PC row, no reply"),
+                }
+            }
             929 => replies.extend(rules.iter().cloned()),
             // 42 `hiuuuh` → 43 `hq`. ❓ The spawn context is the PC object id here.
             42 => {
@@ -331,13 +355,21 @@ async fn connection(
 async fn main() -> io::Result<()> {
     let mut args = std::env::args().skip(1);
     let (mut listen, mut key_path, mut rule_path) = (None, None, None);
+    let (mut lobby, mut cluster, mut world) = (None, 1i16, 1i16);
     while let Some(arg) = args.next() {
         let value = args.next().ok_or_else(|| bad("missing option value"))?;
         match arg.as_str() {
             "--listen" => listen = Some(value),
             "--handshake-key" => key_path = Some(value),
             "--contents-rule" => rule_path = Some(value),
-            "--lobby" => {}
+            "--lobby" => lobby = Some(value),
+            "--world" => {
+                let ids = value
+                    .split_once(',')
+                    .ok_or_else(|| bad("--world <cluster>,<world>"))?;
+                cluster = ids.0.parse().map_err(bad)?;
+                world = ids.1.parse().map_err(bad)?;
+            }
             _ => {
                 return Err(bad(
                     "usage: gamedaemon --listen <addr:port> --handshake-key <file>",
@@ -354,14 +386,32 @@ async fn main() -> io::Result<()> {
         None => Vec::new(),
     });
     eprintln!("gamed: rule list, {} fragments", rules.len());
+    let db = match Db::from_env()? {
+        Some(mut db) => {
+            db.prepare().await?;
+            eprintln!("gamed: game DB BlGame (SQL Server)");
+            Some(Arc::new(db))
+        }
+        None => {
+            eprintln!("gamed: no game DB (GAMED_MSSQL_URL is not set)");
+            None
+        }
+    };
     let listener = TcpListener::bind(&listen).await?;
+    let port = listener.local_addr()?.port() as i16;
+    let link = lobby.map(|lobby| {
+        let link = Link::new(cluster, world, port, db.clone());
+        tokio::spawn(link.clone().run(lobby));
+        link
+    });
     eprintln!("gamed: listening on {listen}");
     loop {
         let (stream, peer) = listener.accept().await?;
         eprintln!("gamed: client {peer}");
         let (key, rules) = (key.clone(), rules.clone());
+        let (link, db) = (link.clone(), db.clone());
         tokio::spawn(async move {
-            let result = connection(key, rules, stream).await;
+            let result = connection(key, rules, link, db, stream).await;
             eprintln!("gamed: client {peer} closed: {result:?}");
         });
     }
@@ -374,7 +424,12 @@ mod tests {
 
     #[test]
     fn entry_packets_encode() {
-        let entry = LocalEntry {
+        let entry = Pc {
+            zone: 1101,
+            position: [-3199, 9241, 599],
+            yaw: 45,
+            level: 1,
+            hp: 303,
             pcid: 5,
             pc: MakePc {
                 race: 1,
@@ -396,7 +451,7 @@ mod tests {
         assert_eq!(rules[0][16..18], 3u16.to_le_bytes());
         assert_eq!(rules[0][2..4], 930u16.to_le_bytes());
         assert!(rules[0].ends_with(b"<option name='a-b' value='yes'/>\x09\0</config>"));
-        let prepare = prepare_zone().unwrap();
+        let prepare = prepare_zone(&entry).unwrap();
         assert_eq!(prepare[2..4], 41u16.to_le_bytes());
     }
 }

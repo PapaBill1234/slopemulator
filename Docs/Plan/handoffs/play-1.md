@@ -184,9 +184,9 @@ Goal: remove the local short cuts of §10. Characters go through `LobbyDB` and `
 | Stage | Work | State |
 | --- | --- | --- |
 | 1 | `lobbyd` uses `LobbyDB` through `MssqlStore` in the play stack | Done |
-| 2 | Real `lobbyd` ↔ `gamedaemon` link (Hello 1/2, create 20 → 21/22, entry 5 → 6/7) | Open |
-| 3 | `gamedaemon` creates and loads the PC in `BlGame` | Open |
-| 4 | Remove `LocalGameDaemon` and `shared::local_entry` | Open |
+| 2 | Real `lobbyd` ↔ `gamedaemon` link (Hello 1/2, world live 4, create 20 → 21/22, entry 5 → 6/7) | Done |
+| 3 | `gamedaemon` creates and loads the PC in `BlGame` | Done |
+| 4 | Remove `LocalGameDaemon` and `shared::local_entry` | Done |
 
 Stage 1 facts:
 
@@ -198,3 +198,51 @@ Stage 1 facts:
 | The 5 tests of `tests/mssql.rs` pass on the clone. | `cargo test -p lobbydaemon --features mssql --test mssql` |
 
 `tools/run_play.sh` builds `lobbyd` with feature `mssql`. It reads the connection string from `secrets/lobbyd.mssql.url` inside the service shell. The string is not on a command line. Without the file, `lobbyd` keeps characters in memory.
+
+Stages 2 to 4, code:
+
+| Part | File |
+| --- | --- |
+| Link messages 1, 2, 3, 4, 5, 6, 7, 20, 21, 22 | `Program/Server/Packet/src/gamed_link.rs` |
+| `lobbyd` listener and `LinkGameDaemon` (option `--world-port`, 21800 as in the original `lobbyd.config.xml`) | `Program/Server/LobbyDaemon/src/gamed_link.rs` |
+| `gamedaemon` link client (option `--lobby`, `--world <cluster>,<world>`) | `Program/Server/GameDaemon/src/link.rs` |
+| `BlGame` create and load | `Program/Server/GameDaemon/src/db.rs` |
+| Test of both sides on loopback (with `GAMED_MSSQL_URL`: real create, load, delete of PC 900002) | `Program/Server/GameDaemon/tests/link.rs` |
+
+```text
+client ─ L_CreateCharacterReq ─► lobbyd ─ LobbyDB (name, slot, PC id)
+                                   │ 20 (PC id, account, name, make-PC record)
+                                   ▼
+                               gamedaemon ─ BlGame.dbo.usp_CreateCharacter
+                                   │ 21 (job, level, showcase) or 22 (reason)
+                                   ▼
+client ─ command 23 (key, token) ─► gamedaemon ─ 5 ─► lobbyd (consume world token) ─ 6 (PC id) or 7
+client ─ command 31 ─► gamedaemon ─ BlGame.dbo.usp_LoadCreatureProperty ─► 32, 41
+```
+
+Facts of stages 2 and 3 (GameDaemon build 381 unless a different build is given):
+
+| Fact | Source |
+| --- | --- |
+| `BlGame` is a schema-only clone of the image database: 107 tables, 476 procedures, 153 indexes. `Configuration` has the 2 image rows (`WorldClusterID 1`, `WorldID 1`); trigger `utr_InstanceIdReseed` was off for that insert. The old copy is `BlGame_recreated`. | `BlGame.mdf` of the BNSX image, attached as `BlGame_bnsx` |
+| Create handler `HandleLobbyGame_CreateCharacterReq`. Command 20 body `qqobisbQh`: lobby transaction, PC id, game account id, blob (max 64 bytes ❓ external account data), `i` (❓ client IPv4), name (33 units), make-PC record (max 256 bytes), is-jumping, top level. The world id comes from the channel. | `0x14013F0F0`, format `0x14099D280` |
+| Failure reasons of the create: 25 (race > 11, job > 19, sex > 3, job not creatable, no race-sex-job record, no jumping data); 2 (no init zone, no pc data, send to Cached failed). Cached reasons map 2/13 → 2, 3 → 3, 10 → 4, 11 → 26, 12 → 25, other → 1. | `CreateCharacterTran` dispatcher `0x14006F1B0`, init `0x14006F3D0` |
+| The original sends the create to CacheDaemon through CacheGate. It does not call SQL. CacheDaemon calls `usp_CreateCharacter`. | `0x140070580` → `0x140323AE0`, log "tryCreateCharacter send request to Cached" |
+| Reply 21 `hqhhb`: transaction, job, level, showcase record. | `0x140149920`, format `0x1409A8D88`, showcase builder `0x1400BB110` |
+| `usp_CreateCharacter` has 453 parameters. The groups `Quest1`, `Quest2`, `Costume`, `Weapon` are optional (all NULL = no row). A create with defaults makes rows in 11 tables: CreatureProperty, ActivatedTeleport, ClientOption (2), DiscoveryArea, QuestList, RandomStore (2), SkillPage, SkillSkinProperty, SlateProperty (2), EnergyProperty, MentoringProperty. | `BlGame`, live probe (rows removed) |
+| `usp_CreateCharacter` and `usp_LoadCreatureProperty` fail inside an open transaction ("invalid initial transaction"). | procedure text |
+| Option-type keys of the 2 `ClientOption` rows and store numbers of the 2 `RandomStore` rows must differ (primary keys). The port uses 1 and 2. ❓ Original values. | `PK_ClientOption`, live probe |
+
+Not parity (❓ local):
+
+| Item | Reason |
+| --- | --- |
+| `gamedaemon` calls `BlGame` directly | CacheDaemon is not ported |
+| Start values: only zone 1101, position, yaw, level 1, hp 303 are set. All other values are 0 or empty | `PcInitialSetting` (table 2019) and pc data (table 2007) are not read |
+| No appearance range checks (tables 687, 675), no creatable-job check, no jumping character | Not ported |
+| Link packet version 83 (build 348) | The build-381 value is not verified |
+| Reply 6 uses the build-307 field list with empty lists | The build-381 list is not verified; `hqqqiCQiqqihcccc;qiqCihqq;Chq;` at `0x1409A90A8` is a related 381 string |
+| Reply 24 with a reason in the last field on failure | The failure form is not verified |
+| Delete, restore, eligibility, admission wait: no link message | Not ported |
+
+`tools/run_play.sh` gives `gamedaemon` the connection string from `secrets/gamed.mssql.url` in the same way as `lobbyd`. Characters made before this change are not in `BlGame`; make a new character.
