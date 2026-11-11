@@ -88,8 +88,10 @@ async fn run<N: Np>(
         let store = tokio::task::spawn_blocking(lobbydaemon::mssql::MssqlStore::from_env)
             .await
             .map_err(io::Error::other)??;
+        eprintln!("lobbyd: store LobbyDB (SQL Server)");
         return serve(store, np, settings, listener, local_game).await;
     }
+    eprintln!("lobbyd: store memory (no LobbyDB connection string)");
     serve(MemoryStore::default(), np, settings, listener, local_game).await
 }
 

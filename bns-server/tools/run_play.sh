@@ -31,6 +31,11 @@ COMMON="--config $CFG/StServer.ini --route-ini $CFG/Route.ini"
 ENTRY_DIR="$ROOT/logs/play/entry"
 # Original GameDaemon rule file (not in git). gamedaemon sends it as command 930.
 CONTENTS_RULE="${CONTENTS_RULE:-$ROOT/../BnS_2020/GameDaemon/Config/ContentsRule.gamed.config.xml}"
+# lobbyd reads the LobbyDB connection string from a secrets file (not in git).
+# The file content never goes on a command line. Without the file, lobbyd keeps characters in memory.
+LOBBYD_DB_FILE="${LOBBYD_DB_FILE:-$ROOT/secrets/lobbyd.mssql.url}"
+LOBBYD_DB=""
+[ -f "$LOBBYD_DB_FILE" ] && LOBBYD_DB="BNS_SECRET_FILE=$LOBBYD_DB_FILE sh -c 'LOBBYD_MSSQL_URL=\$(cat \$BNS_SECRET_FILE) exec \"\$@\"' lobbyd"
 SERVICES=(
   "RouteSrv|6605|$BIN/RouteSrv --config $CFG/Route.ini --listen 127.0.0.1:6605 --server-id 1"
   "AuthSrv||$BIN/AuthSrv $COMMON --accounts $ACCOUNTS --server-id 2"
@@ -39,7 +44,7 @@ SERVICES=(
   "PlayStubs||$BIN/PlayStubs $COMMON --server-id 5"
   "CliGate|$CLIGATE_PORT|$BIN/CliGate $COMMON --listen 0.0.0.0:$CLIGATE_PORT --server-id 6"
   "GameGate|6601|$BIN/GameGate $COMMON --listen 127.0.0.1:6601 --server-id 7"
-  "LobbyDaemon|21801|env BNS_LOCAL_ENTRY_DIR=$ENTRY_DIR $BIN/lobbydaemon 21801 --gamegate 127.0.0.1:6601 --game-code bns --world 1,1,Play,$PUBLIC_IP,$GAME_PORT"
+  "LobbyDaemon|21801|env BNS_LOCAL_ENTRY_DIR=$ENTRY_DIR $LOBBYD_DB $BIN/lobbydaemon 21801 --gamegate 127.0.0.1:6601 --game-code bns --world 1,1,Play,$PUBLIC_IP,$GAME_PORT"
   "LobbyGate|$LOBBYGATE_PORT|env LOBBYGATE_DEBUG=1 $BIN/lobbygate --config-dir $LOBBYGATE_CONFIG_DIR --handshake-key $HANDSHAKE_KEY"
 )
 # DbSrv is not on the play path yet (AuthSrv reads a file). It starts only with tools/play/Db.ini.
@@ -69,9 +74,9 @@ start() {
   [ -f "$HANDSHAKE_KEY" ] || { echo "missing handshake key $HANDSHAKE_KEY"; exit 1; }
   [ -f "$LOBBYGATE_CONFIG_DIR/lobbygate.config.xml" ] || { echo "missing LobbyGate config in $LOBBYGATE_CONFIG_DIR"; exit 1; }
   if command -v docker >/dev/null && ! docker ps --format '{{.Names}}' 2>/dev/null | grep -qx bns-mssql; then
-    echo "note: DB container bns-mssql is not running (the play path does not need it yet)"
+    echo "note: DB container bns-mssql is not running (lobbyd needs LobbyDB when secrets/lobbyd.mssql.url exists)"
   fi
-  (cd "$ROOT" && cargo build -q -p routesrv -p authsrv -p gameaccountsrv -p slotsrv -p play-stubs -p cligate -p gamegate -p lobbydaemon -p lobbygate -p gamedaemon)
+  (cd "$ROOT" && cargo build -q -p routesrv -p authsrv -p gameaccountsrv -p slotsrv -p play-stubs -p cligate -p gamegate -p lobbydaemon -p lobbygate -p gamedaemon --features lobbydaemon/mssql)
   mkdir -p "$LOGS"
   tmux new-session -d -s "$SESSION" -n shell -c "$ROOT"
   for entry in "${SERVICES[@]}"; do

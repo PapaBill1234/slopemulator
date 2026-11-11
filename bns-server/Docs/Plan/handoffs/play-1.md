@@ -176,3 +176,25 @@ Live result: the game Hello 11/12 works with the LobbyGate handshake layout. The
 | Failure reply in 348 is command 897, reason 2086. | `HandleGame_ContentsRuleListReq` 0x14036DF60 |
 
 Local: `gamedaemon --contents-rule <file>` reads `ContentsRule.gamed.config.xml` at start. ❓ File order, revision 0, no defaults for absent options, no 30 s rate limit.
+
+## 12. Move to the database (11 Nov 2026)
+
+Goal: remove the local short cuts of §10. Characters go through `LobbyDB` and `BlGame`, as in the original.
+
+| Stage | Work | State |
+| --- | --- | --- |
+| 1 | `lobbyd` uses `LobbyDB` through `MssqlStore` in the play stack | Done |
+| 2 | Real `lobbyd` ↔ `gamedaemon` link (Hello 1/2, create 20 → 21/22, entry 5 → 6/7) | Open |
+| 3 | `gamedaemon` creates and loads the PC in `BlGame` | Open |
+| 4 | Remove `LocalGameDaemon` and `shared::local_entry` | Open |
+
+Stage 1 facts:
+
+| Fact | Source |
+| --- | --- |
+| The recreated `LobbyDB` had 39 indexes. The image database has 75. `usp_CheckValidityOfCharacterName` needs `IX_Character_UniqueCharacterName` (index hint) and failed with SQL error 308. | `LobbyDB.mdf` of the BNSX image, attached as `LobbyDB_bnsx` |
+| `LobbyDB` is now a schema-only clone of the image database (`DBCC CLONEDATABASE`, then read-write). 37 tables, 178 procedures, 75 indexes, 0 rows. The old copy is `LobbyDB_recreated`. | container `bns-mssql` |
+| The image database has rows in `GameWorld` (1), `GameWorldCluster` (1), `RandomStoreInitializationSchedule` (1) and account tables. The clone has none. ❓ Seed rows that `lobbyd` needs. | `LobbyDB_bnsx` |
+| The 5 tests of `tests/mssql.rs` pass on the clone. | `cargo test -p lobbydaemon --features mssql --test mssql` |
+
+`tools/run_play.sh` builds `lobbyd` with feature `mssql`. It reads the connection string from `secrets/lobbyd.mssql.url` inside the service shell. The string is not on a command line. Without the file, `lobbyd` keeps characters in memory.
