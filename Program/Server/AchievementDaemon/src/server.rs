@@ -116,6 +116,7 @@ impl<S: Store> Server<S> {
     pub async fn serve_games(self: Arc<Self>, listener: TcpListener) -> io::Result<()> {
         loop {
             let (stream, addr) = listener.accept().await?;
+            let _ = stream.set_nodelay(true); // rule H5
             let ip = match addr.ip() {
                 IpAddr::V4(ip) => ip,
                 IpAddr::V6(ip) => ip.to_ipv4_mapped().unwrap_or(Ipv4Addr::UNSPECIFIED),
@@ -126,6 +127,7 @@ impl<S: Store> Server<S> {
     pub async fn serve_managers(self: Arc<Self>, listener: TcpListener) -> io::Result<()> {
         loop {
             let (stream, _) = listener.accept().await?;
+            let _ = stream.set_nodelay(true); // rule H5
             let id = self.next_id.fetch_add(1, Ordering::Relaxed);
             tokio::spawn(self.clone().manager_connection(stream, id));
         }

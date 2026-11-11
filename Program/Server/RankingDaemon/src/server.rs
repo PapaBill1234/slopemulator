@@ -95,6 +95,7 @@ impl Server {
     pub async fn serve(self: Arc<Self>, port: Port, listener: TcpListener) -> io::Result<()> {
         loop {
             let (stream, _) = listener.accept().await?;
+            let _ = stream.set_nodelay(true); // rule H5
             let server = Arc::clone(&self);
             tokio::spawn(async move { server.session(port, stream).await });
         }

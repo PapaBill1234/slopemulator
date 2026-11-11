@@ -112,6 +112,7 @@ impl Server {
     pub async fn serve_public(self: Arc<Self>, listener: TcpListener) -> io::Result<()> {
         loop {
             let (stream, _) = listener.accept().await?;
+            let _ = stream.set_nodelay(true); // rule H5
             if self
                 .max_public
                 .is_some_and(|max| self.clients.lock().unwrap().len() >= max)
@@ -179,6 +180,7 @@ impl Server {
                 _ = stop.notified() => return,
             };
             if let Ok(stream) = connected {
+                let _ = stream.set_nodelay(true); // rule H5
                 let (reader, writer) = stream.into_split();
                 let close = Arc::new(Notify::new());
                 let conn = Conn {

@@ -172,11 +172,13 @@ impl<S: Store, N: Np> Server<S, N> {
         stream: TcpStream,
         lane: Lane<S, N>,
     ) -> io::Result<()> {
-        let (mut reader, mut writer) = stream.into_split();
+        shared::net::tune(&stream)?;
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = shared::net::FrameReader::new(reader, shared::net::MAX_TRUSTED_FRAME);
         let (tx, mut rx) = mpsc::channel::<Vec<Vec<u8>>>(32);
         self.links.lock().await.insert(link, (tx, lane.clone()));
         let receive = async {
-            while let Some(packet) = protocol::read(&mut reader).await? {
+            while let Some(packet) = reader.next().await? {
                 let mut jobs = lane.lock().await;
                 // Expire before dispatch too, so traffic cannot extend a deadline.
                 self.deliver(jobs.expire()?).await?;
@@ -199,8 +201,10 @@ impl<S: Store, N: Np> Server<S, N> {
         };
         let send = async {
             while let Some(packets) = rx.recv().await {
-                for packet in packets {
-                    writer.write_all(&packet).await?;
+                // One write for all packets of one job step. The order stays the same.
+                match packets.as_slice() {
+                    [packet] => writer.write_all(packet).await?,
+                    _ => writer.write_all(&packets.concat()).await?,
                 }
             }
             Ok(())
