@@ -227,6 +227,10 @@ pub fn character_info_failure(key: u64, slot: [u8; 16], reason: i16) -> io::Resu
         ],
     )
 }
+/// D80 GetServiceEntryListOk with no rows.
+pub fn service_entries(key: u64) -> io::Result<Vec<Vec<u8>>> {
+    compose_fragments(80, "hiqCqQqohq;", &[Value::U64(key), Value::Repeat(vec![])]).map_err(invalid)
+}
 pub fn characters(key: u64, account: &Account, rows: &[Character]) -> io::Result<Vec<Vec<u8>>> {
     let rows = rows
         .iter()

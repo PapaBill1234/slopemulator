@@ -120,6 +120,9 @@ pub struct StubNp {
     pub world_results: HashMap<(AccountId, u64, [u8; 16]), Result<ChargeMode, i16>>,
     /// Local generated-fixture deadlines. These are not recovered NP lifetimes.
     pub token_expiry: HashMap<[u8; 16], Instant>,
+    /// True: a new login of an account takes the presence of the old login.
+    /// ❓ The original PresenceSrv kicks the old login. Local policy for `lobbyd`.
+    pub presence_replace: bool,
     presence: Mutex<Presence>,
 }
 impl StubNp {
@@ -195,10 +198,11 @@ impl Np for StubNp {
                 return Err(error);
             }
             let mut presence = self.presence.lock().unwrap();
-            if presence
-                .owners
-                .get(&account)
-                .is_some_and(|old| *old != owner)
+            if !self.presence_replace
+                && presence
+                    .owners
+                    .get(&account)
+                    .is_some_and(|old| *old != owner)
             {
                 return Err(NpError::PresenceConflict);
             }

@@ -36,7 +36,7 @@ SERVICES=(
   "CliGate|$CLIGATE_PORT|$BIN/CliGate $COMMON --listen 0.0.0.0:$CLIGATE_PORT --server-id 6"
   "GameGate|6601|$BIN/GameGate $COMMON --listen 127.0.0.1:6601 --server-id 7"
   "LobbyDaemon|21801|$BIN/lobbydaemon 21801 --gamegate 127.0.0.1:6601 --game-code bns --world 1,1,Play,$PUBLIC_IP,$GAME_PORT"
-  "LobbyGate|$LOBBYGATE_PORT|$BIN/lobbygate --config-dir $LOBBYGATE_CONFIG_DIR --handshake-key $HANDSHAKE_KEY"
+  "LobbyGate|$LOBBYGATE_PORT|env LOBBYGATE_DEBUG=1 $BIN/lobbygate --config-dir $LOBBYGATE_CONFIG_DIR --handshake-key $HANDSHAKE_KEY"
 )
 # DbSrv is not on the play path yet (AuthSrv reads a file). It starts only with tools/play/Db.ini.
 [ -f "$CFG/Db.ini" ] && SERVICES=("DbSrv|10901|$BIN/DbSrv --config $CFG/Db.ini --db AcctDb --listen 127.0.0.1:10901" "${SERVICES[@]}")

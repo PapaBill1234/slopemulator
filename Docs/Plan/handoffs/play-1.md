@@ -105,3 +105,15 @@ If the live login fails at the first step, the old path still works for a compar
 
 1. Run the live test of §3. Send the `logs/play/*.log` lines of the first failure, or the screen that the client reaches.
 2. Start card world-1 (§2).
+
+## 8. Live test result (11 Nov 2026)
+
+The real client (build 381) logged in through the Rust StServers and reached character select.
+
+| # | Found in the live test | Fix |
+| --- | --- | --- |
+| 1 | The client stays on "connecting" when `Slot/ListSlots` has zero slots: `NPSession::ReceiveCharacterListSuccess` (`Client.exe` 0xC1DF90) returns before `LobbyGateSession::ReceiveNPCharacterListSuccessNotify` (0xCA1950), so cmd 27 is not sent. | `slotsrv` returns 4 slots of type `char` (client string 0x15D9888). Parser: `StsMsgCli32.dll` sub_10005B40, all `Slot` children are optional. |
+| 2 | A second login of the same account got start failure D11 ("game access has been limited"). The reason code was not logged ❓. Likely cause: the presence of the old session. | `StubNp.presence_replace` (set in `lobbyd`); `lobbyd` logs the reason of a start failure. |
+| 3 | Client cmd 71 `L_GetServiceEntryListReq` → D79 had no handler in `lobbyd`; the gate link closed and the client waited. | D79 → D80 with an empty list ❓ (the 307 job is not ported). `lobbyd` logs each unsupported command id. |
+
+Verified live: SRP login, RC4 switch, `Sts/Connect` reply, the post-login requests, `GetMyUserInfo` forward, game token, LobbyGate login, world list, character list. The ❓ items of §4 passed this test.

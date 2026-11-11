@@ -289,6 +289,16 @@ impl<S: Store, N: Np> Jobs<S, N> {
             44 | 47 | 51 | 54 => self.character_mutation(link, packet, key, cmd).await?,
             103 => self.initial_user_name(link, packet, key).await?,
             64 | 67 | 70 | 73 | 76 => self.goods_unavailable(link, packet, key, cmd)?,
+            // D79 GetServiceEntryListReq `hq` → D80 `hiqCqQqohq;` (02-links).
+            // ❓ The 307 job is not ported. Local policy: an empty list, so the
+            // client gets C72 and leaves its wait state.
+            79 => {
+                if wire::fields("hq", packet).is_err() {
+                    vec![]
+                } else {
+                    wire::service_entries(key)?
+                }
+            }
             18 | 19 | 23 => {
                 wire::fields("hq", packet)?;
                 let client = if cmd == 18 {
@@ -327,7 +337,10 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 }
                 reply
             }
-            _ => return Err(wire::invalid("unsupported LobbyGate command")),
+            _ => {
+                eprintln!("lobbyd: unsupported LobbyGate command {cmd}");
+                return Err(wire::invalid("unsupported LobbyGate command"));
+            }
         };
         Ok(if packets.is_empty() {
             vec![]
@@ -523,6 +536,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 Ok(packets)
             }
             Err(reason) => {
+                eprintln!("lobbyd: start failed, reason {reason}");
                 self.sessions.remove(&key);
                 self.finish(key, session);
                 Ok(vec![wire::failure(11, key, reason)?])
