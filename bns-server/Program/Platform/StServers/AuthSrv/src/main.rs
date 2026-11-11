@@ -3,7 +3,7 @@
 //! prints one account line. The password is not stored or printed.
 use authsrv::{
     accounts::{enroll, to_line, Accounts},
-    service::{target, AuthService, Config},
+    service::{AuthService, Config},
 };
 use std::{
     io::{self, BufRead},
@@ -11,13 +11,11 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use sts_core::{
-    conn::{header, reply_error, reply_ok, set_header},
     connect::ConnectInfo,
     ini::Ini,
     route::{Location, Topology},
     route_client::{
-        parse_systems, select_router, Registration, RouteClient, RouteClientConfig, RouteEvent,
-        RouteIni,
+        parse_systems, select_router, Registration, RouteClient, RouteClientConfig, RouteIni,
     },
 };
 
@@ -106,7 +104,7 @@ async fn main() -> io::Result<()> {
             .duration_since(UNIX_EPOCH)
             .map_or(1, |d| d.as_secs() as u32),
     };
-    let (route, mut events) = RouteClient::start(RouteClientConfig {
+    let (route, events) = RouteClient::start(RouteClientConfig {
         router,
         identity: ConnectInfo {
             conn_type: CONN_TYPE_SERVER,
@@ -130,37 +128,6 @@ async fn main() -> io::Result<()> {
     });
     let service = Arc::new(AuthService::new(cfg, accounts));
     eprintln!("AuthSrv: router {router}");
-    while let Some(event) = events.recv().await {
-        match event {
-            RouteEvent::Registered => eprintln!("AuthSrv: registered on the route bus"),
-            RouteEvent::Request(inc) => {
-                let (service, route) = (service.clone(), route.clone());
-                tokio::spawn(async move {
-                    let (protocol, command) = inc.command();
-                    let body = inc.body();
-                    let result = if protocol == "Auth" {
-                        service
-                            .handle(command, target(&inc.frame), body.as_ref(), &route)
-                            .await
-                    } else {
-                        Err(sts_core::StsError::new(10, 5, 0))
-                    };
-                    if inc.id() == 0 {
-                        return;
-                    }
-                    let mut frame = match &result {
-                        Ok(body) => reply_ok(inc.id(), body.as_ref()),
-                        Err(e) => reply_error(inc.id(), e, server_id),
-                    };
-                    // The router needs `t` = the `p` header of the request.
-                    if let Some(origin) = header(&inc.frame, "p") {
-                        set_header(&mut frame, "t", origin);
-                    }
-                    inc.peer.send(frame);
-                });
-            }
-            _ => {}
-        }
-    }
+    authsrv::service::run(service, route, events, server_id).await;
     Ok(())
 }

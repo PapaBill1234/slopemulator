@@ -22,6 +22,7 @@ members = [
     "Program/Platform/StServers/GameAccountSrv",
     "Program/Platform/StServers/SlotSrv",
     "Program/Platform/StServers/PlayStubs",
+    "Program/Platform/StServers/GameGate",
     "Program/Tools/DataFile/BnsData",
     "Program/Tools/DataFile/BnsModel",
     "Program/Tools/DataFile/BnsSchema",

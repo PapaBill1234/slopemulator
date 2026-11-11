@@ -11,16 +11,18 @@ use std::{
     collections::HashMap,
     future::Future,
     pin::Pin,
-    sync::Mutex,
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 use sts::{key_data, srp6::ServerExchange, Frame};
 use sts_core::{
     conn::{header, reply_result, request, set_header, DEFAULT_TIMEOUT},
     error::{ERR_BAD_DATA, ERR_BAD_PARAM, ERR_PERMISSION},
-    route_client::RouteClient,
+    route_client::{RouteClient, RouteEvent},
+    service::bus_reply,
     Element, StsError,
 };
+use tokio::sync::mpsc;
 
 pub const ERR_BAD_PASSWD: u32 = 11;
 pub const ERR_TOKEN_NOT_FOUND: u32 = 3010;
@@ -359,7 +361,8 @@ impl AuthService {
         };
         let req = Element::new("Request").child(Element::text("GameCode", game_code));
         let mut frame = request("GameAccount", "ListAccounts", Some(&req));
-        set_header(&mut frame, "t", user.user_id.clone());
+        // Router target form `<center>$<key>`, center 0 = local (13 §5).
+        set_header(&mut frame, "t", format!("0${}", user.user_id));
         let reply = bus
             .call(frame)
             .await?
@@ -446,7 +449,36 @@ impl AuthService {
     }
 }
 
-/// Target and body of an incoming frame, for [`AuthService::handle`].
-pub fn target(frame: &Frame) -> Option<&str> {
-    header(frame, "t")
+/// Request loop of the service on the route bus.
+pub async fn run(
+    service: Arc<AuthService>,
+    route: RouteClient,
+    mut events: mpsc::UnboundedReceiver<RouteEvent>,
+    server_id: u32,
+) {
+    while let Some(event) = events.recv().await {
+        match event {
+            RouteEvent::Registered => eprintln!("AuthSrv: registered on the route bus"),
+            RouteEvent::Request(inc) => {
+                let (service, route) = (service.clone(), route.clone());
+                tokio::spawn(async move {
+                    let (protocol, command) = inc.command();
+                    let body = inc.body();
+                    let result = if protocol == "Auth" {
+                        service
+                            .handle(command, header(&inc.frame, "t"), body.as_ref(), &route)
+                            .await
+                    } else {
+                        Err(StsError::new(ERR_BAD_PARAM, MOD_MAIN, 0))
+                    };
+                    eprintln!(
+                        "AuthSrv: {protocol}/{command} -> {}",
+                        result.as_ref().map_or_else(|e| e.code, |_| 0)
+                    );
+                    bus_reply(&inc, &result, server_id);
+                });
+            }
+            _ => {}
+        }
+    }
 }

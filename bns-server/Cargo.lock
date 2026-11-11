@@ -469,6 +469,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "gamegate"
+version = "0.1.0"
+dependencies = [
+ "authsrv",
+ "gameaccountsrv",
+ "routesrv",
+ "shared",
+ "sts",
+ "sts-core",
+ "tokio",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -545,6 +558,7 @@ name = "lobbydaemon"
 version = "0.1.0"
 dependencies = [
  "bloodlib",
+ "gamegate",
  "lobbygate",
  "num-bigint",
  "packet",
