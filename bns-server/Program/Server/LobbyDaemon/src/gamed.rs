@@ -170,3 +170,64 @@ impl GameDaemon for StubGameDaemon {
         })
     }
 }
+
+/// Stand-in for the GameDaemon link while no GameDaemon server exists
+/// (card play-1). It is not a port of the link (`Docs/Server/LobbyDaemon/07-gamed-link.md`).
+/// Create: the showcase comes from the client make-PC record, as
+/// `CreateCharacterTran` does it in GameDaemon, but without the
+/// `PcInitialSetting` data ❓. World admission fails with reason 2.
+#[derive(Default)]
+pub struct LocalGameDaemon;
+
+impl GameDaemon for LocalGameDaemon {
+    fn create_character(
+        &self,
+        request: crate::character::CreateCharacter,
+        _pcid: u64,
+        appearance: Vec<u8>,
+    ) -> GameFuture<'_, crate::character::CreatedCharacter> {
+        Box::pin(async move {
+            let Some(pc) = shared::fsd::decode_make_pc(&appearance) else {
+                eprintln!(
+                    "lobbyd: create character, bad make-PC record ({} bytes)",
+                    appearance.len()
+                );
+                return Err(2);
+            };
+            let showcase = shared::fsd::compose_new_showcase(&pc, &request.name, 1);
+            eprintln!(
+                "lobbyd: create character, race {} sex {} job {}, showcase {} bytes",
+                pc.race,
+                pc.sex,
+                pc.job,
+                showcase.len()
+            );
+            Ok(crate::character::CreatedCharacter {
+                job: i16::from(pc.job),
+                level: 1,
+                showcase,
+            })
+        })
+    }
+    fn delete_character(&self, _world: i16, _pcid: u64) -> GameFuture<'_, i16> {
+        Box::pin(async { Ok(1) })
+    }
+    fn restore_character(&self, _world: i16, _pcid: u64) -> GameFuture<'_, ()> {
+        Box::pin(async { Ok(()) })
+    }
+    fn eligibility(&self, _character: &Character) -> Result<Eligibility, i16> {
+        Ok(Eligibility::Ready)
+    }
+    fn restore(&self, _world: i16, _pcid: u64) -> GameFuture<'_, ()> {
+        Box::pin(async { Ok(()) })
+    }
+    fn admit(
+        &self,
+        _owner: u64,
+        _world: i16,
+        _pcid: u64,
+        _charge: ChargeMode,
+    ) -> GameFuture<'_, Admission> {
+        Box::pin(async { Err(2) })
+    }
+}
