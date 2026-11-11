@@ -1,0 +1,14 @@
+[package]
+name = "gameaccountsrv"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "GameAccountSrv of the StServers port: the game account list of a user."
+
+[dependencies]
+sts-core = { path = "../StsCore" }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "signal"] }
+
+[[bin]]
+name = "GameAccountSrv"
+path = "src/main.rs"

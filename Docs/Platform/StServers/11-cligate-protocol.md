@@ -79,6 +79,10 @@ request ──► bind client app info (fail → 3030)
 
 All forwarded calls use sub_1400CEF30 with a 25 000 ms timeout (0x61A8).
 
+Note on ids 18 and 20 (`ida/StServers/CliGate.exe`, sub_1400CFA50, read 11 Nov 2026): the handler needs the login session string (conn+328 ≠ 0). Else ErrPermission 49, module 1, line 2331. With a session it removes header `p`, adds the session data (sub_1400D29E0, conn+248) and forwards with reply callback `ClientReply` (sub_1400CED50). The table text "only before login" is thus not exact: the condition is "login session present". ❓ The game client sends `Auth/GetMyUserInfo` after LoginFinish, when the session string is free. Which id that request has in this switch is not verified. The Rust port forwards `GetMyUserInfo` for a logged-in user (it is in `Gate.ini [Commands.CliGate]`).
+
+`GameAccount` command 3 (`ListMyAccounts`, sub_1400D0500): a `CCliConnTxn` with reply callback sub_1400D3340, then the generic gate path (sub_14011A3A0).
+
 ## 4. Login sequence
 
 ```
