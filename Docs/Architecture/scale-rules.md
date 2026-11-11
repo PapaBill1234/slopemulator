@@ -155,7 +155,7 @@ Toolchain: `rustc 1.99.1`. Before you use a new language feature, compile a smal
 | Newtype ids (`struct Pcid(u64)`), `#[repr(u16)]` enums for codes | bare integers |
 | `#[inline]` only after a bench shows a gain | `#[inline(always)]` by guess |
 
-Release profile (add to the root `Cargo.toml`):
+Release profile (in the root `Cargo.toml`; `panic = "abort"` is not set there until rule H8 holds in all crates):
 
 ```toml
 [profile.release]
@@ -175,7 +175,7 @@ Refactor one crate at a time. Parity tests must pass before and after each step.
 | Step | Work |
 | --- | --- |
 | 1 | Add spans and counters (M1, M2). Measure login and enter world. Write the numbers to `Docs/Architecture/baseline.md`. |
-| 2 | Shared `net` module: framed reader, batching writer, bounded queues (H2 to H7). Move each daemon to it. |
+| 2 | Shared `net` module (`Program/Server/Shared/src/net.rs`): framed reader, batching writer, bounded queues (H2 to H7). Move each daemon to it. State 2026-11-11: module done; the lobbyd–gamed link and the lobbyd reader use it; all sockets have `TCP_NODELAY`. Open: LobbyGate, CacheGate, the 3 small daemons, CliGate, the GameDaemon client connection. |
 | 3 | Database pools (D1 to D4) in GameDaemon and LobbyDaemon. |
 | 4 | Split handlers into pure domain functions (section 3). Remove locks (O1 to O4). |
 | 5 | Shards and tick loop in GameDaemon (section 6). |

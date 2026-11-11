@@ -37,3 +37,12 @@ resolver = "2"
 opt-level = 3
 [profile.dev.package.rsa]
 opt-level = 3
+
+# Release build (Docs/Architecture/scale-rules.md section 9).
+# `panic = "abort"` is not set yet: a panic on peer data must stop one task, not the daemon,
+# until rule H8 (no panic path on peer data) holds in all crates.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+debug = "line-tables-only"
