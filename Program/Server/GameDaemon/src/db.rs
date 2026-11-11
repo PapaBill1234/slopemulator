@@ -6,12 +6,15 @@
 //! The original takes them from `PcInitialSetting` (table 2019).
 //! The connection string comes from the environment variable `GAMED_MSSQL_URL` only.
 use shared::fsd::{MakePc, APPEARANCE_BYTES};
+use shared::pool::Pool;
 use std::{fmt::Write, io, time::Duration};
 use tiberius::{Client, Config, Row};
-use tokio::{net::TcpStream, sync::Mutex};
+use tokio::net::TcpStream;
 use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 
 const TIMEOUT: Duration = Duration::from_secs(5);
+/// Default count of connections to the game database (`scale-rules.md` rule D1).
+const POOL_SIZE: usize = 8;
 
 /// A PC as the world-entry packets need it.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -50,7 +53,8 @@ type Connection = Client<Compat<TcpStream>>;
 
 pub struct Db {
     config: Config,
-    client: Mutex<Option<Connection>>,
+    /// Connections to `BlGame` (rule D1). Size: `GAMED_DB_POOL`, default 8.
+    pool: Pool<Connection>,
     /// Parameter names and SQL types of `usp_CreateCharacter`, in order.
     parameters: Vec<(String, String)>,
 }
@@ -137,7 +141,12 @@ impl Db {
         let config = Config::from_ado_string(&url).map_err(driver)?;
         Ok(Some(Self {
             config,
-            client: Mutex::new(None),
+            pool: Pool::new(
+                std::env::var("GAMED_DB_POOL")
+                    .ok()
+                    .and_then(|size| size.parse().ok())
+                    .unwrap_or(POOL_SIZE),
+            ),
             parameters: Vec::new(),
         }))
     }
@@ -150,30 +159,32 @@ impl Db {
             .map_err(driver)
     }
 
-    /// Run one batch. A failure drops the connection; the next call opens a new one.
+    /// Run one batch on a pool connection. Calls run in parallel up to the pool size.
+    /// A failure or a timeout drops the connection; a later call opens a new one.
     async fn rows(&self, sql: &str, values: &[&dyn tiberius::ToSql]) -> io::Result<Vec<Vec<Row>>> {
-        let mut guard = self.client.lock().await;
+        let mut lease = self.pool.acquire().await;
         let work = async {
-            if guard.is_none() {
-                *guard = Some(self.open().await?);
-            }
-            let client = guard.as_mut().unwrap();
-            client
+            let mut client = match lease.take() {
+                Some(client) => client,
+                None => self.open().await?,
+            };
+            let sets = client
                 .query(sql, values)
                 .await
                 .map_err(driver)?
                 .into_results()
                 .await
-                .map_err(driver)
+                .map_err(driver)?;
+            Ok((client, sets))
         };
-        let result = match tokio::time::timeout(TIMEOUT, work).await {
-            Ok(result) => result,
+        match tokio::time::timeout(TIMEOUT, work).await {
+            Ok(Ok((client, sets))) => {
+                lease.give(client);
+                Ok(sets)
+            }
+            Ok(Err(error)) => Err(error),
             Err(_) => Err(io::Error::new(io::ErrorKind::TimedOut, "game DB timeout")),
-        };
-        if result.is_err() {
-            *guard = None;
         }
-        result
     }
 
     /// Read the parameter list of `usp_CreateCharacter`. Call it one time at start.

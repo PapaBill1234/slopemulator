@@ -81,21 +81,24 @@ impl MssqlStore {
                         return;
                     }
                 };
-                let connection = runtime.block_on(async {
-                    tokio::time::timeout(TIMEOUT, async {
-                        let tcp = TcpStream::connect(config.get_addr())
-                            .await
-                            .map_err(driver)?;
-                        tcp.set_nodelay(true).map_err(driver)?;
-                        Client::connect(config, tcp.compat_write())
-                            .await
-                            .map_err(driver)
+                let connect = || {
+                    let config = config.clone();
+                    runtime.block_on(async {
+                        tokio::time::timeout(TIMEOUT, async {
+                            let tcp = TcpStream::connect(config.get_addr())
+                                .await
+                                .map_err(driver)?;
+                            tcp.set_nodelay(true).map_err(driver)?;
+                            Client::connect(config, tcp.compat_write())
+                                .await
+                                .map_err(driver)
+                        })
+                        .await
+                        .map_err(|_| io::Error::other(SqlStoreError::Timeout))?
                     })
-                    .await
-                    .map_err(|_| io::Error::other(SqlStoreError::Timeout))?
-                });
-                let mut client = match connection {
-                    Ok(client) => client,
+                };
+                let mut client = match connect() {
+                    Ok(client) => Some(client),
                     Err(error) => {
                         let _ = ready.send(Err(error));
                         return;
@@ -105,11 +108,23 @@ impl MssqlStore {
                     return;
                 }
                 while let Ok(request) = receiver.recv() {
+                    // A failed call drops its connection. The next request opens a new one.
+                    // The failed request is not sent again.
+                    let mut live = match client.take() {
+                        Some(live) => live,
+                        None => match connect() {
+                            Ok(live) => live,
+                            Err(error) => {
+                                let _ = request.reply.send(Err(error));
+                                continue;
+                            }
+                        },
+                    };
                     let result = runtime.block_on(async {
                         tokio::time::timeout(TIMEOUT, async {
                             request
                                 .query
-                                .query(&mut client)
+                                .query(&mut live)
                                 .await
                                 .map_err(driver)?
                                 .into_results()
@@ -120,17 +135,16 @@ impl MssqlStore {
                     });
                     match result {
                         Ok(Ok(sets)) => {
+                            client = Some(live);
                             let _ = request.reply.send(check_return(sets));
                         }
                         Ok(Err(error)) => {
                             let _ = request.reply.send(Err(error));
-                            break; // Do not reuse a possibly damaged stream or retry a write.
                         }
                         Err(_) => {
                             let _ = request
                                 .reply
                                 .send(Err(io::Error::other(SqlStoreError::Timeout)));
-                            break;
                         }
                     }
                 }
