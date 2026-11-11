@@ -7,13 +7,13 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 | Job | Created by (table+command) | Tasks | State methods | Size (tokens) | Spec |
 | --- | --- | --- | --- | --- | --- |
 | AbandonChargeJob | Game38 | 58 59 122 | Initialize init requestChargeAbandon responseChargeAbandon expireChargeAbandon | 1047 | `14-jobs-b.md` |
-| ActivateGradeJob | Lobb106 | 28 80 81 | ActivateGradeJob ~ActivateGradeJob initFromLobbyGate initFromGame activateGradeReq activateGradeResponse activateGradeExpire sendFail | 2774 | open |
+| ActivateGradeJob | Lobb106 | 28 80 81 | ActivateGradeJob ~ActivateGradeJob initFromLobbyGate initFromGame activateGradeReq activateGradeResponse activateGradeExpire sendFail | 2774 | `15-jobs-c.md` (partial ❓) |
 | AddSlotJob | Lobb94 | 26 | AddSlotJob ~AddSlotJob init checkAccountInventoryItem checkAccountInventoryItemOk checkAccountInventoryItemFail checkAccountInventoryItemTimeout checkSlotCapacity checkSlotCapacityAck checkSlotCapacityExpire registerServiceEntry tryConsumeAccountInventoryItem tryConsumeAccountInventoryItemOk tryConsumeAccountInventoryItemFail tryConsumeAccountInventoryItemTimeout createSlot createSlotAck createSlotExpire finConsumeAccountInventoryItem finConsumeAccountInventoryItemOk finConsumeAccountInventoryItemFail finConsumeAccountInventoryItemTimeout finServiceEntry | 6197 | open |
 | AuctionBidJob | — | 85 86 135 | init auctionBidReq auctionBidResponse auctionBidExpire | 1153 | `14-jobs-b.md` |
-| AuctionDeliverJob | — | 82 | AuctionDeliverJob ~AuctionDeliverJob init registerPostOk registerPostFail registerPostTimeout | 3265 | open |
-| AuctionEscrowJob | — | 83 | ~AuctionEscrowJob escrow escrowOk escrowFail escrowExpire | 1888 | open |
-| AuctionRollbackEscrowJob | — | 84 | AuctionRollbackEscrowJob ~AuctionRollbackEscrowJob rollbackEscrow registerPostOk registerPostFail registerPostExpire | 2252 | open |
-| BindCharacterSlotJob | — | 33 | init reqGetSlot responseGetSlot expireGetSlot bindCharacterSlot | 1669 | open |
+| AuctionDeliverJob | — | 82 | AuctionDeliverJob ~AuctionDeliverJob init registerPostOk registerPostFail registerPostTimeout | 3265 | `15-jobs-c.md` (partial ❓) |
+| AuctionEscrowJob | — | 83 | ~AuctionEscrowJob escrow escrowOk escrowFail escrowExpire | 1888 | `15-jobs-c.md` (partial ❓) |
+| AuctionRollbackEscrowJob | — | 84 | AuctionRollbackEscrowJob ~AuctionRollbackEscrowJob rollbackEscrow registerPostOk registerPostFail registerPostExpire | 2252 | `15-jobs-c.md` (partial ❓) |
+| BindCharacterSlotJob | — | 33 | init reqGetSlot responseGetSlot expireGetSlot bindCharacterSlot | 1669 | `15-jobs-c.md` (partial ❓) |
 | CancelWaitCharacterDeletionJob | Lobb51 | 12 | CancelWaitCharacterDeletionJob ~CancelWaitCharacterDeletionJob init restore restoreCharacterReq restoreCharacterOk restoreCharacterFail restoreCharacterExpire | 3720 | open |
 | ChangeCharacterAppearanceJob | Lobb82 | 24 | ChangeCharacterAppearanceJob ~ChangeCharacterAppearanceJob init checkAccountInventoryItem checkAccountInventoryItemOk checkAccountInventoryItemFail checkAccountInventoryItemTimeout registerServiceEntry tryConsumeAccountInventoryItem tryConsumeAccountInventoryItemOk tryConsumeAccountInventoryItemFail tryConsumeAccountInventoryItemTimeout changeCharacterAppearance changeCharacterAppearanceOk changeCharacterAppearanceFail changeCharacterAppearanceTimeout finConsumeAccountInventoryItem finConsumeAccountInventoryItemOk finConsumeAccountInventoryItemFail finConsumeAccountInventoryItemTimeout finServiceEntry | 7083 | open |
 | ChangeCharacterRaceJob | Lobb88 | 32 | ChangeCharacterRaceJob ~ChangeCharacterRaceJob init checkAccountInventoryItem checkAccountInventoryItemOk checkAccountInventoryItemFail checkAccountInventoryItemTimeout registerServiceEntry tryConsumeAccountInventoryItem tryConsumeAccountInventoryItemOk tryConsumeAccountInventoryItemFail tryConsumeAccountInventoryItemTimeout changeCharacterRace changeCharacterRaceOk changeCharacterRaceFail changeCharacterRaceTimeout finConsumeAccountInventoryItem finConsumeAccountInventoryItemOk finConsumeAccountInventoryItemFail finConsumeAccountInventoryItemTimeout finServiceEntry releasePcServiceStatus | 7332 | open |
@@ -23,21 +23,21 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 | CreateCharacterJob | Lobb44 |  | CreateCharacterJob ~CreateCharacterJob init reqGetSlot responseGetSlot expireGetSlot tryCreateCharacter createCharacterOk createCharacterFail createCharacterExpire | 6640 | open |
 | CreateInitialUserNameJob | — | 27 70 71 | ~CreateInitialUserNameJob init changeUserNameReq changeUserNameAck changeUserNameExpire | 1807 | open |
 | DeleteCharacterJob | Lobb47 | 11 | DeleteCharacterJob ~DeleteCharacterJob init checkSecondPasswordStatus checkSecondPasswordStatusResponse checkSecondPasswordStatusExpire checkSecondPasswordVerified checkSecondPasswordVerifiedResponse checkSecondPasswordVerifiedExpire getCharacterGoodsReq getCharacterGoodsCountOk getCharacterGoodsCountFail getCharacterGoodsCountExpire deleteReq deleteOk deleteFail deleteExpire directDelete scheduleDelete | 7906 | open |
-| DepositMileageJob | Mana14 Game100 | 5 91 92 | DepositMileageJob ~DepositMileageJob init depositReq depositAck depositExpire Callback | 3098 | open |
+| DepositMileageJob | Mana14 Game100 | 5 91 92 | DepositMileageJob ~DepositMileageJob init depositReq depositAck depositExpire Callback | 3098 | `15-jobs-c.md` (partial ❓) |
 | DepositPcCafeMileageJobManageCallback | — |  | OnError OnSuccess OnFail OnTimeout | 234 | open |
 | EndWaitGameWorldJob | — | 0 3 | init endWait | 696 | `13-jobs-a.md` |
 | EnterGameWorldJob | Game5 | 0 117 | Initialize init enterGameWorld | 3337 | open |
 | ExtendJumpingCharacterCreationQuotaJob | Lobb100 Game69 | 30 | ExtendJumpingCharacterCreationQuotaJob ~ExtendJumpingCharacterCreationQuotaJob init checkAccountInventoryItem checkAccountInventoryItemOk checkAccountInventoryItemFail checkAccountInventoryItemTimeout registerServiceEntry tryConsumeAccountInventoryItem tryConsumeAccountInventoryItemOk tryConsumeAccountInventoryItemFail tryConsumeAccountInventoryItemTimeout extendJumpingCharacterCreationQuota finConsumeAccountInventoryItem finConsumeAccountInventoryItemOk finConsumeAccountInventoryItemFail finConsumeAccountInventoryItemTimeout finServiceEntry sendFailReason | 4826 | open |
-| GetChargeInfoJob | Lobb60 | 17 52 53 | GetChargeInfoJob init requestChargeGetInfo responseChargeGetInfo expireChargeGetInfo | 1424 | open |
+| GetChargeInfoJob | Lobb60 | 17 52 53 | GetChargeInfoJob init requestChargeGetInfo responseChargeGetInfo expireChargeGetInfo | 1424 | `15-jobs-c.md` (partial ❓) |
 | GetGoodsCountJob | Lobb64 | 19 | GetGoodsCountJob ~GetGoodsCountJob init getGoodsCountReq getGoodsCountOk getGoodsCountFail getGoodsCountTimeout | 1162 | `14-jobs-b.md` |
-| GetLobbyServiceItemJob | Lobb76 | 23 | GetLobbyServiceItemJob ~GetLobbyServiceItemJob init getLobbyServiceItemReq getLobbyServiceItemOk getLobbyServiceItemFail getLobbyServiceItemTimeout | 1266 | open |
+| GetLobbyServiceItemJob | Lobb76 | 23 | GetLobbyServiceItemJob ~GetLobbyServiceItemJob init getLobbyServiceItemReq getLobbyServiceItemOk getLobbyServiceItemFail getLobbyServiceItemTimeout | 1266 | `15-jobs-c.md` (partial ❓) |
 | GiveupWaitGameWorldJob | Lobb31 | 0 16 | Initialize init giveupWait | 411 | `13-jobs-a.md` |
 | InitCliSessionWlobbyTokenJob | Lobb12 | 0 14 | Initialize init initOk | 574 | `13-jobs-a.md` |
 | InitCliSessionWnpTokenJob | — | 7 | init | 584 | `13-jobs-a.md` |
 | KickJob | Mana5 | 1 | Demander KickJob ~KickJob init kick worldKickReq worldKickOk worldKickFail worldKickExpire | 1877 | open |
 | LeaveGameWorldJob | Game8 | 0 119 | Initialize init leaveGameWorld | 823 | `13-jobs-a.md` |
 | ListGoodsJob | Lobb67 | 20 | ListGoodsJob ~ListGoodsJob init listGoodsReq listGoodsOk listGoodsFail listGoodsTimeout | 1169 | `14-jobs-b.md` |
-| ListLobbyServiceItemJob | Lobb73 | 22 | ListLobbyServiceItemJob ~ListLobbyServiceItemJob init listLobbyServiceItemReq listLobbyServiceItemOk listLobbyServiceItemFail listLobbyServiceItemTimeout | 1281 | open |
+| ListLobbyServiceItemJob | Lobb73 | 22 | ListLobbyServiceItemJob ~ListLobbyServiceItemJob init listLobbyServiceItemReq listLobbyServiceItemOk listLobbyServiceItemFail listLobbyServiceItemTimeout | 1281 | `15-jobs-c.md` (partial ❓) |
 | LobbyJob | — |  | ~LobbyJob dispatch_work transit execute resume | 495 | `13-jobs-a.md` |
 | LobbyJobManager | — |  | ~LobbyJobManager Initialize Register Clear Start Postpone Execute ExecuteW ResumeW add remove find | 2658 | `13-jobs-a.md` |
 | LobbyJobTaskEvent | — |  | ~LobbyJobTaskEvent HandleEvent | 231 | `13-jobs-a.md` |
