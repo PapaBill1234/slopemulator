@@ -153,7 +153,7 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 | B | Character jobs (create, delete, cancel, recover, rename, appearance, sex, race) | done (`16-jobs-d.md`, `17-jobs-e.md`) |
 | C | Session jobs (start session NP and lobby token, try enter, enter world, kick) | done (`13-jobs-a.md`, `18-jobs-f.md`) |
 | D | Slot, user name, jumping character, play reward, NP schedule jobs | done (`19-jobs-g.md`) |
-| E | Handlers without a job, timers, manage port | open |
+| E | Handlers without a job, timers, manage port (`20-handlers.md`) | done |
 
 ## 4. Tool
 
