@@ -457,8 +457,12 @@ dependencies = [
 name = "gamedaemon"
 version = "0.1.0"
 dependencies = [
+ "bloodlib",
+ "lobbygate",
  "packet",
  "packet-ids",
+ "rand",
+ "tokio",
 ]
 
 [[package]]

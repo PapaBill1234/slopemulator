@@ -7,3 +7,11 @@ license = "MIT"
 [dependencies]
 packet = { path = "../Packet" }
 packet-ids = { path = "../PacketIds" }
+bloodlib = { path = "../BloodLib" }
+lobbygate = { path = "../LobbyGate" }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "macros"] }
+rand = "0.8"
+
+[[bin]]
+name = "gamedaemon"
+path = "src/bin/gamedaemon.rs"

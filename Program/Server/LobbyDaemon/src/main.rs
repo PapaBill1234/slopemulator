@@ -66,6 +66,7 @@ async fn main() -> io::Result<()> {
             // `Program` of the Connect body: program id 302 of `bnsserver` in the original Game.ini.
             let mut backend = StubNp::default();
             backend.presence_replace = true;
+            backend.world_default = Some(shared::np_channel::ChargeMode::Free);
             let np = GateNp::new(gate, game_code, 302, backend);
             run(np, settings, listener, true).await
         }
@@ -102,6 +103,8 @@ async fn serve<S: lobbydaemon::store::Store, N: Np>(
     // With `--gamegate` (play stack) characters are made locally: no GameDaemon server exists.
     let mut settings = settings;
     if local_game {
+        // ❓ Local value. The original lifetime is not known.
+        settings.world_token_lifetime = Some(std::time::Duration::from_secs(120));
         // ❓ Local policy: names of 2..=16 letters, 7 days deletion wait.
         settings.character_policy = Some(lobbydaemon::character::CharacterPolicy {
             slots: Default::default(),

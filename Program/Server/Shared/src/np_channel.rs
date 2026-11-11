@@ -123,6 +123,9 @@ pub struct StubNp {
     /// True: a new login of an account takes the presence of the old login.
     /// ❓ The original PresenceSrv kicks the old login. Local policy for `lobbyd`.
     pub presence_replace: bool,
+    /// Result of a world entry that has no fixture. `None` gives reason 2.
+    /// ❓ Local policy for `lobbyd`: the charge services are not ported.
+    pub world_default: Option<ChargeMode>,
     presence: Mutex<Presence>,
 }
 impl StubNp {
@@ -167,7 +170,7 @@ impl Np for StubNp {
             self.world_results
                 .get(&(account, pcid, slot))
                 .copied()
-                .unwrap_or(Err(2))
+                .unwrap_or(self.world_default.ok_or(2))
         })
     }
     fn consume(&self, token: [u8; 16], portal: [u8; 16]) -> NpFuture<'_, Identity> {

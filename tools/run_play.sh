@@ -67,7 +67,7 @@ start() {
   if command -v docker >/dev/null && ! docker ps --format '{{.Names}}' 2>/dev/null | grep -qx bns-mssql; then
     echo "note: DB container bns-mssql is not running (the play path does not need it yet)"
   fi
-  (cd "$ROOT" && cargo build -q -p routesrv -p authsrv -p gameaccountsrv -p slotsrv -p play-stubs -p cligate -p gamegate -p lobbydaemon -p lobbygate)
+  (cd "$ROOT" && cargo build -q -p routesrv -p authsrv -p gameaccountsrv -p slotsrv -p play-stubs -p cligate -p gamegate -p lobbydaemon -p lobbygate -p gamedaemon)
   mkdir -p "$LOGS"
   tmux new-session -d -s "$SESSION" -n shell -c "$ROOT"
   for entry in "${SERVICES[@]}"; do
