@@ -178,6 +178,7 @@ impl TcpLobbyDaemon {
                     continue;
                 }
             };
+            let _ = stream.set_nodelay(true); // rule H5
             let hello = compose(
                 "hhhh",
                 &[

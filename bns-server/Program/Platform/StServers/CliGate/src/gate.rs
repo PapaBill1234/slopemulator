@@ -78,6 +78,7 @@ impl CliGate {
     pub async fn serve(self: Arc<Self>, listener: TcpListener) -> std::io::Result<()> {
         loop {
             let (stream, addr) = listener.accept().await?;
+            let _ = stream.set_nodelay(true); // rule H5
             tokio::spawn(conn::run(self.clone(), stream, addr));
         }
     }
