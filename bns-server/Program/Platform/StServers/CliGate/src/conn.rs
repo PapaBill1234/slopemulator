@@ -28,6 +28,14 @@ type Stream = CryptStream<TcpStream>;
 
 /// Module of the StsGate errors (§9.1).
 const MODULE_GATE: u32 = 8000;
+/// Commands of `Gate.ini [Commands.CliGate]` that the login path of the game
+/// client uses (`../Sts/10-stservers-original.md`). The other 140 are not ported.
+const FORWARDED: [(&str, &str); 3] = [
+    ("GameAccount", "ListMyAccounts"),
+    ("Slot", "ListSlots"),
+    ("VirtualCurrency", "GetBalance"),
+];
+
 /// Failed LoginStart calls that close the socket (§9.4).
 const MAX_LOGIN_FAILURES: u32 = 3;
 const MAX_LOGIN_NAME: usize = 64;
@@ -299,8 +307,16 @@ impl Conn {
                     "permission denied '{protocol}/{command}', not logged in"
                 )),
             )
+        } else if FORWARDED.contains(&(protocol.as_str(), command.as_str())) {
+            // Generic gate path (§11.1), part: whitelist check and forward.
+            // ❓ The rate limit and the `f` header are not ported.
+            let mut out = request(protocol, command, body.as_ref());
+            set_header(&mut out, "t", user_target(0, self.user()));
+            match self.call(out, "CCliConn::ClientReply").await {
+                Ok(reply) => ok(reply),
+                Err(e) => fail(e),
+            }
         } else {
-            // ❓ The generic gate path (§11.1) is not part of phase 1.
             fail(unknown_command())
         };
         self.finish(rid, outcome).await
@@ -331,7 +347,7 @@ impl Conn {
                 flow: Flow::Close,
             },
             AuthCmd::LoginTokenStart => self.login_token_start(body),
-            AuthCmd::RequestToken | AuthCmd::RequestGameToken => {
+            AuthCmd::RequestToken | AuthCmd::RequestGameToken | AuthCmd::GetMyUserInfo => {
                 // ❓ The `f` header of §11.1 is not set in phase 1.
                 let mut frame = request("Auth", cmd.name(), body.as_ref());
                 set_header(

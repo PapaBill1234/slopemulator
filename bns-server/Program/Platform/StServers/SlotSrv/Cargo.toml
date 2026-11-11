@@ -1,0 +1,14 @@
+[package]
+name = "slotsrv"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "SlotSrv of the StServers port: the slot list of a user."
+
+[dependencies]
+sts-core = { path = "../StsCore" }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "signal"] }
+
+[[bin]]
+name = "SlotSrv"
+path = "src/main.rs"

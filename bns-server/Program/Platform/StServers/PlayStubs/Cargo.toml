@@ -1,0 +1,14 @@
+[package]
+name = "play-stubs"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Fixed replies for services that the login path calls and that are not ported."
+
+[dependencies]
+sts-core = { path = "../StsCore" }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "signal"] }
+
+[[bin]]
+name = "PlayStubs"
+path = "src/main.rs"

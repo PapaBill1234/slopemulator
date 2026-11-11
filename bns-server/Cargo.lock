@@ -446,6 +446,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "gameaccountsrv"
+version = "0.1.0"
+dependencies = [
+ "sts-core",
+ "tokio",
+]
+
+[[package]]
 name = "gamedaemon"
 version = "0.1.0"
 dependencies = [
@@ -743,6 +751,14 @@ checksum = "f950b2377845cebe5cf8b5165cb3cc1a5e0fa5cfa3e1f7f55707d8fd82e0a7b7"
 dependencies = [
  "der",
  "spki",
+]
+
+[[package]]
+name = "play-stubs"
+version = "0.1.0"
+dependencies = [
+ "sts-core",
+ "tokio",
 ]
 
 [[package]]
@@ -1090,6 +1106,14 @@ name = "slab"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
+
+[[package]]
+name = "slotsrv"
+version = "0.1.0"
+dependencies = [
+ "sts-core",
+ "tokio",
+]
 
 [[package]]
 name = "smallvec"

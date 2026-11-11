@@ -69,7 +69,18 @@ impl Session {
         match cmd {
             // These two reset the session first, so every state is fine.
             AuthCmd::LoginStart | AuthCmd::LoginTokenStart => Ok(()),
-            AuthCmd::GetMyUserInfo | AuthCmd::CreateAccount => {
+            // ❓ The handler of ids 18 and 20 (sub_1400CFA50) needs the login
+            // session (conn+328), else ErrPermission line 2331. But the game
+            // client sends GetMyUserInfo after LoginFinish and Gate.ini lists
+            // it. The port forwards it for a logged-in user (§3 note).
+            AuthCmd::GetMyUserInfo => {
+                if state == SessionState::LoggedIn {
+                    Ok(())
+                } else {
+                    err(ERR_PERMISSION, 2331)
+                }
+            }
+            AuthCmd::CreateAccount => {
                 if state == SessionState::LoggedIn {
                     err(ERR_PERMISSION, 0)
                 } else {

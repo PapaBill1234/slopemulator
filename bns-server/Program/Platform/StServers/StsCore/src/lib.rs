@@ -8,6 +8,7 @@ pub mod ini;
 pub mod route;
 pub mod route_client;
 pub mod secrets;
+pub mod service;
 pub mod xml;
 
 pub use error::StsError;
