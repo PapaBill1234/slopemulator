@@ -82,7 +82,9 @@ impl<S: Store, N: Np> Jobs<S, N> {
         let Some(policy) = self.settings.character_policy.clone() else {
             return failure(2);
         };
-        if !policy.slots.contains(&slot) {
+        // An empty set accepts each slot id: the slots are per user in SlotSrv
+        // and `lobbyd` has no Slot link ❓.
+        if !policy.slots.is_empty() && !policy.slots.contains(&slot) {
             return failure(6);
         }
         if !s.services.is_empty() {

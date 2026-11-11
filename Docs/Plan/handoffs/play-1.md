@@ -117,3 +117,19 @@ The real client (build 381) logged in through the Rust StServers and reached cha
 | 3 | Client cmd 71 `L_GetServiceEntryListReq` → D79 had no handler in `lobbyd`; the gate link closed and the client waited. | D79 → D80 with an empty list ❓ (the 307 job is not ported). `lobbyd` logs each unsupported command id. |
 
 Verified live: SRP login, RC4 switch, `Sts/Connect` reply, the post-login requests, `GetMyUserInfo` forward, game token, LobbyGate login, world list, character list. The ❓ items of §4 passed this test.
+| 4 | Character create failed: `lobbyd` had no GameDaemon. | `LocalGameDaemon` in `lobbyd` (used with `--gamegate`). It builds the showcase record in process. **Verified live: create works.** Not parity: the original sends the request to GameDaemon. |
+
+## 9. FSD record facts (GameDaemon 348, PDB names; build 381 has the same format string)
+
+| Fact | Source |
+| --- | --- |
+| `DecomposeMakePcFsd` reads the make-PC record. Symbols: 0 race, 1 sex, 2 job, 3 appearance (92 bytes), 4 name. | 0x1400BCC10 |
+| `ComposeShowcaseFsd` writes the lobby showcase record. | 0x1400BD3E0 |
+| `FsdComposer::ComposeV` layout: u16 total size, u16 format size, format characters, then per field (u16 symbol id, value). | 0x1406E9900 |
+| Format characters: `c` 1 byte, `w` 2, `d` 4, `q` 8, `s` UTF-16 with an end zero, `N` u16 count then values without ids. | 0x1406E9900 |
+| Showcase format (59 characters): `cccNcssdwwwcddwqdcddccccccccddcccdcccdcccqdcddddccccwcwccdd`. Order: race, sex, job, appearance, name, title, geo zone, x, y, z, level, exp, hp, fp, money, equipment. | `FsdShowcaseRecord` |
+| Request handler and transaction. | `HandleLobbyGame_CreateCharacterReq` 0x140140730, `CreateCharacterTran` init 0x140072800 |
+
+Rust: `shared::fsd` (`decode_make_pc`, `compose_new_showcase`). ❓ The local record sets level 1 and all other fields to zero. The original fills them from data tables.
+
+Limit: `lobbyd` keeps characters in memory. A restart removes them.
