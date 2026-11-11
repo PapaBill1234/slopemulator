@@ -29,6 +29,14 @@ required-features = ["sts-local"]
 
 [dev-dependencies]
 lobbygate = { path = "../LobbyGate" }
+sts = { path = "../../Platform/Sts" }
+sts-core = { path = "../../Platform/StServers/StsCore" }
+routesrv = { path = "../../Platform/StServers/RouteSrv" }
+cligate = { path = "../../Platform/StServers/CliGate" }
+authsrv = { path = "../../Platform/StServers/AuthSrv" }
+gameaccountsrv = { path = "../../Platform/StServers/GameAccountSrv" }
+slotsrv = { path = "../../Platform/StServers/SlotSrv" }
+play-stubs = { path = "../../Platform/StServers/PlayStubs" }
 tokio = { version = "1", features = ["test-util"] }
 rand = "0.8"
 rsa = "0.9"

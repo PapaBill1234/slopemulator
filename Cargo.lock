@@ -557,15 +557,22 @@ version = "0.1.0"
 name = "lobbydaemon"
 version = "0.1.0"
 dependencies = [
+ "authsrv",
  "bloodlib",
+ "cligate",
+ "gameaccountsrv",
  "gamegate",
  "lobbygate",
  "num-bigint",
  "packet",
+ "play-stubs",
  "rand",
+ "routesrv",
  "rsa",
  "shared",
+ "slotsrv",
  "sts",
+ "sts-core",
  "tiberius",
  "tokio",
  "tokio-util",
