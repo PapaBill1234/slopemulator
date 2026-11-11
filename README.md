@@ -6,7 +6,7 @@ LobbyDaemon build 307), with its tools, launcher and reverse-engineering notes.
 Game client files, server binaries, databases, IDA databases and keys are **not**
 in this repository. See [`.gitignore`](.gitignore).
 
-## Plan (10 Nov 2026)
+## Plan (11 Nov 2026)
 
 | # | Phase | State |
 | --- | --- | --- |
@@ -14,6 +14,10 @@ in this repository. See [`.gitignore`](.gitignore).
 | 2 | StServers (NP platform) full reverse engineering | Next |
 | 3 | 2020 server set full reverse engineering | Waiting |
 | 4 | Port to Rust from the specs | Some servers done (see below) |
+
+Play path (11 Nov 2026): the real 2020 client logs in, shows character select and makes a character on the Rust servers.
+`lobbyd` uses `LobbyDB`. `lobbyd` and `gamedaemon` use the original link messages (create 20/21/22, world entry 5/6/7).
+`gamedaemon` creates and loads the PC in `BlGame`. Enter world has no live proof yet.
 
 Details and the work method: [`bns-server/README.md`](bns-server/README.md).
 
@@ -64,7 +68,7 @@ slopemulator/
 └── dist/bnsedit-v1/            BnsEdit v1 builds (Linux, Windows)
 ```
 
-## Server parity (10 Nov 2026)
+## Server parity (11 Nov 2026)
 
 How much of each original NCSoft server binary is ported to Rust.
 The original binaries come from the `Service_348_8349` server set (not in this repository).
