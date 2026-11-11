@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Play stack (card play-1): start, stop or show the services in tmux session "play".
-# Usage: tools/run_play.sh start|stop|status
+# Usage: tools/run_play.sh start|stop|status|report
+# report: server response times from the last capture (logs/play/cap/). PLAY_CAPTURE=0 gives no capture.
 # Logs: logs/play/<service>.log
 # Environment (all optional):
 #   PLAY_PUBLIC_IP        address that the client uses (default: Tailscale IPv4, else 127.0.0.1)
@@ -84,9 +85,14 @@ start() {
   tmux new-session -d -s "$SESSION" -n shell -c "$ROOT"
   for entry in "${SERVICES[@]}"; do
     IFS='|' read -r name port cmd <<<"$entry"
-    tmux new-window -d -t "$SESSION" -n "$name" -c "$LOGS" "$cmd 2>&1 | tee -a $LOGS/$name.log"
+    tmux new-window -d -t "$SESSION" -n "$name" -c "$LOGS" "$cmd 2>&1 | $ROOT/tools/ts_lines.pl | tee -a $LOGS/$name.log"
     if [ -n "$port" ] && ! wait_port "$port"; then echo "$name: port $port did not open; see $LOGS/$name.log"; fi
   done
+  # Capture of the client ports (rule M1). Report: tools/run_play.sh report
+  if [ "${PLAY_CAPTURE:-1}" = 1 ] && sudo -n true 2>/dev/null && ip link show tailscale0 >/dev/null 2>&1; then
+    mkdir -p "$LOGS/cap"
+    tmux new-window -d -t "$SESSION" -n Capture -c "$LOGS" "sudo -n tcpdump -i tailscale0 -nn -U -w $LOGS/cap/$(date +%Y%m%d-%H%M%S).pcap 'tcp and (port $CLIGATE_PORT or port $LOBBYGATE_PORT or port $GAME_PORT)'"
+  fi
   sleep 1
   status
   echo "client address: $PUBLIC_IP  (CliGate $CLIGATE_PORT, LobbyGate $LOBBYGATE_PORT, world port $GAME_PORT)"
@@ -118,5 +124,10 @@ case "${1:-}" in
   start) start ;;
   stop) stop ;;
   status) status ;;
-  *) echo "usage: tools/run_play.sh start|stop|status"; exit 2 ;;
+  report)
+    cap="$(ls -t "$LOGS"/cap/*.pcap 2>/dev/null | head -1)"
+    [ -n "$cap" ] || { echo "no capture in $LOGS/cap"; exit 1; }
+    echo "capture: $cap"
+    "$ROOT/tools/pcap_latency.py" "$cap" --ports "$CLIGATE_PORT:CliGate,$LOBBYGATE_PORT:LobbyGate,$GAME_PORT:GameDaemon" ;;
+  *) echo "usage: tools/run_play.sh start|stop|status|report"; exit 2 ;;
 esac
