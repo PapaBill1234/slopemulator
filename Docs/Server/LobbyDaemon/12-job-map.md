@@ -6,10 +6,10 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 
 | Job | Created by (table+command) | Tasks | State methods | Size (tokens) | Spec |
 | --- | --- | --- | --- | --- | --- |
-| AbandonChargeJob | Game38 | 58 59 122 | Initialize init requestChargeAbandon responseChargeAbandon expireChargeAbandon | 1047 | open |
+| AbandonChargeJob | Game38 | 58 59 122 | Initialize init requestChargeAbandon responseChargeAbandon expireChargeAbandon | 1047 | `14-jobs-b.md` |
 | ActivateGradeJob | Lobb106 | 28 80 81 | ActivateGradeJob ~ActivateGradeJob initFromLobbyGate initFromGame activateGradeReq activateGradeResponse activateGradeExpire sendFail | 2774 | open |
 | AddSlotJob | Lobb94 | 26 | AddSlotJob ~AddSlotJob init checkAccountInventoryItem checkAccountInventoryItemOk checkAccountInventoryItemFail checkAccountInventoryItemTimeout checkSlotCapacity checkSlotCapacityAck checkSlotCapacityExpire registerServiceEntry tryConsumeAccountInventoryItem tryConsumeAccountInventoryItemOk tryConsumeAccountInventoryItemFail tryConsumeAccountInventoryItemTimeout createSlot createSlotAck createSlotExpire finConsumeAccountInventoryItem finConsumeAccountInventoryItemOk finConsumeAccountInventoryItemFail finConsumeAccountInventoryItemTimeout finServiceEntry | 6197 | open |
-| AuctionBidJob | — | 85 86 135 | init auctionBidReq auctionBidResponse auctionBidExpire | 1153 | open |
+| AuctionBidJob | — | 85 86 135 | init auctionBidReq auctionBidResponse auctionBidExpire | 1153 | `14-jobs-b.md` |
 | AuctionDeliverJob | — | 82 | AuctionDeliverJob ~AuctionDeliverJob init registerPostOk registerPostFail registerPostTimeout | 3265 | open |
 | AuctionEscrowJob | — | 83 | ~AuctionEscrowJob escrow escrowOk escrowFail escrowExpire | 1888 | open |
 | AuctionRollbackEscrowJob | — | 84 | AuctionRollbackEscrowJob ~AuctionRollbackEscrowJob rollbackEscrow registerPostOk registerPostFail registerPostExpire | 2252 | open |
@@ -29,14 +29,14 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 | EnterGameWorldJob | Game5 | 0 117 | Initialize init enterGameWorld | 3337 | open |
 | ExtendJumpingCharacterCreationQuotaJob | Lobb100 Game69 | 30 | ExtendJumpingCharacterCreationQuotaJob ~ExtendJumpingCharacterCreationQuotaJob init checkAccountInventoryItem checkAccountInventoryItemOk checkAccountInventoryItemFail checkAccountInventoryItemTimeout registerServiceEntry tryConsumeAccountInventoryItem tryConsumeAccountInventoryItemOk tryConsumeAccountInventoryItemFail tryConsumeAccountInventoryItemTimeout extendJumpingCharacterCreationQuota finConsumeAccountInventoryItem finConsumeAccountInventoryItemOk finConsumeAccountInventoryItemFail finConsumeAccountInventoryItemTimeout finServiceEntry sendFailReason | 4826 | open |
 | GetChargeInfoJob | Lobb60 | 17 52 53 | GetChargeInfoJob init requestChargeGetInfo responseChargeGetInfo expireChargeGetInfo | 1424 | open |
-| GetGoodsCountJob | Lobb64 | 19 | GetGoodsCountJob ~GetGoodsCountJob init getGoodsCountReq getGoodsCountOk getGoodsCountFail getGoodsCountTimeout | 1162 | open |
+| GetGoodsCountJob | Lobb64 | 19 | GetGoodsCountJob ~GetGoodsCountJob init getGoodsCountReq getGoodsCountOk getGoodsCountFail getGoodsCountTimeout | 1162 | `14-jobs-b.md` |
 | GetLobbyServiceItemJob | Lobb76 | 23 | GetLobbyServiceItemJob ~GetLobbyServiceItemJob init getLobbyServiceItemReq getLobbyServiceItemOk getLobbyServiceItemFail getLobbyServiceItemTimeout | 1266 | open |
 | GiveupWaitGameWorldJob | Lobb31 | 0 16 | Initialize init giveupWait | 411 | `13-jobs-a.md` |
 | InitCliSessionWlobbyTokenJob | Lobb12 | 0 14 | Initialize init initOk | 574 | `13-jobs-a.md` |
 | InitCliSessionWnpTokenJob | — | 7 | init | 584 | `13-jobs-a.md` |
 | KickJob | Mana5 | 1 | Demander KickJob ~KickJob init kick worldKickReq worldKickOk worldKickFail worldKickExpire | 1877 | open |
 | LeaveGameWorldJob | Game8 | 0 119 | Initialize init leaveGameWorld | 823 | `13-jobs-a.md` |
-| ListGoodsJob | Lobb67 | 20 | ListGoodsJob ~ListGoodsJob init listGoodsReq listGoodsOk listGoodsFail listGoodsTimeout | 1169 | open |
+| ListGoodsJob | Lobb67 | 20 | ListGoodsJob ~ListGoodsJob init listGoodsReq listGoodsOk listGoodsFail listGoodsTimeout | 1169 | `14-jobs-b.md` |
 | ListLobbyServiceItemJob | Lobb73 | 22 | ListLobbyServiceItemJob ~ListLobbyServiceItemJob init listLobbyServiceItemReq listLobbyServiceItemOk listLobbyServiceItemFail listLobbyServiceItemTimeout | 1281 | open |
 | LobbyJob | — |  | ~LobbyJob dispatch_work transit execute resume | 495 | `13-jobs-a.md` |
 | LobbyJobManager | — |  | ~LobbyJobManager Initialize Register Clear Start Postpone Execute ExecuteW ResumeW add remove find | 2658 | `13-jobs-a.md` |
@@ -47,15 +47,15 @@ Source: build 348 with PDB, used as the guide for build 307. Tool: IDA script (s
 | NPLobbyJobTransaction | — |  | Expire Set | 158 | open |
 | RecoverPcJob | Lobb54 | 18 | RecoverPcJob ~RecoverPcJob Initialize init restoreGameWorldPcReq restoreGameWorldPcOk restoreGameWorldPcFail restoreGameWorldPcExpired __restoreStuckPc | 2788 | open |
 | RenameCharacterJob | Lobb91 | 25 | RenameCharacterJob ~RenameCharacterJob init checkAccountInventoryItem checkAccountInventoryItemOk checkAccountInventoryItemFail checkAccountInventoryItemTimeout registerServiceEntry tryConsumeAccountInventoryItem tryConsumeAccountInventoryItemOk tryConsumeAccountInventoryItemFail tryConsumeAccountInventoryItemTimeout renameCharacter renameCharacterOk renameCharacterFail renameCharacterTimeout finConsumeAccountInventoryItem finConsumeAccountInventoryItemOk finConsumeAccountInventoryItemFail finConsumeAccountInventoryItemTimeout finServiceEntry sendFriendMessageToNP | 8535 | open |
-| SecondPasswordGetStatusJob | — | 62 63 129 | init requestGetStatus responseGetStatus expireGetStatus | 991 | open |
-| SecondPasswordIsVerifiedJob | — | 64 65 130 | init requestIsVerified responseIsVerified expireIsVerified | 1011 | open |
+| SecondPasswordGetStatusJob | — | 62 63 129 | init requestGetStatus responseGetStatus expireGetStatus | 991 | `14-jobs-b.md` |
+| SecondPasswordIsVerifiedJob | — | 64 65 130 | init requestIsVerified responseIsVerified expireIsVerified | 1011 | `14-jobs-b.md` |
 | SetupNpScheduleInfoJob | — | 0 6 | SetupNpScheduleInfoJob ~SetupNpScheduleInfoJob tryListCurrentPromotions listCurrentPromotionsAck tryGetPromotionPolicy getPromotionPolicyAck | 3920 | open |
-| StartChargeJob | Game30 | 54 55 120 | Initialize init requestStartCharge responseStartCharge expireStartCharge | 1156 | open |
+| StartChargeJob | Game30 | 54 55 120 | Initialize init requestStartCharge responseStartCharge expireStartCharge | 1156 | `14-jobs-b.md` |
 | StartCliSessionWlobbyTokenJob | Lobb15 | 15 | Initialize init getGradeLevelReq getGradeLevelResponse getGradeLevelExpire listAllGradesReq listAllGradesResponse listAllGradesExpire start | 2518 | open |
 | StartCliSessionWnpTokenJob | — | 8 | StartCliSessionWnpTokenJob ~StartCliSessionWnpTokenJob init consumeToken consumeTokenResponse consumeTokenExpire listUserLastPresencesReq listUserLastPresencesResponse listUserLastPresencesExpire listSlotsReq listSlotsResponse listSlotsExpire createSlotsReq createSlotsResponse createSlotsExpire setSlotDataReq setSlotDataResponse setSlotDataExpire presenceLoginReq presenceLoginResponse presenceLoginExpire getUserProfileReq getUserProfileResponse getUserProfileExpire getGameTimeReq getGameTimeResponse getGameTimeExpire getGradeLevelReq getGradeLevelResponse getGradeLevelExpire listAllGradesReq listAllGradesResponse listAllGradesExpire listUserBansReq listUserBansResponse listUserBansExpire getRMSInquiryReq getRMSInquiryResponse getRMSInquiryExpire getUserPromotionStatusReq getUserPromotionStatusResponse getUserPromotionStatusExpire loginAccount checkIntialUserName | 16469 | open |
-| StopChargeJob | Game33 | 56 57 121 | Initialize init requestChargeStop responseChargeStop expireChargeStop | 1089 | open |
+| StopChargeJob | Game33 | 56 57 121 | Initialize init requestChargeStop responseChargeStop expireChargeStop | 1089 | `14-jobs-b.md` |
 | TakeAccountTimeBasedPlayRewardJob | — | 103 104 143 | init takeAccountTimeBasedPlayRewardReq takeAccountTimeBasedPlayRewardResponse takeAccountTimeBasedPlayRewardExpire sendOk sendFail | 3174 | open |
-| TakeGoodsJob | Lobb70 | 21 | TakeGoodsJob ~TakeGoodsJob init takeGoodsReq takeGoodsOk takeGoodsFail takeGoodsTimeout | 1196 | open |
+| TakeGoodsJob | Lobb70 | 21 | TakeGoodsJob ~TakeGoodsJob init takeGoodsReq takeGoodsOk takeGoodsFail takeGoodsTimeout | 1196 | `14-jobs-b.md` |
 | TryEnterGameWorldJob | Lobb24 | 13 | TryEnterGameWorldJob ~TryEnterGameWorldJob Initialize init restorePcReq restorePcOk restorePcFail restorePcExpired checkSecondPasswordStatus checkSecondPasswordStatusResponse checkSecondPasswordStatusExpire checkSecondPasswordVerified checkSecondPasswordVerifiedResponse checkSecondPasswordVerifiedExpire requestGetSlot responseGetSlot expireGetSlot requestChargeGetInfo responseChargeGetInfo expireChargeGetInfo tryEnterGameWorld issueGameWorldToken | 7138 | open |
 | UpgradeJumpingCharacterStateJob | Game72 Game75 | 0 | UpgradeJumpingCharacterStateJob init upgradeJumpingCharacterState | 1453 | open |
 
