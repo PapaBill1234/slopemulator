@@ -48,7 +48,7 @@ Sources: the specs and crate sources named in the table. No new IDA facts are in
 | Decision | Reason |
 | --- | --- |
 | The new crates `cligate` + `authsrv` carry the client login. | The card prefers them. They follow the original service split. |
-| Move `srp6.rs` and `key_data.rs` from `sts` into `authsrv`. CliGate keeps its own RC4 (`cligate::crypt`). | Only AuthSrv does SRP. The `sts` crate stays as it is until the live test passes. |
+| `authsrv` uses `sts::srp6` and `sts::key_data` as a dependency. No move. CliGate keeps its own RC4 (`cligate::crypt`). | `cligate` and `routesrv` depend on `sts` already. A move gives no function and adds risk before the live test. |
 | Hops 5 and 6 (AccessSrv, PresenceSrv) become one small crate `play-stubs` in stage 3. It gives fixed replies. | The card has no stage for them. CliGate cannot finish LoginFinish without the two replies. The stub is not parity; the README must say so. |
 | WorldSrv stays out. The world list is a start-up fixture. | ❓ No `StServer.ini` line. |
 | GameGate (stage 4) implements only the commands behind the `Np` trait. | `shared::np_channel::Np` is the full set that LobbyDaemon calls. |
@@ -66,3 +66,7 @@ Sources: the specs and crate sources named in the table. No new IDA facts are in
 | 8 Live instructions | small | The first live run will find the ❓ items of hop 1. |
 
 The shortest way to a first live result is: stages 2, 3 and 5, then a live login to character select (hops 1–8 with `StubNp`), then stage 7. Stage 4 does not block the first live login, because LobbyDaemon can consume the game token in process. The card order stays; this note is for the user.
+
+## 5. Note on the old `sts` crate
+
+`../Sts/07-client-login-wire.md` records live logins of the real client against `sts-local` (8 Nov 2026). After LoginFinish the client sent `GameAccount/ListMyAccounts`, `Auth/GetMyUserInfo`, `Auth/RequestToken`, `VirtualCurrency/GetBalance` and `Slot/ListSlots`. Thus the old crate is the only login path with a live result. The new path must answer the same five requests through the CliGate generic gate path (11 §11.1), which phase 1 of `cligate` does not have. Stage 3 adds it.

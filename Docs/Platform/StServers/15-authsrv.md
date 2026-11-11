@@ -268,7 +268,26 @@ Reply of `ListAccounts`, state 19 (`CAuTxn` vtable 0x1401AA238, slot +32 sub_140
 | +160 | expiry tick = `timeGetTime()` + game lifetime ms | sub_1400D9790 |
 | +168 | copy of request +832 text (length at +180) | sub_1400D9790 |
 
-ConsumeGameToken (id 31, sub_1400E3D70) uses this store. It is not decoded ❓.
+ConsumeGameToken (id 31) uses this store. See §7.7.
+
+### 7.7 ConsumeGameToken (id 31, sub_1400E3D70)
+
+Source: `ida/StServers/AuthSrv.exe`, read 11 Nov 2026. The handler gets the user record of the `t` header (arg 1).
+
+| Step | Fact | Source |
+| --- | --- | --- |
+| 1 | No body → ErrBadParam 10, module 6, line 7933, `missing body`. | sub_1400E3D70 |
+| 2 | Token (request +312, 16 bytes) all zero → ErrBadParam 10, line 7940, `missing token`. | sub_1400E3D70 |
+| 3 | `GameCode` (+984) empty → ErrBadParam 10, line 7947, `missing game code`. | sub_1400E3D70 |
+| 4 | Find the token in the game token list of the user (user +272): the GUID must be equal and the GameCode must be equal (sub_1401014B0). | sub_1400E9000 |
+| 5 | Not found → error 3010, module 6, line 8038, no text. Log `failed to authenticate game token - user:%s, from:%s, error:%u(%u), app:%s, game:%s, token:%s` with sub-code 1. | sub_1400E3D70 |
+| 6 | Address check: token address (+104) against request `ClientNetAddress` (+120), kind `game`. Equal → pass. Not equal → log `consume %s token from wrong location[u:%s,rip:%s,cip:%s]`; it still passes when GeoIP has no country data ❓ (the full GeoIP rule is not decoded). Fail → error 3303, sub-code 3, line 8038. | sub_1400F63B0 |
+| 7 | Pass → log `game token is authenticated - user:%s, from:%s, app:%s, game:%s, token:%s`. | sub_1400E3D70 |
+| 8 | If request +304 (16 bytes, issuer AppId ❓) is not zero: a second bus request with a `CAuTxn` state 20, timeout 25 000 ms ❓ (target not decoded). Else reply at once. | sub_1400E3D70 |
+| 9 | Reply (sub_1400F3FB0): `<Reply>` with `GameAccountId` (token +64), `LoginName` (user +32), `UserId` (user +12), `UserName` (user +97), `UserStatus` (user +164 if user flag bit 3, else ❓), `UserCenter` (user +28), `Roles` (`type="array"`, `RoleId` list), and `TokenInfo/AuthProviderCode` only if the token text +168 is set. | sub_1400F3FB0 |
+| 10 | The token is unlinked and deleted after a found token, in the pass and the fail case. One use only. | sub_1400F3EE0 |
+
+Rust port: steps 1–7, 9, 10. Step 8 and the GeoIP rule are not ported ❓.
 
 ### 7.6 App token log (§7.3)
 

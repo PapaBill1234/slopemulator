@@ -1,0 +1,17 @@
+[package]
+name = "authsrv"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "AuthSrv of the StServers port: SRP login, LoginFinish, app token, game token."
+
+[dependencies]
+sts-core = { path = "../StsCore" }
+sts = { path = "../../Sts" }
+base64 = "0.22"
+rand = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "signal"] }
+
+[[bin]]
+name = "AuthSrv"
+path = "src/main.rs"

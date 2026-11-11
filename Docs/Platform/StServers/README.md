@@ -29,22 +29,22 @@ Updated 8 Nov 2026.
 | TLS between servers | — | Not ported yet; key = `keyhere` | `13-routesrv.md` §6 |
 | Admin HTTP pages | — | Not ported yet (low priority) | `../Sts/10-stservers-original.md` |
 
-## Port parity (10 Nov 2026)
+## Port parity (11 Nov 2026)
 
 Counted by service type. The 49 types are the services that `StServer.ini` starts.
 Scoring: Ported = 100 %, In progress = 50 %, all other states = 0 %.
 
 | Measure | Count | Percent |
 | --- | --- | --- |
-| **Rust port parity** | 1 ported + 2 in progress of 49 | **4 %** |
+| **Rust port parity** | 1 ported + 3 in progress of 49 | **5 %** |
 | Ported (DbSrv) | 1 of 49 | 2 % |
-| In progress (RouteSrv, CliGate) | 2 of 49 | 4 % |
-| Analysed or decompiled (no Rust yet) | 6 of 49 | 12 % |
+| In progress (RouteSrv, CliGate, AuthSrv) | 3 of 49 | 6 % |
+| Analysed or decompiled (no Rust yet) | 5 of 49 | 10 % |
 | Not started | 40 of 49 | 82 % |
 | By process count (DbSrv runs 33 instances) | 33 of 81 processes ported | 41 % ❓ misleading, one binary |
 
 ```
-Port parity  [#-------------------------------------------------] 3 %
+Port parity  [##------------------------------------------------] 5 %
 Analysis     [#########-----------------------------------------] 18 %
 ```
 
@@ -57,7 +57,7 @@ The percent changes when a service reaches "Ported". RouteSrv is next.
 | DbSrv (33 instances) | **Ported** | All reply, error and partial rules verified live on SQL Server. Not ported yet: RouteSrv registration. Storage path: not used. Spec `12-dbsrv-contract.md` |
 | RouteSrv | **In progress** | Phase 1 crate `routesrv` (19 tests): Connect, service commands, Direct/Key/Block routing, reply relay. ❓ key hash, provider codes and command reply shapes are local choices. Not yet: forward scope, multi-router, TLS. Spec `13-routesrv.md`, crate `Program/Platform/StServers/RouteSrv/README.md` |
 | CliGate | **In progress** | Phase 1 crate `cligate` (22 tests): login flow, logout, idle and auth timeouts, key routing through RouteSrv. Spec `11-cligate-protocol.md`. The `sts` crate still covers the client login path today |
-| AuthSrv | Analysed | Login, SRP verifier, LoginFinish, DB calls, app and game tokens. Spec `15-authsrv.md`. Rust card `auth-1b-rust` waits for the RE phases. Not done: ConsumeGameToken, pre-checks |
+| AuthSrv | **In progress** | Phase 1 crate `authsrv` (5 tests): LoginStart, KeyData, LoginFinish, RequestToken, RequestGameToken, ConsumeGameToken, route bus registration. Accounts come from a TSV file, not from DbSrv. Spec `15-authsrv.md`, crate `Program/Platform/StServers/AuthSrv/README.md` |
 | GameGate | Analysed (partial) | Daemon gate for LobbyGate/GameDaemon, 74 commands |
 | SessionGateSrv, GameAccountSrv, SlotSrv, SpawnSrv | Decompiled | Next after RouteSrv |
 | AccessSrv, ApiGate, ApiManageSrv, ApiSrv, AppAuthSrv, AppGate, AuctionSrv, BanSrv, CacheSrv, ChargeSrv, CouponSrv, DeliverySrv, EventLogSrv, ExAuthSrv, ExAuthnSrv, ForwardSrv, FriendSrv, GoodsSrv, GradeMembersSrv, GradeSrv, IpCheckSrv, LevelSrv, MwGate, NameSrv, PresenceSrv, PrivacySrv, ProfileSrv, PromotionStampSrv, PurchaseLimitSrv, PurchaseSrv, RefundSrv, RewardSrv, RoleSrv, ShowcaseSrv, SvcDispatcher, SysInfoSrv, VirtualCurrencySrv, WarehouseSrv, WebGate, WishSrv | Not ported yet | Order follows the login and in-game flow |
