@@ -18,7 +18,7 @@ use gamedaemon::{
     db::{Db, Pc},
     link::Link,
 };
-use lobbygate::wire::{inner_packet, read_frame, write_frame};
+use lobbygate::wire::{inner_packet, read_frame, write_frame, write_frames};
 use packet::{
     world_entry::{
         property_code, CraftUnion, CreatureProperties, EnterWorldOk, EntryHeader, Fragments,
@@ -338,15 +338,17 @@ async fn connection(
             }
             _ => {}
         }
+        // One write for all replies of one request (rule H4). The order stays the same.
+        let mut frames = Vec::with_capacity(replies.len());
         for reply in replies {
             eprintln!(
                 "gamed: reply cmd {} ({} bytes)",
                 i16::from_le_bytes([reply[2], reply[3]]),
                 reply.len()
             );
-            let frame = session.encrypt(&reply, 4002, false).map_err(bad)?;
-            write_frame(&mut writer, &frame).await?;
+            frames.push(session.encrypt(&reply, 4002, false).map_err(bad)?);
         }
+        write_frames(&mut writer, &frames).await?;
     }
     Ok(())
 }
