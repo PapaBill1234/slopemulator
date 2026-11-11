@@ -175,7 +175,7 @@ Refactor one crate at a time. Parity tests must pass before and after each step.
 | Step | Work |
 | --- | --- |
 | 1 | Add spans and counters (M1, M2). Measure login and enter world. Write the numbers to `Docs/Architecture/baseline.md`. |
-| 2 | Shared `net` module (`Program/Server/Shared/src/net.rs`): framed reader, batching writer, bounded queues (H2 to H7). Move each daemon to it. State 2026-11-11: module done; the lobbyd–gamed link and the lobbyd reader use it; all sockets have `TCP_NODELAY`. Open: LobbyGate, CacheGate, the 3 small daemons, CliGate, the GameDaemon client connection. |
+| 2 | Shared `net` module (`Program/Server/Shared/src/net.rs`): framed reader, batching writer, bounded queues (H2 to H7). Move each daemon to it. Done 2026-11-11: all game daemons and gates read and write through it or through one batched write (`LobbyGate/src/wire.rs` `write_frames` for client frames); all sockets have `TCP_NODELAY`; no unbounded frame queue is left in `Program/Server`. Not moved, by decision: StServers (`Program/Platform`, login only, other frame form). Open: the client frame reader of LobbyGate and GameDaemon moves into the module when GameDaemon gets its connection tasks (step 5); spans and counters (M1, M2). |
 | 3 | Database pools (D1 to D4) in GameDaemon and LobbyDaemon. |
 | 4 | Split handlers into pure domain functions (section 3). Remove locks (O1 to O4). |
 | 5 | Shards and tick loop in GameDaemon (section 6). |
