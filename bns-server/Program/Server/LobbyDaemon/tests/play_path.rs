@@ -355,7 +355,7 @@ async fn client_logs_in_through_stservers_to_the_character_list() {
         let balance = sts.call("VirtualCurrency", "GetBalance", req()).await;
         assert_eq!(balance.get_text("BalanceInfoListCount"), Some("0"));
         let slots = sts.call("Slot", "ListSlots", req()).await;
-        assert_eq!(slots.all("Slot").count(), 0);
+        assert_eq!(slots.all("Slot").count(), 4);
         let token = sts
             .call(
                 "Auth",

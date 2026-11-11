@@ -64,7 +64,9 @@ async fn main() -> io::Result<()> {
                 listener.local_addr()?
             );
             // `Program` of the Connect body: program id 302 of `bnsserver` in the original Game.ini.
-            let np = GateNp::new(gate, game_code, 302, StubNp::default());
+            let mut backend = StubNp::default();
+            backend.presence_replace = true;
+            let np = GateNp::new(gate, game_code, 302, backend);
             run(np, settings, listener).await
         }
         None => {
