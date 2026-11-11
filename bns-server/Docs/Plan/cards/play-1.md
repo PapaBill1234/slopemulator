@@ -62,7 +62,7 @@ Read with `python3 tools/spec_index.py <doc>` first. Then read only the line ran
 
 ## Rules
 - Clean room: binary → spec → Rust. Do not paste Hex-Rays code.
-- Copy original bugs and exploits (parity first). Abuse cases go to `Docs/Plan/abuse-notes/play-1.md` only.
+- Do not port original bugs or exploits. Write the correct behaviour and record the original bug in the spec. Abuse cases go to `Docs/Plan/abuse-notes/play-1.md` only.
 - Never write keys, passwords, certificates or connection strings. Write `keyhere`. Real secrets load through `sts-core::secrets`.
 - Never print, copy or read the gateway key or the IDA licence.
 - DB: container `bns-mssql` at 127.0.0.1:14333. Never print credentials.

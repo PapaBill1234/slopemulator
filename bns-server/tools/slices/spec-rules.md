@@ -29,10 +29,11 @@ Context budget (each tool result is read again on every later turn):
 
 ## Original bugs (quirks)
 - The original code has bugs, for example out-of-bounds reads, reads of uninitialized memory, wrong indexes and integer overflow. Game data and scripts can depend on what these bugs return. A port that fixes them silently breaks that content.
-- Do not fix a bug in the spec. Write a "Quirk" row: address, what the code does, the value it actually gets (for example the next field in the struct, the old buffer contents, or zero), and which data or script can reach it.
+- Record the bug in the spec. Do not hide it. Write a "Quirk" row: address, what the code does, the value it actually gets (for example the next field in the struct, the old buffer contents, or zero), and which data or script can reach it.
 - Give the quirk a short name (`quirk_<name>`), so that the Rust code and the tests can cite it.
 
-- If a quirk looks like a player exploit (see `Docs/Plan/known-exploits.md`), add "exploit" and the list name to its row. Still copy it. Exploit fixes come after full parity.
+- If a quirk looks like a player exploit (see `Docs/Plan/known-exploits.md`), add "exploit" and the list name to its row.
+- The Rust port does not copy a bug or an exploit (user rule, 2026-11-11). Each quirk row gets a column "Port": `fixed` (write the correct behaviour) or `keep value` (game data or scripts need the value that the bug returns; the port gives this value in a safe way, with no memory error).
 
 Abuse notes (all slices):
 - The port copies the original behaviour, also when a player can abuse it. Full parity comes first.
