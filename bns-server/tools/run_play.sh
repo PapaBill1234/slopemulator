@@ -29,6 +29,8 @@ COMMON="--config $CFG/StServer.ini --route-ini $CFG/Route.ini"
 # name | port to wait for | command
 # Local character hand-off from lobbyd to gamedaemon (not parity). Not in git.
 ENTRY_DIR="$ROOT/logs/play/entry"
+# Original GameDaemon rule file (not in git). gamedaemon sends it as command 930.
+CONTENTS_RULE="${CONTENTS_RULE:-$ROOT/../BnS_2020/GameDaemon/Config/ContentsRule.gamed.config.xml}"
 SERVICES=(
   "RouteSrv|6605|$BIN/RouteSrv --config $CFG/Route.ini --listen 127.0.0.1:6605 --server-id 1"
   "AuthSrv||$BIN/AuthSrv $COMMON --accounts $ACCOUNTS --server-id 2"
@@ -43,7 +45,7 @@ SERVICES=(
 # DbSrv is not on the play path yet (AuthSrv reads a file). It starts only with tools/play/Db.ini.
 [ -f "$CFG/Db.ini" ] && SERVICES=("DbSrv|10901|$BIN/DbSrv --config $CFG/Db.ini --db AcctDb --listen 127.0.0.1:10901" "${SERVICES[@]}")
 # GameDaemon has no server binary before stage 7.
-[ -x "$BIN/gamedaemon" ] && SERVICES+=("GameDaemon|$GAME_PORT|env BNS_LOCAL_ENTRY_DIR=$ENTRY_DIR $BIN/gamedaemon --listen 0.0.0.0:$GAME_PORT --handshake-key $HANDSHAKE_KEY --lobby 127.0.0.1:21801")
+[ -x "$BIN/gamedaemon" ] && SERVICES+=("GameDaemon|$GAME_PORT|env BNS_LOCAL_ENTRY_DIR=$ENTRY_DIR $BIN/gamedaemon --listen 0.0.0.0:$GAME_PORT --handshake-key $HANDSHAKE_KEY --lobby 127.0.0.1:21801 --contents-rule $CONTENTS_RULE")
 
 port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
 
