@@ -4,18 +4,24 @@ Read this file before you write or change Rust code in `Program/`. Size: about 2
 
 ## 1. Goal and limit
 
-| Item | Rule |
-| --- | --- |
-| Parity | The peer must not see a difference from the original: same bytes, same order of messages on one connection, same reply codes, same database rows, same game timing (tick period, cooldowns, timeouts). |
-| Freedom | All that the peer cannot see is ours: threads, tasks, memory, locks, buffers, batching, database connections. |
-| Not allowed | Client prediction, packet merge that changes the frame order, a changed tick period, a skipped original message. These change parity. |
+Parity means: the player can play as in the original. It does not mean the same code or the same structure.
+
+| Tier | What | Rule |
+| --- | --- | --- |
+| 1. Fixed | All that the game client sees: packet bytes, message order on one connection, reply codes, game rules, game timing that the player feels (cooldowns, cast times, timeouts). | Same as the original. |
+| 2. Free, with care | Links between our own daemons, database layout and procedures, the split into processes. | Change them when a measurement shows a gain. Change the two ends together. Write the change in the spec. |
+| 3. Free | Threads, tasks, memory, locks, buffers, batching, internal tick rate, logs, config form. | Use the modern form. Do not copy an original structure because it is original. |
+
+Do not copy original code habits: a global lock, a blocking call in a handler, a polling loop, a thread for each connection, a fixed-size buffer copy.
+
+Not allowed: a change that the client can see. Examples: a changed frame order, a skipped message, a changed cooldown.
 
 The original lag has 2 possible sources. We can remove only the first one.
 
 | Source | Can we remove it? |
 | --- | --- |
 | Server stalls: a blocked thread, a database call in the game path, a global lock, an unbatched send, Nagle delay | Yes |
-| Protocol design: TCP, server-side hit timing, the original tick period | No (parity) |
+| Client protocol design: TCP, server-side hit timing | No (tier 1) |
 
 ## 2. State of the code (2026-11-11, counted, not measured)
 
@@ -95,7 +101,7 @@ The hot path is all code that runs for each packet or each tick.
 
 | # | Rule |
 | --- | --- |
-| G1 | Each zone shard runs a fixed tick with the original period (take the period from the spec; ❓ until the spec gives it). |
+| G1 | Each zone shard runs a fixed tick. The internal period is ours (tier 3). The times that the client sees (cooldowns, cast times, send period of position updates) are the original values from the spec (❓ until the spec gives them). |
 | G2 | Tick order: drain inbox → run handlers → run simulation step → flush outboxes one time. |
 | G3 | Use `Interval` with `MissedTickBehavior::Skip`. Write the tick time to a histogram. |
 | G4 | Area broadcast uses a spatial grid of the zone. Do not loop over all players of the zone for each event. |
@@ -106,7 +112,7 @@ The hot path is all code that runs for each packet or each tick.
 | # | Rule |
 | --- | --- |
 | D1 | One pool for each database (start: 8 connections, config value). No single connection behind a mutex. |
-| D2 | One Rust function for each original stored procedure, same name, same parameters, same return code. |
+| D2 | One Rust function for each database operation. Start with the original stored procedures. A new layout or query is permitted (tier 2) if the client-visible result is the same. |
 | D3 | Each call has a timeout (original value from the spec, 10 s in LobbyDaemon). |
 | D4 | Operations for one account or one character go through one ordered queue. Different accounts run in parallel. |
 | D5 | Read at login, keep in the shard, write on change. Do not read the same row again in a session if the original does not. |
