@@ -116,7 +116,7 @@ async fn serve<S: lobbydaemon::store::Store, N: Np>(
     }
     let mut server = Server::new(store, np, settings)?;
     if local_game {
-        server = server.with_game_daemon(Arc::new(lobbydaemon::gamed::LocalGameDaemon));
+        server = server.with_game_daemon(Arc::new(lobbydaemon::gamed::LocalGameDaemon::default()));
     }
     let server = Arc::new(server);
     let (stop, shutdown) = watch::channel(false);
