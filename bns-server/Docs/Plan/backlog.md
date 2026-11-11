@@ -46,3 +46,25 @@ Questions for the card (Client_gm PDB names, then Client 2020):
 4. How a panel is opened (key, command, menu).
 5. Can a plugin add a new panel (new layout + new handler), or must it take over an unused existing panel (for example a GM or debug panel left in the retail client)?
 6. Which existing panels to copy: list, tabs, input box, buttons.
+
+### gmweb: what client RE already gives (2026-11-11)
+
+Source: `Docs/Client/RE/14-ui.md` (§1), `14-ui-engine-vtables.tsv`, `12-infogate-arena.md` §3.1. Client 381.
+
+| Fact | Source | Effect on the panel |
+| --- | --- | --- |
+| Widgets and layouts are in UE packages (world UI: package `00007979` / `00070471`, scene `Game_MainScene`). Code finds widgets by name (`UIPanel::GetWidgetId` `0x7fbe40`). | 14-ui §1.1, §1.3 | A new native panel needs a new layout in a UE package. |
+| `UIEngineInterface` (501 slots) has no create or clone widget call. | 14-ui-engine-vtables.tsv | A plugin cannot build widgets at run time. |
+| Widget events go to static `Panel::OnXxx(EngineEventHandler *, EUiEvent *)` callbacks through `EventTransmitter::Transmit` `0x55fbe0`. | 14-ui §1.5 | A plugin can hook buttons of an existing panel. |
+| `InGameWebPanel` (33 functions) is a game window with a browser widget. Engine calls: `SetWebBrowserURL` (slot 206), `SetWebBrowserJavasciprt`, `SetWebBrowserCallJavascriptFunction`, URL filters. Web page → client calls: `BnsCommandDefinition` (72 types, method `CALLBACK`). | 14-ui §1.7, vtable TSV | A game window can show our own GM web page. |
+| Web URLs come from a table: `InGameWeb::GetDomainUrl` `0xe31ae0` (index 1–75), `SetDomainUrl` `0xe31a80`. `InGameWeb::IsWebEnabled` gates use. | 12-infogate-arena §3.1 | A plugin can set one URL to our GM page. |
+
+Paths:
+
+| Path | Look | Work | Choice |
+| --- | --- | --- | --- |
+| B: `InGameWebPanel` + our GM web page (axum). Plugin sets the URL and handles `BnsCommandDefinition` callbacks for target, position and similar. | Game window frame, HTML inside | Low. One HTML GM tool for game and browser. | **First** |
+| A1: take over an existing panel and hook its `OnXxx` callbacks | Fully native | Medium. Fixed widget set. | Later, for small tools |
+| A2: new panel in a UE package | Fully native | High. UE package edit for `bsengine`. | Only if B is not good enough |
+
+Open ❓: browser engine and version in `bsengine_Shipping.dll`; `BnsCommandDefinition` dispatch function (14-ui §4); `IsWebEnabled` condition; same functions in client 2020.
