@@ -7,11 +7,11 @@ Source: build 348 (PDB). Procedure binding (parameters, result columns) of build
 | Fact | Value |
 | --- | --- |
 | `LobbyDB::*` wrappers in build 348 | 94 |
-| Wrappers in build 307 (`db-binding.json`) | 87 (88 procedures) |
-| Wrappers only in build 348 ❓ | 7: `LoadGameWorldCluster`, `LoadGameWorld`, `LoadGameAccountContentQuotaList`, `UpdateGameAccountContentQuota`, `LoadGameAccountRecycleTimeList`, `UpdateGameAccountRecycleTime`, `LoadMileage` |
+| Wrappers in build 307 | 90 (`db-binding.json` has 87; it does not have `LoadGameWorldCluster`, `LoadGameWorld`, `LoadMileage`) |
+| Wrappers only in build 348 | 4: `LoadGameAccountContentQuotaList`, `UpdateGameAccountContentQuota`, `LoadGameAccountRecycleTimeList`, `UpdateGameAccountRecycleTime` |
 | Procedures in build 307 with no 348 wrapper | 0 |
 
-Do not port the 7 wrappers of build 348 before the 307 comparison. ❓ Build 307 must load the world list by another path (not in `db-binding.json`).
+Do not port the 4 wrappers of build 348. Source of this correction: `22-compare-307.md` §2.
 
 ## 2. Wrapper rule
 
