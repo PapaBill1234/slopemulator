@@ -55,6 +55,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "authsrv"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "rand",
+ "sts",
+ "sts-core",
+ "tokio",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

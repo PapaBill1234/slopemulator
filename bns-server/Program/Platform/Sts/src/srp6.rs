@@ -129,6 +129,38 @@ pub fn enroll<R: RngCore + CryptoRng>(login: &str, password: &[u8], rng: &mut R)
     }
 }
 
+/// Verifier for a given salt. For account tools: the server never gets the password.
+pub fn verifier(login: &str, password: &[u8], salt: &[u8]) -> Vec<u8> {
+    number_bytes(&generator().modpow(&password_x(login, password, salt), &modulus()))
+}
+
+/// (A, M1, expected M2, K) of [`client_model`].
+pub type ClientModel = (Vec<u8>, [u8; 32], [u8; 32], [u8; 64]);
+
+/// Client side of the exchange. A model for tests and loopback tools only.
+/// Input: the challenge (salt, B) and 32 random bytes for a.
+/// Output: (A, M1, expected M2, K).
+pub fn client_model(
+    login: &str,
+    password: &[u8],
+    salt: &[u8],
+    server_public: &[u8],
+    random: &[u8; 32],
+) -> Result<ClientModel, Error> {
+    let n = modulus();
+    let b = read_number(server_public)?;
+    let a = BigUint::from_bytes_le(random);
+    let a_pub = number_bytes(&generator().modpow(&a, &n));
+    let u = hash_number(hash(&[&a_pub, server_public]));
+    let x = password_x(login, password, salt);
+    let gx = generator().modpow(&x, &n);
+    let base = (&b + &n * multiplier(&n) - (multiplier(&n) * gx) % &n) % &n;
+    let key = session_key(&base.modpow(&(a + u * x), &n));
+    let m1 = client_proof(login, salt, &a_pub, server_public, &key);
+    let m2 = hash(&[&a_pub, &m1, &key]);
+    Ok((a_pub, m1, m2, key))
+}
+
 /// Consumed by step 2. No Debug: contains ephemeral private data.
 pub struct ServerExchange {
     login: String,
