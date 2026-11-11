@@ -63,8 +63,8 @@ async fn main() -> io::Result<()> {
                 "lobbyd listens on {}, tokens through GameGate {gate}",
                 listener.local_addr()?
             );
-            // ❓ `Program` of the Connect body: portal program id of Game.ini. 0 here.
-            let np = GateNp::new(gate, game_code, 0, StubNp::default());
+            // `Program` of the Connect body: program id 302 of `bnsserver` in the original Game.ini.
+            let np = GateNp::new(gate, game_code, 302, StubNp::default());
             run(np, settings, listener).await
         }
         None => {
