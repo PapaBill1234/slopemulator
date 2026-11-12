@@ -17,6 +17,7 @@ use std::{
 use tokio::time::Instant;
 
 mod characters;
+mod services;
 mod world;
 use world::WorldToken;
 
@@ -82,6 +83,14 @@ pub struct Settings {
     pub max_links: usize,
     /// Local fixture worlds sent in HelloOk. Empty by default (milestone R1).
     pub worlds: Vec<crate::protocol::WorldInfo>,
+    /// Original config byte +400 (charge info). Default off. The on-path is not ported:
+    /// it needs NP charge calls. With `charge` on, command 60 gets Fail code 2.
+    pub charge: bool,
+    /// Original config byte +413 (`useGrade`). Default off. The on-path is not ported:
+    /// it needs NP grade calls. With `grade` on, command 106 gets Fail code 2.
+    /// Account inventory is always off (no account-inventory link): commands 82 to 100
+    /// always fail with code 7.
+    pub grade: bool,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -95,6 +104,8 @@ impl Default for Settings {
             max_sessions: 1024,
             max_links: 64,
             worlds: Vec::new(),
+            charge: false,
+            grade: false,
         }
     }
 }
@@ -430,6 +441,11 @@ impl<S: Store, N: Np> Jobs<S, N> {
             // Build 307's D41 handler has no decode, session lookup or reply.
             41 => vec![],
             64 | 67 | 70 | 73 | 76 => self.goods_unavailable(link, packet, key, cmd)?,
+            60 => self.charge_info(link, packet, key)?,
+            106 => self.activate_grade(link, packet, key)?,
+            82 | 85 | 88 | 91 | 94 | 97 | 100 => {
+                self.account_item_service(link, packet, key, cmd)?
+            }
             // D79 GetServiceEntryListReq `hq` → D80 `hiqCqQqohq;` (02-links).
             // ❓ The 307 job is not ported. Local policy: an empty list, so the
             // client gets C72 and leaves its wait state.
