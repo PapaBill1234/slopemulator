@@ -49,7 +49,7 @@ lp2-3	spec	opus	-	Docs/Server/GameDaemon/10-session-handlers.md,Docs/Server/Lobb
 lp2-3-rust	rust	sonnet	lobbydaemon,gamedaemon,packet	Program/Server/LobbyDaemon/,Program/Server/GameDaemon/,Program/Server/Packet/,Docs/Server/LobbyDaemon/23-return-to-lobby.md,Cargo.lock	lp2-3,ids-3-rust	120	done	return to lobby on both ends
 lp2-4-rust	rust	sonnet	lobbydaemon,gamedaemon,packet	Program/Server/LobbyDaemon/,Program/Server/GameDaemon/,Program/Server/Packet/,Cargo.lock	lp2-3-rust	120	blocked	logout in world and kick over the GameDaemon link
 lp2-5-rust	rust	sonnet	lobbydaemon	Program/Server/LobbyDaemon/,Docs/Server/LobbyDaemon/11-character-select.md	lp2-2-rust,ids-3-rust	120	done	character lifecycle state from the database
-st-06	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	ready	StServers RE: AccessSrv, BanSrv, RoleSrv, PrivacySrv
+st-06	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	done	StServers RE: AccessSrv, BanSrv, RoleSrv, PrivacySrv
 st-07	spec	opus	-	Docs/Platform/StServers/RE/	st-09	150	ready	StServers RE: ExAuthSrv, ExAuthnSrv, IpCheckSrv
 st-08	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	ready	StServers RE: FriendSrv, PresenceSrv, ProfileSrv, NameSrv
 st-09	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	ready	StServers RE: member library, GradeSrv, GradeMembersSrv, LevelSrv
