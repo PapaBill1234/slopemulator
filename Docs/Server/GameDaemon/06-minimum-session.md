@@ -77,7 +77,20 @@ Descriptor entries identify these options and offsets:
 The worker computes the interval as `max(1000, 1000 × server-ping-send-sec)`.
 The result is consistent with milliseconds and the seconds option name.
 ❓ Scheduler wall-time calibration was not independently traced.
-No deployed default or configured option value was recovered.
+
+Descriptor layout (381, 40 bytes each, from `0x140ED1050`): description text pointer, config offset, name pointer, type (1 = int, 4 = bool), default pointer.
+Built-in defaults (381, gw-enter stage 3):
+
+| Option | Type | Default pointer | Default value |
+| --- | --- | --- | --- |
+| `enable-server-ping` (+1444) | bool | null | false ❓ (null pointer read as "no default", thus false) |
+| `server-ping-send-sec` (+1448) | int | `0x1407E30E4` | 60 |
+| `server-ping-disconnect-count` (+1452) | int | `0x1407E3D18` | 3 |
+| `server-ping-disconnect-no-packet-enabled` (+1445) | bool | null | false ❓ |
+| `server-ping-disconnect-invalid-packet-enabled` (+1446) | bool | null | false ❓ |
+
+Thus with built-in defaults the server sends no ping 17. A server config file can enable it. ❓ The deployed config values are not known.
+Port default: ping off; if on, interval 60 s and disconnect count 3.
 
 Let `S` be the last sent pair and `R` the last received pair.
 Let `d_seq = S.sequence − R.sequence`.
@@ -103,7 +116,8 @@ A count threshold is not a fixed deadline from TCP accept.
 | State | Evidence | Limit |
 | --- | --- | --- |
 | Zone spawn wait | PcSpawnAction start `0x1404BEAE0` schedules `0x140674A00` with value `1800000`. Timeout callback `0x1404BEE30` logs that value and cancels the action path. | ❓ Complete unit conversion and resulting client disconnect behavior not verified. Do not state a fixed wall-clock timeout. |
-| Scheduler | `0x140674A00` divides its input by the owning scheduler field +16 before queueing. | ❓ Owner tick calibration not traced. |
+| Scheduler | `0x140674A00` divides its input by the owning scheduler field +16 before queueing. 2019 + PDB `PcSpawnAction::startAction` `0x1404B4B00` line 83: `_postTick = 1800000 / serializer->_interval`, then `Serializer::post`. Thus +16 is `Serializer::_interval` (ms per tick) and 1,800,000 is in ms (30 minutes). | ❓ Value of `_interval` not traced. |
+| Spawn position (2019) | `PcSpawnAction::startAction` `0x1404B4B00` lines 44–60: if the action has a creature id, use that creature's x/y/z; else call `GeoZone::GetPcSpawn(geozone, 1, &x, &y, &z, &yaw)`. zupper = z + 1. Then `checkSpawnPosition`; on success `prepareSpawn` (sends 41). On failure: log and `finishAction`. | ❓ Meaning of argument 1 in `GetPcSpawn` (index or type) not traced. |
 | TCP/Hello/token wait | Separate session and authentication states exist. | ❓ Timer values and all failure-close rules not recovered. |
 | Client load/cinematic wait | `0x78E8F0` can defer command 42 through a cinematic branch. | ❓ No universal loading-finished timer or separate final ready command recovered. |
 | Idle standing | Ordinary ping fields and server checks recovered. | ❓ Complete client-side idle-disconnect rules and mandatory background packets remain open. |
