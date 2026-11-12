@@ -1,9 +1,16 @@
-//! `lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--world-port <port>] [--deletion-period <seconds>] [--world <id>,<cluster>,<name>,<ip>,<port>]...`
+//! `lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--np-game-code <code>] [--world-port <port>] [--deletion-period <seconds>] [--world <id>,<cluster>,<name>,<ip>,<port>]...`
+//! `--np-game-code`: NP deposit id prefix (config key `np-game-code`, default `bnsprog`, ASCII).
 //! Without `--gamegate` the empty stub rejects all tokens.
 //! `--deletion-period`: period of the deletion scheduler. ❓ Local default 60 s.
 //! `--world-port`: loopback listener of the GameDaemon link (07-gamed-link.md).
 use gamegate::np_client::GateNp;
-use lobbydaemon::{jobs::Settings, np::StubNp, protocol::WorldInfo, store::MemoryStore, Server};
+use lobbydaemon::{
+    jobs::Settings,
+    np::{check_np_game_code, StubNp, DEFAULT_NP_GAME_CODE},
+    protocol::WorldInfo,
+    store::MemoryStore,
+    Server,
+};
 use shared::np_channel::Np;
 use std::{
     io,
@@ -12,7 +19,7 @@ use std::{
 };
 use tokio::{net::TcpListener, sync::watch};
 
-const USAGE: &str = "usage: lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--world-port <port>] [--deletion-period <seconds>] [--world <id>,<cluster>,<name>,<ip>,<port>]...";
+const USAGE: &str = "usage: lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--np-game-code <code>] [--world-port <port>] [--deletion-period <seconds>] [--world <id>,<cluster>,<name>,<ip>,<port>]...";
 
 fn usage() -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, USAGE)
@@ -42,6 +49,7 @@ async fn main() -> io::Result<()> {
     let mut world_port: Option<u16> = None;
     let mut gate: Option<SocketAddr> = None;
     let mut game_code = String::from("bns");
+    let mut np_game_code = String::from(DEFAULT_NP_GAME_CODE);
     let mut settings = Settings::default();
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -49,6 +57,13 @@ async fn main() -> io::Result<()> {
         match arg.as_str() {
             "--gamegate" => gate = Some(value()?.parse().map_err(|_| usage())?),
             "--game-code" => game_code = value()?,
+            // Config key `np-game-code` (`BnsCommonConfig`). Not the STS `--game-code`.
+            "--np-game-code" => {
+                let code = value()?;
+                check_np_game_code(&code)
+                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+                np_game_code = code;
+            }
             "--world-port" => world_port = Some(value()?.parse().map_err(|_| usage())?),
             "--deletion-period" => {
                 let seconds: u64 = value()?.parse().map_err(|_| usage())?;
@@ -63,6 +78,8 @@ async fn main() -> io::Result<()> {
             _ => port = arg.parse().map_err(|_| usage())?,
         }
     }
+    // ❓ The deposit job (ld381-r5) reads this value. Until then it is only logged.
+    eprintln!("lobbyd: np-game-code {np_game_code}");
     // Loopback only.
     let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port)).await?;
     let link = match world_port {

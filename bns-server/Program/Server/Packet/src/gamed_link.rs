@@ -2,19 +2,20 @@
 //! Spec: Docs/Server/LobbyDaemon/07-gamed-link.md. Frame: `size:u16, command:u16, body`.
 //! Sources: lobbyd 307 `0x1400722B0`, `0x140083D60`; GameDaemon 381 `0x14013F0F0` (20),
 //! `0x140149920` (21), format strings `0x14099BD50`, `0x14099D280`, `0x1409A8D88`, `0x1409449E4`.
-//! ❓ Command 6 uses the build-307 field list. The build-381 list is not verified.
+//! Build 381 formats: `HelloOk` string `0x14017ba60`, `EnterWorldOk` string `0x140179cd0`.
 //! ❓ Command 6 sends empty lists and zero account fields except the PC id and the account id.
 use bloodlib::packet::{compose, decompose, DecodeLimits, PacketError, Value};
 
-/// ❓ Build 348 value. Build 307 uses 80. The build-381 value is not verified.
+/// Verified in build 381 (`HandleLobbyGame_HelloReq` `0x140083ee0`). Build 307 uses 80.
 pub const PACKET_VERSION: i16 = 83;
 
 const HELLO: &str = "hhhhh";
-const HELLO_OK: &str = "hCQiiiqqChii;;qqqi";
+/// A rule entry has 5 values (h, i, i, i, i). The rule lists stay empty.
+const HELLO_OK: &str = "hCQiiiqqChiiii;;qqqi";
 const ERROR: &str = "hE";
 const WORLD: &str = "hhh";
 const ENTER: &str = "hqqqi";
-const ENTER_OK: &str = "hiqqocbbbbssQhhiQCQiqqihcc;Cqhs;iQQQsCiiiii;iCiiQiqq;Ciqq;qqiq";
+const ENTER_OK: &str = "hiqqocbbbbssQhhiQCQiqqihcccc;Cqhs;iQQQsCiiiii;iCiiQiqq;Ciqq;qqiqCihqq;Chq;";
 const FAILURE: &str = "hqE";
 const CREATE: &str = "hqqobisbQh";
 const CREATE_OK: &str = "hqhhb";
@@ -212,6 +213,9 @@ impl Message {
                         U64(0),
                         U32(0),
                         U64(0),
+                        // Content quota list (i, h, q, q) and recycle time list (h, q): empty.
+                        list(),
+                        list(),
                     ],
                 )
             }
@@ -502,12 +506,47 @@ mod tests {
             let packet = message.encode().unwrap();
             assert_eq!(Message::decode(&packet).unwrap(), Some(message));
         }
-        // Hello reply: 96 bytes + 10 for each rule (07-gamed-link.md). ❓ The spec size has other framing.
+        // Hello reply: 96 bytes + 18 for each rule (381 rule entry `hiiii`; 07-gamed-link.md). ❓ The spec size has other framing.
         assert_eq!(
             Message::HelloOk.encode().unwrap().len(),
             2 + 2 + 2 + 2 * 31 + 28
         );
         assert_eq!(Message::decode(&[4, 0, 99, 0]).unwrap(), None);
+    }
+
+    #[test]
+    fn hello_ok_381_format() {
+        assert_eq!(HELLO_OK, "hCQiiiqqChiiii;;qqqi");
+        assert_eq!(PACKET_VERSION, 83);
+    }
+
+    #[test]
+    fn enter_ok_381_tail() {
+        let message = Message::EnterOk {
+            transaction: 9,
+            pcid: 60005,
+            account: [4; 16],
+        };
+        let packet = message.encode().unwrap();
+        let limits = DecodeLimits {
+            blob_bytes: 4096,
+            string_units: 256,
+            property_bytes: 0,
+        };
+        let mut values = decompose(ENTER_OK, &packet, limits).unwrap();
+        let n = values.len();
+        assert_eq!(values[n - 2], Value::Repeat(Vec::new()));
+        assert_eq!(values[n - 1], Value::Repeat(Vec::new()));
+        // Non-empty new lists: content quota (i, h, q, q) and recycle time (h, q).
+        values[n - 2] = Value::Repeat(vec![vec![
+            Value::U32(1),
+            Value::I16(2),
+            Value::U64(3),
+            Value::U64(4),
+        ]]);
+        values[n - 1] = Value::Repeat(vec![vec![Value::I16(5), Value::U64(6)]]);
+        let packet = compose(ENTER_OK, &values).unwrap();
+        assert_eq!(Message::decode(&packet).unwrap(), Some(message));
     }
 
     #[test]
