@@ -28,11 +28,12 @@ One Sonnet builder at a time (`tools/run_queue.sh`). Each Rust slice keeps all 8
 | Slice | Model | Work | Deps |
 | --- | --- | --- | --- |
 | `lp2-1-rust` | Sonnet | Spec session states; LogoutJob table; 28 GetWaitInfo; 31 GiveupWait | — |
+| `ids-3-rust` | Sonnet | Official command names: LobbyDaemon (from `command-tables.json`, ✅ only), LobbyGate link side, GameDaemon `const F` leftovers | `lp2-1-rust` |
 | `lp2-2-rust` | Sonnet | Feature-off and channel-absent replies: 60, 106, 82–100 | `lp2-1-rust` |
 | `lp2-3` | Opus (IDA) | Spec: GameDaemon 381 `ReturnToLobbyTran`, client 27/28, link 8/9/10 order. Writes card `lp2-3-rust`. | — |
-| `lp2-3-rust` | Sonnet | Return to lobby on both ends | `lp2-3` |
+| `lp2-3-rust` | Sonnet | Return to lobby on both ends | `lp2-3`, `ids-3-rust` |
 | `lp2-4-rust` | Sonnet | Gamed 12 LogoutNotify, link close, KickJob over the link (14/15/16) | `lp2-3-rust` |
-| `lp2-5-rust` | Sonnet | Character lifecycle from the database; remove the per-link maps | `lp2-2-rust` |
+| `lp2-5-rust` | Sonnet | Character lifecycle from the database; remove the per-link maps | `lp2-2-rust`, `ids-3-rust` |
 
 Later (not carded): delete and restore on GameDaemon, full NP start sequence (`18` §1), try-enter checks (`18` §3), gamed account requests, slot bind 57, account inventory link. Write their cards when `lp2-5-rust` is done and the user has tested login.
 
