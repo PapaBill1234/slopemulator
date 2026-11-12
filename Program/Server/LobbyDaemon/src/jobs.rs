@@ -26,15 +26,26 @@ pub struct Output {
     pub link: LinkId,
     pub packets: Vec<Vec<u8>>,
 }
+/// Local session state. Each variant names its spec state (`13-jobs-a.md` §2, value is
+/// `major << 16 | minor`). The spec states 1.2, 1.3, 3.1, 5.3 and 6.0 have no local value:
+/// no local path stays in them (6.0 = the session is removed).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum State {
+    /// 1.1 anonymous, NP token init done (`0x10001`).
     Init,
+    /// Local sub-state of 2.0 (`0x20000`): lobby, initial user name still open.
     InitialName,
+    /// 2.0 lobby, character select (`0x20000`).
     Lobby,
+    /// 5.1 world-to-lobby, leave token issued (`0x50001`).
     Retained,
+    /// 5.2 world-to-lobby, anonymous presence set (`0x50002`).
     RetainedInit,
+    /// 3.2 lobby-to-world wait, in the queue (`0x30002`).
     WorldQueued,
+    /// 3.3 lobby-to-world ok, enter token issued (`0x30003`).
     WorldReady,
+    /// 4.0 in world (`0x40000`).
     World,
 }
 #[derive(Clone)]
@@ -430,7 +441,10 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 }
             }
             18 | 19 | 23 => {
-                wire::fields("hq", packet)?;
+                if wire::fields("hq", packet).is_err() {
+                    return Ok(vec![]);
+                }
+                // 18 names the session by gate key, 19 and 23 by client key.
                 let client = if cmd == 18 {
                     self.sessions
                         .iter()
@@ -439,37 +453,32 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 } else {
                     Some(key)
                 };
-                let mut reply = vec![];
-                if let Some(client) = client {
-                    if self.sessions.get(&client).is_some_and(|s| s.link == link) {
-                        if matches!(
-                            self.state(client),
-                            Some(State::Retained | State::WorldReady)
-                        ) {
-                            if cmd == 23 {
-                                reply.push(wire::notice(21, client)?);
-                            }
-                            return Ok(if reply.is_empty() {
-                                vec![]
-                            } else {
-                                vec![Output {
-                                    link,
-                                    packets: reply,
-                                }]
-                            });
-                        }
-                        let session = self.sessions.remove(&client).unwrap();
-                        if cmd == 23 && session.state == State::Lobby {
-                            reply.push(wire::notice(21, client)?);
-                        }
-                        self.finish(client, session);
-                    }
+                match client {
+                    // ❓ The gate channel and `close` of each command are not read from the
+                    // original. Local choice: `close` is true for all three; only 23 (the
+                    // client logs out, the gate stays) has a gate channel for the notify.
+                    Some(client) => self.logout(link, client, true, cmd == 23)?,
+                    None => vec![],
                 }
-                reply
             }
+            // D28 GetWaitInfoReq `hq` → D29 `hqiiCch;` / D30 `hqE` (20-handlers §4.1).
+            28 => {
+                if wire::fields("hq", packet).is_err() {
+                    return Ok(vec![]);
+                }
+                self.wait_info(link, key)?
+            }
+            // D31 GiveupWaitReq `hq` → D32 `hq` / D33 `hqE` (20-handlers §4.1).
+            31 => {
+                if wire::fields("hq", packet).is_err() {
+                    return Ok(vec![]);
+                }
+                self.giveup_wait(link, key)?
+            }
+            // An unknown command gets no reply. The link and its other sessions stay.
             _ => {
-                eprintln!("lobbyd: unsupported LobbyGate command {cmd}");
-                return Err(wire::invalid("unsupported LobbyGate command"));
+                eprintln!("lobbyd: unsupported LobbyGate command {cmd}, ignored");
+                vec![]
             }
         };
         Ok(if packets.is_empty() {
@@ -477,6 +486,55 @@ impl<S: Store, N: Np> Jobs<S, N> {
         } else {
             vec![Output { link, packets }]
         })
+    }
+    /// LogoutJob (`13-jobs-a.md` §3.3). `close` is the job flag. `notify` says that the job
+    /// has a gate channel; the notify (command 21) needs both. The reply is the notify, if any.
+    /// A session of another link, or no session, ends the job with no change.
+    fn logout(
+        &mut self,
+        link: LinkId,
+        client: u64,
+        close: bool,
+        notify: bool,
+    ) -> io::Result<Vec<Vec<u8>>> {
+        let Some(last) = self
+            .sessions
+            .get(&client)
+            .filter(|s| s.link == link)
+            .map(|s| s.state)
+        else {
+            return Ok(vec![]);
+        };
+        let notice = || -> io::Result<Vec<Vec<u8>>> {
+            if close && notify {
+                Ok(vec![wire::notice(21, client)?])
+            } else {
+                Ok(vec![])
+            }
+        };
+        let (remove, reply) = match last {
+            // 1.1 and 5.2: only a `close` ends the session. No notify.
+            State::Init | State::RetainedInit => (close, vec![]),
+            // 2.0 (also the local initial-name sub-state): end the session, then notify.
+            State::Lobby | State::InitialName => (true, notice()?),
+            // 3.2: end the session and `leave` the queue (the drop of the session
+            // releases the admission), then notify.
+            State::WorldQueued => (true, notice()?),
+            // 3.3: "absorb logout by L2W_ok state". No state change, notify as above.
+            State::WorldReady => (false, notice()?),
+            // 4.0 and 5.1: "invalid state" in the original. No change, no notify.
+            // ❓ 5.1 is read from the pseudocode layout (13-jobs-a.md §3.3).
+            State::World | State::Retained => {
+                eprintln!("lobbyd: logout in invalid state {last:?} ignored");
+                (false, vec![])
+            }
+        };
+        if remove {
+            if let Some(session) = self.sessions.remove(&client) {
+                self.finish(client, session);
+            }
+        }
+        Ok(reply)
     }
     /// Local world-return control. The real GameDaemon return link is deferred.
     /// The caller must supply the lifetime; no binary default is assumed.
