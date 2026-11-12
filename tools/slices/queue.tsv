@@ -42,7 +42,7 @@ st-02	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	done	StServers RE: AuthS
 st-03	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	done	StServers RE: GameAccountSrv, SlotSrv, SpawnSrv, WorldSrv
 st-04	spec	opus	-	Docs/Platform/StServers/RE/	st-01	150	done	StServers RE: GameGate, AppGate, MwGate, WebGate
 st-05	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	done	StServers RE: RouteSrv, ForwardSrv, SvcDispatcher, CacheSrv, DbSrv audit
-lp2-1-rust	rust	sonnet	lobbydaemon	Program/Server/LobbyDaemon/,Docs/Server/LobbyDaemon/13-jobs-a.md	-	120	ready	LobbyDaemon session states, logout table, wait info, give up wait
+lp2-1-rust	rust	sonnet	lobbydaemon	Program/Server/LobbyDaemon/,Docs/Server/LobbyDaemon/13-jobs-a.md	-	120	done	LobbyDaemon session states, logout table, wait info, give up wait
 lp2-2-rust	rust	sonnet	lobbydaemon	Program/Server/LobbyDaemon/	lp2-1-rust	120	ready	LobbyDaemon replies for charge, grade and account-inventory item requests
 lp2-3	spec	opus	-	Docs/Server/GameDaemon/10-session-handlers.md,Docs/Server/LobbyDaemon/23-return-to-lobby.md,Docs/Server/LobbyDaemon/13-jobs-a.md,Docs/Server/LobbyDaemon/07-gamed-link.md,Docs/Plan/cards/lp2-3-rust.md	-	150	ready	spec of return to lobby (GameDaemon 381, LobbyDaemon 307)
 lp2-3-rust	rust	sonnet	lobbydaemon,gamedaemon,packet	Program/Server/LobbyDaemon/,Program/Server/GameDaemon/,Program/Server/Packet/,Docs/Server/LobbyDaemon/23-return-to-lobby.md,Cargo.lock	lp2-3	120	ready	return to lobby on both ends
