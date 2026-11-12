@@ -4,7 +4,7 @@ use gamedaemon::{db::Db, link::Link};
 use lobbydaemon::{
     character::CreateCharacter,
     gamed::GameDaemon,
-    gamed_link::{Consume, LinkGameDaemon},
+    gamed_link::{Consume, LinkGameDaemon, LinkPeer},
 };
 use shared::fsd::APPEARANCE_BYTES;
 use std::{sync::Arc, time::Duration};
@@ -45,7 +45,11 @@ async fn create_and_enter() {
     const PCID: u64 = 900_002;
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap().to_string();
-    let lobby = Arc::new(LinkGameDaemon::default());
+    let lobby = Arc::new(LinkGameDaemon::new(vec![LinkPeer {
+        world: 1,
+        cluster: 1,
+        address: std::net::Ipv4Addr::LOCALHOST.into(),
+    }]));
     let consume: Consume = Arc::new(|key, token, _, world| {
         Box::pin(async move {
             if (key, token, world) == (11, 22, 1) {

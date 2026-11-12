@@ -130,11 +130,22 @@ async fn serve<S: lobbydaemon::store::Store, N: Np>(
             deletion_wait_seconds: 7 * 24 * 3600,
         });
     }
+    // Each `--world` is one configured GameDaemon. The link listens on loopback only, so the
+    // peer address is loopback. ❓ A cluster network needs a peer address for each world.
+    let peers = settings
+        .worlds
+        .iter()
+        .map(|w| lobbydaemon::gamed_link::LinkPeer {
+            world: w.id,
+            cluster: w.cluster,
+            address: Ipv4Addr::LOCALHOST.into(),
+        })
+        .collect::<Vec<_>>();
     let mut server = Server::new(store, np, settings)?;
     // With `--world-port` the GameDaemon link makes characters and consumes world tokens.
     let gamed = link
         .as_ref()
-        .map(|_| Arc::new(lobbydaemon::gamed_link::LinkGameDaemon::default()));
+        .map(|_| Arc::new(lobbydaemon::gamed_link::LinkGameDaemon::new(peers)));
     if let Some(gamed) = &gamed {
         server = server.with_game_daemon(gamed.clone());
     }
@@ -146,6 +157,13 @@ async fn serve<S: lobbydaemon::store::Store, N: Np>(
             let target = target.clone();
             Box::pin(async move { target.consume_world(key, token, ipv4, world).await })
         });
+        // Return to lobby (8 → 9 or 10). Without this hook every leave fails with reason 2.
+        let target = server.clone();
+        let leave: lobbydaemon::gamed_link::Leave = Arc::new(move |pcid, key, world| {
+            let target = target.clone();
+            Box::pin(async move { target.leave_world(key, pcid, world).await })
+        });
+        gamed.set_leave(leave);
         tokio::spawn(async move {
             let result = gamed.serve(link, consume).await;
             eprintln!("lobbyd: gamed link listener stopped: {result:?}");
