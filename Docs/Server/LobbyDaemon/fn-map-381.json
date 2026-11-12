@@ -1,0 +1,3665 @@
+{
+"note": "Function match of build 348 (2019 + PDB names) to build 381. Columns: address in 381, address in 348, name, evidence. Only verified pairs. Method: 24-compare-381.md section 1.",
+"rows": [
+[
+"0x140002270",
+"0x140001050",
+"PacketFormatIterator::SetFormat(char const *,int)",
+"same strings and constants"
+],
+[
+"0x140002410",
+"0x1400011e0",
+"FragmentPacketSplitter::AddBuffer(Packet::Header const *,Packet::Header *)",
+"same strings and constants"
+],
+[
+"0x140002530",
+"0x140001300",
+"FragmentPacketSplitter::Finalize(Packet::Header const *)",
+"same strings and constants"
+],
+[
+"0x1400028b0",
+"0x140001530",
+"FragmentPacketConcatenater::Add(Packet const *,bool *,bool)",
+"same strings and constants"
+],
+[
+"0x140003560",
+"0x140001e90",
+"BnsCommonConfig::Dump(void)",
+"same strings; constants differ"
+],
+[
+"0x140003720",
+"0x140002050",
+"BnsCommonConfig::CheckMinMaxBoundary(void const * const,XmlCfgDefLocal const *,XmlCfgDef const *,int)",
+"same strings and constants"
+],
+[
+"0x140003990",
+"0x140002760",
+"RefCntObject::~RefCntObject(void)",
+"same strings and constants"
+],
+[
+"0x140003a20",
+"0x140002850",
+"RefCntObject::removeReferenceCount(wchar_t const *,int)",
+"same strings and constants"
+],
+[
+"0x140003ce0",
+"0x140002a40",
+"SharedChannel::~SharedChannel(void)",
+"same strings and constants"
+],
+[
+"0x140003e90",
+"0x140002d60",
+"NPTransactionRegistry::Find(uint,NPTransactionRegistry::Item *)",
+"same strings and constants"
+],
+[
+"0x140003f90",
+"0x140003180",
+"NPSessionHandler::OnAccept(Session const *)",
+"same strings and constants"
+],
+[
+"0x140004000",
+"0x1400031f0",
+"NPSessionHandler::OnConnect(Session const *,bool)",
+"same strings and constants"
+],
+[
+"0x1400040f0",
+"0x1400032e0",
+"NPSessionHandler::OnClose(Session const *,bool)",
+"same strings and constants"
+],
+[
+"0x140004670",
+"0x1400039f0",
+"NPChannel::Connect(unsigned __int64,uint,ulong,ushort,long,bool)",
+"same strings and constants"
+],
+[
+"0x140004ce0",
+"0x140003e20",
+"NPChannel::handlePacket(Packet const *)",
+"same strings; constants differ"
+],
+[
+"0x140005e90",
+"0x140004830",
+"SharedChannel::Accept(unsigned __int64,Session const *)",
+"same strings and constants"
+],
+[
+"0x140006370",
+"0x140004d60",
+"SharedChannelList::Initialize(unsigned __int64,unsigned __int64)",
+"same strings and constants"
+],
+[
+"0x140006460",
+"0x140004e20",
+"SharedChannelList::Set(SharedChannel *)",
+"same strings and constants"
+],
+[
+"0x140006570",
+"0x140004f30",
+"RefCntPoolObj::operator delete(void *,void *)",
+"same strings and constants"
+],
+[
+"0x140006830",
+"0x1400052a0",
+"AbandonChargeJob::init(void)",
+"same strings and constants"
+],
+[
+"0x140006c20",
+"0x140005690",
+"AbandonChargeJob::responseChargeAbandon(void *)",
+"same strings and constants"
+],
+[
+"0x140007050",
+"0x140005b10",
+"AbandonChargeJob::expireChargeAbandon(void)",
+"same strings and constants"
+],
+[
+"0x140007260",
+"0x1400defc0",
+"RepeatPacketComposer::PopRepeatCount(void)",
+"same strings and constants"
+],
+[
+"0x140007650",
+"0x140006010",
+"Goods::Fetch(FragmentPacket *)",
+"same strings; constants differ"
+],
+[
+"0x140007b90",
+"0x140006500",
+"AccountInventoryChannel::Connect(unsigned __int64,uint,ulong,ushort,long,bool)",
+"same strings and constants"
+],
+[
+"0x1400093c0",
+"0x140008020",
+"AccountInventorySessionHandler::OnAccept(Session const *)",
+"same strings and constants"
+],
+[
+"0x140009660",
+"0x1400081b0",
+"AccountInventorySessionHandler::OnClose(Session const *,bool)",
+"same strings and constants"
+],
+[
+"0x140009bd0",
+"0x1400087d0",
+"HandleAccountInventoryLobby_HelloOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140009c20",
+"0x140008820",
+"HandleAccountInventoryLobby_HelloFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140009cb0",
+"0x1400088b0",
+"HandleAccountInventoryLobby_GetGoodsCountOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140009e40",
+"0x140008ad0",
+"HandleAccountInventoryLobby_GetGoodsCountFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140009fd0",
+"0x140008d00",
+"HandleAccountInventoryLobby_ListGoodsOk(SharedChannel *,FragmentPacketConcatenater *)",
+"handler table: same command and formats"
+],
+[
+"0x14000a760",
+"0x140009550",
+"HandleAccountInventoryLobby_ListGoodsFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000a8e0",
+"0x140009750",
+"HandleAccountInventoryLobby_TakeGoodsOk(SharedChannel *,FragmentPacketConcatenater *)",
+"handler table: same command and formats"
+],
+[
+"0x14000ab70",
+"0x140009a60",
+"HandleAccountInventoryLobby_TakeGoodsFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000acf0",
+"0x140009c60",
+"HandleAccountInventoryLobby_RetrieveLobbyServiceItemListOk(SharedChannel *,FragmentPacketConcatenater *)",
+"handler table: same command and formats"
+],
+[
+"0x14000af80",
+"0x140009f60",
+"HandleAccountInventoryLobby_RetrieveLobbyServiceItemListFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000b100",
+"0x14000a160",
+"HandleAccountInventoryLobby_RetrieveSingleWarehouseItemOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000b350",
+"0x14000a440",
+"HandleAccountInventoryLobby_RetrieveSingleWarehouseItemFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000b4f0",
+"0x14000a680",
+"HandleAccountInventoryLobby_TryWarehouseItemConsumptionOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000b600",
+"0x14000a780",
+"HandleAccountInventoryLobby_TryWarehouseItemConsumptionFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000b7b0",
+"0x14000a9c0",
+"HandleAccountInventoryLobby_FinishWarehouseItemConsumptionOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000b8c0",
+"0x14000aac0",
+"HandleAccountInventoryLobby_FinishWarehouseItemConsumptionFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000ba70",
+"0x14000ad00",
+"HandleAccountInventoryLobby_CancelWarehouseItemConsumptionOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000bab0",
+"0x14000ad40",
+"HandleAccountInventoryLobby_CancelWarehouseItemConsumptionFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000baf0",
+"0x14000ad80",
+"HandleAccountInventoryLobby_ConsumeWarehouseItemOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000bc00",
+"0x14000ae80",
+"HandleAccountInventoryLobby_ConsumeWarehouseItemFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000bdb0",
+"0x14000b0c0",
+"HandleAccountInventoryLobby_RetrieveCharacterGoodsCountOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000bf60",
+"0x14000b310",
+"HandleAccountInventoryLobby_RetrieveCharacterGoodsCountFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14000c0e0",
+"0x14000b510",
+"HandleAccountInventoryLobby_GoodsInventoryChangedNotify(SharedChannel *,FragmentPacketConcatenater *)",
+"handler table: same command and formats"
+],
+[
+"0x14000c5a0",
+"0x14000b9e0",
+"RefCntObject::addReferenceCount(bool,wchar_t const *,int)",
+"same strings and constants"
+],
+[
+"0x14000c970",
+"0x14000bd00",
+"ActivateGradeJob::initFromLobbyGate(LobbyGate_ActivateGradeReqParam *)",
+"same strings and constants"
+],
+[
+"0x14000cde0",
+"0x14000c1a0",
+"ActivateGradeJob::initFromGame(Game_ActivateGradeReqParam *)",
+"same strings and constants"
+],
+[
+"0x14000d6e0",
+"0x14000ca10",
+"ActivateGradeJob::activateGradeResponse(void *)",
+"same strings and constants"
+],
+[
+"0x14000dc10",
+"0x14000cf50",
+"ActivateGradeJob::activateGradeExpire(void)",
+"same strings and constants"
+],
+[
+"0x14000e8f0",
+"0x14000d570",
+"AddSlotJob::init(void *)",
+"same strings and constants"
+],
+[
+"0x14000f070",
+"0x14000dc90",
+"AddSlotJob::checkAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x14000f880",
+"0x14000e610",
+"AddSlotJob::checkSlotCapacity(void)",
+"same strings and constants"
+],
+[
+"0x14000fae0",
+"0x14000e8b0",
+"AddSlotJob::checkSlotCapacityAck(void *)",
+"same strings and constants"
+],
+[
+"0x14000ffc0",
+"0x14000eec0",
+"AddSlotJob::registerServiceEntry(void)",
+"same strings and constants"
+],
+[
+"0x1400103f0",
+"0x14000f370",
+"AddSlotJob::tryConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x140010a00",
+"0x14000fb30",
+"AddSlotJob::createSlot(void)",
+"same strings and constants"
+],
+[
+"0x140010c90",
+"0x14000fe00",
+"AddSlotJob::createSlotAck(void *)",
+"same strings and constants"
+],
+[
+"0x1400113b0",
+"0x1400106b0",
+"AddSlotJob::finConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x140011ec0",
+"0x140012130",
+"AuctionBidJob::auctionBidExpire(void)",
+"same strings; constants differ"
+],
+[
+"0x140012000",
+"0x140011290",
+"AuctionBidJob::init(Game_AuctionBidReqParam *)",
+"same strings and constants"
+],
+[
+"0x1400124b0",
+"0x140011750",
+"AuctionBidJob::auctionBidReq(void)",
+"same strings and constants"
+],
+[
+"0x140014940",
+"0x140013630",
+"AuctionEscrow::GetDeliveryPostMessage(StsMsgLib::_StsMsgRequestGameAuctionDeliver *,wchar_t *,int)",
+"same strings; constants differ"
+],
+[
+"0x140015a80",
+"0x140014770",
+"AuctionEscrow::GetRollbackEscrowPostMessage(LobbyDB::TryAuctionEscrowRollbackOutParam *,wchar_t *,int)",
+"same strings; constants differ"
+],
+[
+"0x1400161c0",
+"0x140015e80",
+"AuctionEscrowJob::escrowExpire(void)",
+"same strings; constants differ"
+],
+[
+"0x1400176c0",
+"0x140016d70",
+"AuctionRollbackEscrowJob::registerPostExpire(void)",
+"same strings; constants differ"
+],
+[
+"0x140018a50",
+"0x140017050",
+"BindCharacterSlotJob::init(void *)",
+"same strings and constants"
+],
+[
+"0x1400192d0",
+"0x1400179e0",
+"BindCharacterSlotJob::responseGetSlot(void *)",
+"same strings; constants differ"
+],
+[
+"0x140019940",
+"0x140018100",
+"BindCharacterSlotJob::bindCharacterSlot(void)",
+"same strings and constants"
+],
+[
+"0x14001b480",
+"0x140019ad0",
+"CancelWaitCharacterDeletionJob::restoreCharacterReq(void)",
+"same strings; constants differ"
+],
+[
+"0x14001c2e0",
+"0x14001a860",
+"CancelWaitCharacterDeletionJob::restoreCharacterExpire(void)",
+"same strings; constants differ"
+],
+[
+"0x14001d9f0",
+"0x14001bae0",
+"ChangeCharacterAppearanceJob::checkAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x14001e260",
+"0x14001c490",
+"ChangeCharacterAppearanceJob::registerServiceEntry(void)",
+"same strings and constants"
+],
+[
+"0x14001e860",
+"0x14001cad0",
+"ChangeCharacterAppearanceJob::tryConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x14001eec0",
+"0x14001d300",
+"ChangeCharacterAppearanceJob::changeCharacterAppearance(void)",
+"same strings and constants"
+],
+[
+"0x14001f850",
+"0x14001de60",
+"ChangeCharacterAppearanceJob::finConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x1400202f0",
+"0x1400229a0",
+"ChangeCharacterRaceJob::releasePcServiceStatus(void)",
+"same strings and constants"
+],
+[
+"0x1400217c0",
+"0x14001fa00",
+"ChangeCharacterRaceJob::checkAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x140022030",
+"0x1400203b0",
+"ChangeCharacterRaceJob::registerServiceEntry(void)",
+"same strings and constants"
+],
+[
+"0x140022650",
+"0x140020a10",
+"ChangeCharacterRaceJob::tryConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x140022cb0",
+"0x140021240",
+"ChangeCharacterRaceJob::changeCharacterRace(void)",
+"same strings and constants"
+],
+[
+"0x140023660",
+"0x140021dc0",
+"ChangeCharacterRaceJob::finConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x140025520",
+"0x140023a10",
+"ChangeCharacterSexJob::checkAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x140025d90",
+"0x1400243c0",
+"ChangeCharacterSexJob::registerServiceEntry(void)",
+"same strings and constants"
+],
+[
+"0x1400263a0",
+"0x140024a10",
+"ChangeCharacterSexJob::tryConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x140026a00",
+"0x140025240",
+"ChangeCharacterSexJob::changeCharacterSex(void)",
+"same strings and constants"
+],
+[
+"0x1400273a0",
+"0x140025db0",
+"ChangeCharacterSexJob::finConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x140028500",
+"0x140026c80",
+"ChangeUserNameJob::init(void *)",
+"same strings; constants differ"
+],
+[
+"0x140028e70",
+"0x1400275f0",
+"ChangeUserNameJob::checkAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x140029cb0",
+"0x140028580",
+"ChangeUserNameJob::changeUserNameResponse(void *)",
+"same strings and constants"
+],
+[
+"0x14002a180",
+"0x140028bd0",
+"ChangeUserNameJob::consumeLobbyServiceItem(void)",
+"same strings and constants"
+],
+[
+"0x14002a5d0",
+"0x140029350",
+"ChangeUserNameJob::finLobbyService(void)",
+"same strings and constants"
+],
+[
+"0x14002afa0",
+"0x140029c30",
+"ContentsRuleConfig::Dump(void)",
+"same strings; constants differ"
+],
+[
+"0x14002b1a0",
+"0x140029e30",
+"ContentsRuleConfig::CheckMinMaxBoundary(void const * const,XmlCfgDefLocal const *,XmlCfgDef const *,int)",
+"same strings and constants"
+],
+[
+"0x14002b8f0",
+"0x14002a6a0",
+"ExtendJumpingCharacterCreationQuotaJob::init(void *)",
+"same strings; constants differ"
+],
+[
+"0x14002c360",
+"0x14002b0a0",
+"ExtendJumpingCharacterCreationQuotaJob::checkAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x14002caf0",
+"0x14002b990",
+"ExtendJumpingCharacterCreationQuotaJob::registerServiceEntry(void)",
+"same strings; constants differ"
+],
+[
+"0x14002cee0",
+"0x14002bdf0",
+"ExtendJumpingCharacterCreationQuotaJob::tryConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x14002d4b0",
+"0x14002c550",
+"ExtendJumpingCharacterCreationQuotaJob::extendJumpingCharacterCreationQuota(void)",
+"same strings and constants"
+],
+[
+"0x14002d6a0",
+"0x14002c730",
+"ExtendJumpingCharacterCreationQuotaJob::finConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x14002e100",
+"0x14002d140",
+"ExtendJumpingCharacterCreationQuotaJob::sendFailReason(short)",
+"same strings and constants"
+],
+[
+"0x14002e590",
+"0x14002d580",
+"UpgradeJumpingCharacterStateJob::init(int,void *)",
+"same strings and constants"
+],
+[
+"0x14002fd90",
+"0x14002f040",
+"InfoGateChannelManager::OnAccept(Session const *)",
+"same strings and constants"
+],
+[
+"0x14002fe10",
+"0x14002f0b0",
+"InfoGateChannelManager::OnConnect(Session const *,bool)",
+"same strings and constants"
+],
+[
+"0x1400305c0",
+"0x14002f830",
+"lob_json_write_iso8601_datetime(wchar_t * &,wchar_t *,__int64)",
+"same strings and constants"
+],
+[
+"0x140030780",
+"0x14002f9e0",
+"LobbyMessage::Dispatch(LobbyMessageAcceptor *)",
+"same strings and constants"
+],
+[
+"0x140030c40",
+"0x140030d90",
+"CreateInitialUserNameJob::changeUserNameExpire(void)",
+"same strings; constants differ"
+],
+[
+"0x140030d70",
+"0x14002fe20",
+"CreateInitialUserNameJob::init(void *)",
+"same strings and constants"
+],
+[
+"0x1400315b0",
+"0x140030660",
+"CreateInitialUserNameJob::changeUserNameReq(void)",
+"same strings and constants"
+],
+[
+"0x140031dc0",
+"0x1400310c0",
+"Character::FetchCharacterInfo(FragmentPacket *)",
+"same strings; constants differ"
+],
+[
+"0x1400320a0",
+"0x140031380",
+"Character::FetchCharacterInfo(Packet *,PacketComposer *)",
+"same strings; constants differ"
+],
+[
+"0x140032290",
+"0x140031550",
+"Character::TryCreation(GameAccount const &,id128 const &,short,wchar_t const *,short)",
+"same strings and constants"
+],
+[
+"0x140032ab0",
+"0x140032510",
+"Character::SetShowcase(char const *,short)",
+"same strings and constants"
+],
+[
+"0x140032bf0",
+"0x140032800",
+"Character::EndGameWorldPlay(void)",
+"same strings and constants"
+],
+[
+"0x140032ea0",
+"0x140032ed0",
+"TimeBasedPlayInfoList::Compose(FragmentPacket &)",
+"same strings and constants"
+],
+[
+"0x140035690",
+"0x140035730",
+"CliSession::setPresence(Presence *)",
+"same strings and constants"
+],
+[
+"0x140035750",
+"0x140035810",
+"CliSession::closePresence(void)",
+"same strings and constants"
+],
+[
+"0x140035810",
+"0x1400358e0",
+"CliSession::kickPresence(int)",
+"same strings and constants"
+],
+[
+"0x1400358f0",
+"0x1400359c0",
+"CliSession::enter(ServiceLocation *)",
+"same strings and constants"
+],
+[
+"0x140035b30",
+"0x140035c10",
+"CliSession::leave(void)",
+"same strings and constants"
+],
+[
+"0x140035d20",
+"0x140035eb0",
+"CliSession::completeRequestChargeStop(bool)",
+"same strings and constants"
+],
+[
+"0x140035e40",
+"0x140053750",
+"GradeService::SetGradeLevel(CliSession *,StsMsgLib::_StsMsgResponseGradeGetLevel const &)",
+"same strings and constants"
+],
+[
+"0x1400363f0",
+"0x1400366e0",
+"CliSession::setContentBans(StsMsgLib::_StsMsgResponseListUserBans *)",
+"same strings and constants"
+],
+[
+"0x1400366e0",
+"0x140036a50",
+"CliSession::setUserPromotionStatus(char,int,StsMsgLib::_StsMsgResponseUserPromotionStatus *)",
+"same strings and constants"
+],
+[
+"0x1400369c0",
+"0x140036df0",
+"CliSession::fetchContentBans(FragmentPacket *)",
+"same strings and constants"
+],
+[
+"0x140036b70",
+"0x140036fa0",
+"CliSession::fetchAccountContentQuotaList(FragmentPacket *)",
+"same strings; constants differ"
+],
+[
+"0x140036de0",
+"0x1400371b0",
+"CliSession::fetchAccountRecycleTimeList(FragmentPacket *)",
+"same strings; constants differ"
+],
+[
+"0x140037030",
+"0x1400373a0",
+"CliSession::addLobbyService(LobbyService *)",
+"same strings and constants"
+],
+[
+"0x140037170",
+"0x140037530",
+"CliSession::removeLobbyService(unsigned __int64)",
+"same strings and constants"
+],
+[
+"0x1400372b0",
+"0x1400376b0",
+"CliSession::queryLobbyService(Character *)",
+"same strings and constants"
+],
+[
+"0x140037a80",
+"0x140038500",
+"CliSession::UpdateAccountData(unsigned __int64,int,TimeBasedPlayInfoList &)",
+"same strings; constants differ"
+],
+[
+"0x140037cd0",
+"0x140038670",
+"CliSession::UpdateTimeBasedPlayReward(unsigned __int64,int,char,short,UserPromotionReward &,__int64)",
+"same strings; constants differ"
+],
+[
+"0x140038020",
+"0x140038930",
+"CliSession::UpdateAccountExp(unsigned __int64,GameAccountExpInfo::ExpInfo &)",
+"same strings and constants"
+],
+[
+"0x140038220",
+"0x140038b50",
+"CliSession::UpdateAccountContentQuota(unsigned __int64,std::vector<AccountContentQuota,StlAllocator<AccountContentQuota,2>> const &)",
+"same strings and constants"
+],
+[
+"0x1400383c0",
+"0x140038cc0",
+"CliSession::UpdateAccountRecycleTime(unsigned __int64,std::vector<AccountRecycleTime,StlAllocator<AccountRecycleTime,2>> const &)",
+"same strings and constants"
+],
+[
+"0x140039280",
+"0x140039820",
+"CliSession::ReserveStopPlay(bool,int,int)",
+"same strings and constants"
+],
+[
+"0x1400394b0",
+"0x140039a70",
+"CliSession::TimeoutStopPlay(StopPlayTimerEvent *)",
+"same strings and constants"
+],
+[
+"0x140039b90",
+"0x14003a2c0",
+"CliSession::onPcCafeChargeStop(void)",
+"same strings and constants"
+],
+[
+"0x14003a1a0",
+"0x14003a670",
+"AnonymousLobbyGatePresence::Kick(CliSession *,int)",
+"same strings and constants"
+],
+[
+"0x14003a340",
+"0x14003a7d0",
+"LobbyGatePresence::OnSet(CliSessionTable *,CliSession *)",
+"same strings and constants"
+],
+[
+"0x14003a5c0",
+"0x14003aa30",
+"LobbyGatePresence::OnUnset(CliSessionTable *,CliSession *)",
+"same strings and constants"
+],
+[
+"0x14003af50",
+"0x14003aff0",
+"GameWorldPresence::OnUnset(CliSessionTable *,CliSession *)",
+"same strings and constants"
+],
+[
+"0x14003b190",
+"0x14003b120",
+"GameWorldPresence::Kick(CliSession *,int)",
+"same strings and constants"
+],
+[
+"0x14003b560",
+"0x14003b3d0",
+"GameServiceLocation::OnEnter(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14003b6d0",
+"0x14003b540",
+"GameServiceLocation::OnLeave(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14003bed0",
+"0x14003bb60",
+"GameServiceLocation::ReserveStopPlay(CliSession *,StopPlayTimerEvent *)",
+"same strings and constants"
+],
+[
+"0x14003bff0",
+"0x14003bc80",
+"GameServiceLocation::TimeoutStopPlay(CliSession *,StopPlayTimerEvent *)",
+"same strings and constants"
+],
+[
+"0x14003e040",
+"0x14003d940",
+"CliSessionTable::Initialize(int,int,short,short,short,short)",
+"same strings and constants"
+],
+[
+"0x14003f5f0",
+"0x140040e30",
+"BLDaemonInfoTable::add(BLDaemonInfo *)",
+"same strings and constants"
+],
+[
+"0x14003f7a0",
+"0x140040f30",
+"BLDaemonInfoTable::Load(wchar_t const *)",
+"same strings and constants"
+],
+[
+"0x14003f8c0",
+"0x140041090",
+"BLDaemonInfoTable::Update(wchar_t const *)",
+"same strings and constants"
+],
+[
+"0x1400419e0",
+"0x1400433f0",
+"CreateCharacterJob::responseGetSlot(void *)",
+"same strings; constants differ"
+],
+[
+"0x140043830",
+"0x140044d40",
+"CreateCharacterJob::createCharacterExpire(void)",
+"same strings and constants"
+],
+[
+"0x1400452b0",
+"0x140046440",
+"DeleteCharacterJob::checkSecondPasswordStatus(void)",
+"same strings and constants"
+],
+[
+"0x1400455a0",
+"0x140046760",
+"DeleteCharacterJob::checkSecondPasswordStatusResponse(void *)",
+"same strings and constants"
+],
+[
+"0x140045b50",
+"0x140046d20",
+"DeleteCharacterJob::checkSecondPasswordStatusExpire(void)",
+"same strings and constants"
+],
+[
+"0x140045cf0",
+"0x140046ed0",
+"DeleteCharacterJob::checkSecondPasswordVerified(void)",
+"same strings and constants"
+],
+[
+"0x140045fe0",
+"0x140047200",
+"DeleteCharacterJob::checkSecondPasswordVerifiedResponse(void *)",
+"same strings and constants"
+],
+[
+"0x140046350",
+"0x140047560",
+"DeleteCharacterJob::checkSecondPasswordVerifiedExpire(void)",
+"same strings and constants"
+],
+[
+"0x1400464f0",
+"0x140047710",
+"DeleteCharacterJob::getCharacterGoodsReq(void)",
+"same strings; constants differ"
+],
+[
+"0x140046d00",
+"0x140047fa0",
+"DeleteCharacterJob::getCharacterGoodsCountExpire(void)",
+"same strings; constants differ"
+],
+[
+"0x140047fc0",
+"0x140049090",
+"DeleteCharacterJob::deleteExpire(void)",
+"same strings; constants differ"
+],
+[
+"0x140048300",
+"0x1400493a0",
+"DeleteCharacterJob::directDelete(void)",
+"same strings; constants differ"
+],
+[
+"0x140048750",
+"0x140049770",
+"DeleteCharacterJob::scheduleDelete(void)",
+"same strings; constants differ"
+],
+[
+"0x140048db0",
+"0x14004aee0",
+"DepositMileageJob::depositExpire(void)",
+"same strings; constants differ"
+],
+[
+"0x140048f00",
+"0x140049da0",
+"DepositMileageJob::init(void *)",
+"same strings; constants differ"
+],
+[
+"0x140049c00",
+"0x14004aa40",
+"DepositMileageJob::depositAck(void *)",
+"same strings and constants"
+],
+[
+"0x14004a340",
+"0x14004b150",
+"EndWaitGameWorldJob::init(int,void *)",
+"same strings and constants"
+],
+[
+"0x14004ac20",
+"0x14004bb80",
+"GameTimeQueue::Block(void)",
+"same strings and constants"
+],
+[
+"0x14004b0d0",
+"0x14004bf90",
+"GameTimeQueue::Release(void)",
+"same strings; constants differ"
+],
+[
+"0x14004b6d0",
+"0x14004c880",
+"GameWorld::Setup(GameWorld::DB *,GameWorldCluster *)",
+"same strings and constants"
+],
+[
+"0x14004bad0",
+"0x14004ce60",
+"GameWorld::FetchWorldInfoForInfoGate(FragmentPacket *)",
+"same strings and constants"
+],
+[
+"0x14004bbb0",
+"0x14004d120",
+"GameWorld::PermitCharacterManagement(CliSession *,bool)",
+"same strings and constants"
+],
+[
+"0x14004cb70",
+"0x14004e080",
+"GameWorldCluster::leaveUser(GameWorld *,CliSession *)",
+"same strings and constants"
+],
+[
+"0x14004cde0",
+"0x14004e4f0",
+"GameWorldCluster::addGameWorld(GameWorld *)",
+"same strings and constants"
+],
+[
+"0x14004d1e0",
+"0x14004e9b0",
+"GameWorldRegistry::FetchWorldInfoList(FragmentPacket *)",
+"same strings and constants"
+],
+[
+"0x14004d580",
+"0x14004ed00",
+"GameWorldRegistry::Setup(short,short)",
+"same strings and constants"
+],
+[
+"0x14004e380",
+"0x14004f940",
+"GameWorldReporter::~GameWorldReporter(void)",
+"same strings and constants"
+],
+[
+"0x14004e460",
+"0x14004fa80",
+"GameWorldReporter::WriteReport(void)",
+"same strings and constants"
+],
+[
+"0x14004e620",
+"0x14004fc70",
+"GameWorldReport::Write(GameWorldRegistry *)",
+"same strings and constants"
+],
+[
+"0x14004eab0",
+"0x140051360",
+"GetChargeInfoJob::expireChargeGetInfo(void)",
+"same strings; constants differ"
+],
+[
+"0x14004ebe0",
+"0x140050760",
+"GetChargeInfoJob::init(void)",
+"same strings and constants"
+],
+[
+"0x14004edc0",
+"0x140050970",
+"GetChargeInfoJob::requestChargeGetInfo(void)",
+"same strings and constants"
+],
+[
+"0x14004fc50",
+"0x1400516e0",
+"GetGoodsCountJob::init(void)",
+"same strings and constants"
+],
+[
+"0x14004ff40",
+"0x140051a00",
+"GetGoodsCountJob::getGoodsCountReq(void)",
+"same strings and constants"
+],
+[
+"0x1400508a0",
+"0x1400522f0",
+"GetLobbyServiceItemJob::init(void)",
+"same strings and constants"
+],
+[
+"0x140050ba0",
+"0x140052620",
+"GetLobbyServiceItemJob::getLobbyServiceItemReq(void)",
+"same strings and constants"
+],
+[
+"0x140051520",
+"0x140052f70",
+"GiveupWaitGameWorldJob::init(void)",
+"same strings; constants differ"
+],
+[
+"0x140051b40",
+"0x140053800",
+"GradeService::SetGradeList(CliSession *,StsMsgLib::_StsMsgResponseGradeListAllGrades const &)",
+"same strings and constants"
+],
+[
+"0x140052c10",
+"0x140054ae0",
+"InitCliSessionWlobbyTokenJob::init(void)",
+"same strings; constants differ"
+],
+[
+"0x1400534a0",
+"0x140055160",
+"ListGoodsJob::init(void *)",
+"same strings and constants"
+],
+[
+"0x1400537a0",
+"0x140055490",
+"ListGoodsJob::listGoodsReq(void)",
+"same strings and constants"
+],
+[
+"0x140053f00",
+"0x140056670",
+"ListLobbyServiceItemJob::listLobbyServiceItemTimeout(void)",
+"same strings; constants differ"
+],
+[
+"0x140054050",
+"0x140055dc0",
+"ListLobbyServiceItemJob::init(void)",
+"same strings and constants"
+],
+[
+"0x140054340",
+"0x1400560f0",
+"ListLobbyServiceItemJob::listLobbyServiceItemReq(void)",
+"same strings and constants"
+],
+[
+"0x140054c90",
+"0x140056d40",
+"HandleLobbyInfoGate_HelloReq(Session const *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140055430",
+"0x140057350",
+"HandleLobbyInfoGate_AuthTokenReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140055bb0",
+"0x140057880",
+"HandleLobbyInfoGate_GetWorldInfoListReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140056740",
+"0x1400587d0",
+"HandleLobbyManage_HelloReq(Session const *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140056910",
+"0x1400589b0",
+"HandleLobbyManage_AnnounceNotify(Session const *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140056b90",
+"0x140058b00",
+"HandleLobbyManage_KickReq(Session const *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400570f0",
+"0x1400590a0",
+"HandleLobbyManage_CleanupGameAccountIdIndexReq(Session const *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400575d0",
+"0x140059470",
+"HandleLobbyManage_CleanupPcidIndexReq(Session const *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140057bf0",
+"0x140059820",
+"HandleLobbyManage_RetryMileageDepositReq(Session const *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400581b0",
+"0x14005a0b0",
+"LobbyStats::Initialize(wchar_t const *,wchar_t const *,wchar_t const *,long)",
+"same strings; constants differ"
+],
+[
+"0x140058800",
+"0x14005a6e0",
+"LobbyTick::Add(LobbyTick::Listener *)",
+"same strings and constants"
+],
+[
+"0x140058890",
+"0x14005a770",
+"LobbyTick::Remove(LobbyTick::Listener *)",
+"same strings and constants"
+],
+[
+"0x140058d30",
+"0x14005ab90",
+"LogoutInGameWorldJob::Initialize(short)",
+"same strings and constants"
+],
+[
+"0x140058e60",
+"0x14005acc0",
+"LogoutInGameWorldJob::init(void)",
+"same strings and constants"
+],
+[
+"0x1400590d0",
+"0x14005af30",
+"LogoutInGameWorldJob::logout(void)",
+"same strings and constants"
+],
+[
+"0x1400592d0",
+"0x14005b140",
+"ManageSessionHandler::OnAccept(Session const *)",
+"same strings and constants"
+],
+[
+"0x140059310",
+"0x14005b180",
+"ManageSessionHandler::OnConnect(Session const *,bool)",
+"same strings and constants"
+],
+[
+"0x140059350",
+"0x14005b1c0",
+"ManageSessionHandler::OnClose(Session const *,bool)",
+"same strings and constants"
+],
+[
+"0x140059430",
+"0x14005b2a0",
+"ManageSessionHandler::PacketHandler(Session const *,Packet const *)",
+"same strings and constants"
+],
+[
+"0x140059db0",
+"0x14005c040",
+"MembershipMileage::Initialize(MileageConfig const &,__int64)",
+"same strings and constants"
+],
+[
+"0x14005a070",
+"0x14005c300",
+"MembershipMileage::Start(CliSession *,__int64)",
+"same strings and constants"
+],
+[
+"0x14005ad50",
+"0x14005cca0",
+"MembershipMileageSession::start(MembershipMileageSession::SectionType,Grade const *,__int64,unsigned __int64)",
+"same strings and constants"
+],
+[
+"0x14005aea0",
+"0x14005cfd0",
+"MembershipMileageSession::stop(MembershipMileageSession::SectionType,__int64,unsigned __int64)",
+"same strings and constants"
+],
+[
+"0x14005b6e0",
+"0x14005d940",
+"Mileage::Initialize(MileageConfig const &,__int64)",
+"same strings; constants differ"
+],
+[
+"0x14005bd60",
+"0x14005df70",
+"DepositMileageCallback::OnError(DepositMileageJob::CallbackParam const &)",
+"same strings and constants"
+],
+[
+"0x14005be30",
+"0x14005e050",
+"DepositMileageCallback::OnSuccess(DepositMileageJob::CallbackParam const &,__int64,int)",
+"same strings and constants"
+],
+[
+"0x14005bed0",
+"0x14005e0f0",
+"DepositMileageCallback::OnFail(DepositMileageJob::CallbackParam const &,int)",
+"same strings and constants"
+],
+[
+"0x14005bf50",
+"0x14005e170",
+"DepositMileageCallback::OnTimeout(DepositMileageJob::CallbackParam const &)",
+"same strings and constants"
+],
+[
+"0x14005c3d0",
+"0x14005e6c0",
+"Mileage::FeverTime::Initiaize(MileageFeverTimeInfo &,__int64,__int64)",
+"same strings and constants"
+],
+[
+"0x14005cd90",
+"0x14005f170",
+"Mileage::FeverTime::makeRepeatSection(Section<__int64> const &,Section<__int64> const &,__int64,__int64,Section<__int64> *,int)",
+"same strings and constants"
+],
+[
+"0x14005cf00",
+"0x14005f2c0",
+"MileageLimit::Fillin(Section<__int64> const &,__int64)",
+"same strings and constants"
+],
+[
+"0x14005d160",
+"0x14005f5a0",
+"MileageManager::Initialize(__int64)",
+"same strings and constants"
+],
+[
+"0x14005d6d0",
+"0x14005fc30",
+"MileageManager::CreateSlot(id128 const &,unsigned __int64)",
+"same strings and constants"
+],
+[
+"0x14005f9d0",
+"0x140062610",
+"ObjPool::Initialize(ObjPoolMemoryAllocator *,void *,int,long)",
+"same strings and constants"
+],
+[
+"0x14005fbc0",
+"0x140062800",
+"ObjPool::Finalize(void)",
+"same strings and constants"
+],
+[
+"0x14005fc80",
+"0x1400628c0",
+"ObjPool::Checkout(wchar_t const *,int)",
+"same strings and constants"
+],
+[
+"0x14005fd60",
+"0x1400629a0",
+"ObjPool::Checkin(void *,wchar_t const *,int)",
+"same strings and constants"
+],
+[
+"0x140060060",
+"0x140062c80",
+"ObjPoolTimer::Start(long)",
+"same strings and constants"
+],
+[
+"0x140060100",
+"0x140062d30",
+"ObjPoolTimer::Add(ObjPool *)",
+"same strings and constants"
+],
+[
+"0x1400601a0",
+"0x140062e90",
+"TencentNetBar::CreateFromExternalAuthData(char const *,CliSession const *)",
+"same strings and constants"
+],
+[
+"0x1400606c0",
+"0x140063350",
+"TencentNetBar::onSet(CliSession *)",
+"same strings and constants"
+],
+[
+"0x140060e50",
+"0x1400639f0",
+"PostOfficeChannel::Connect(unsigned __int64,uint,ulong,ushort,long,bool)",
+"same strings and constants"
+],
+[
+"0x140061460",
+"0x140064170",
+"PostOfficeSessionHandler::OnAccept(Session const *)",
+"same strings and constants"
+],
+[
+"0x140061710",
+"0x1400642e0",
+"PostOfficeSessionHandler::OnClose(Session const *,bool)",
+"same strings and constants"
+],
+[
+"0x1400617c0",
+"0x140064420",
+"PostOfficeSessionHandler::PacketHandler(Session const *,Packet const *)",
+"same strings; constants differ"
+],
+[
+"0x140061a40",
+"0x1400646f0",
+"HandlePostOfficeHelloOk(Session const *,Packet const *)",
+"same strings and constants"
+],
+[
+"0x140061a90",
+"0x140064740",
+"HandlePostOfficeHelloFail(Session const *,Packet const *)",
+"same strings and constants"
+],
+[
+"0x140061b40",
+"0x1400647f0",
+"HandlePostOfficeRegisterPostOk(Session const *,Packet const *)",
+"same strings and constants"
+],
+[
+"0x140061ce0",
+"0x140064a20",
+"HandlePostOfficeRegisterPostFail(Session const *,Packet const *)",
+"same strings and constants"
+],
+[
+"0x140061ec0",
+"0x140064c90",
+"RefCntList::~RefCntList(void)",
+"same strings and constants"
+],
+[
+"0x140061f30",
+"0x140064d00",
+"RefCntList::Pushback(RefCntListNode *)",
+"same strings and constants"
+],
+[
+"0x140061fd0",
+"0x140064da0",
+"RefCntList::Remove(RefCntListNode *)",
+"same strings and constants"
+],
+[
+"0x140062310",
+"0x140065040",
+"RecoverPcJob::Initialize(LobbyGateChannel *,id128 const &)",
+"same strings and constants"
+],
+[
+"0x140062570",
+"0x1400664f0",
+"RecoverPcJob::restoreGameWorldPcExpired(void)",
+"same strings; constants differ"
+],
+[
+"0x140062fa0",
+"0x140065b40",
+"RecoverPcJob::restoreGameWorldPcReq(void)",
+"same strings and constants"
+],
+[
+"0x140063870",
+"0x140066600",
+"RecoverPcJob::__restoreStuckPc(Character *,short &)",
+"same strings and constants"
+],
+[
+"0x140066760",
+"0x140068e80",
+"RenameCharacterJob::checkAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x140067700",
+"0x140069f70",
+"RenameCharacterJob::tryConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x140067d40",
+"0x14006a770",
+"RenameCharacterJob::renameCharacter(void)",
+"same strings and constants"
+],
+[
+"0x140068580",
+"0x14006b1b0",
+"RenameCharacterJob::finConsumeAccountInventoryItem(void)",
+"same strings and constants"
+],
+[
+"0x1400699d0",
+"0x14006c330",
+"LobbyService::Fetch(CliSession *,FragmentPacket *)",
+"same strings and constants"
+],
+[
+"0x140069b70",
+"0x14006c550",
+"CharacterCosmesisService::Fetch(CliSession *,FragmentPacket *)",
+"same strings and constants"
+],
+[
+"0x140069da0",
+"0x14006c780",
+"CharacterCosmesisService::Start(CliSession *,uint,char *,int)",
+"same strings and constants"
+],
+[
+"0x140069f90",
+"0x14006c980",
+"CharacterCosmesisService::ConsumeItemTried(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006a180",
+"0x14006cb80",
+"CharacterCosmesisService::TaskDone(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006a370",
+"0x14006cd80",
+"CharacterCosmesisService::ConsumeItemFinished(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006a560",
+"0x14006cf80",
+"CharacterCosmesisService::Finish(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006a780",
+"0x14006d240",
+"AddSlotService::Fetch(CliSession *,FragmentPacket *)",
+"same strings and constants"
+],
+[
+"0x14006a950",
+"0x14006d420",
+"AddSlotService::Start(CliSession *,uint)",
+"same strings and constants"
+],
+[
+"0x14006ab00",
+"0x14006d5d0",
+"AddSlotService::ConsumeItemTried(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006acf0",
+"0x14006d7d0",
+"AddSlotService::TaskDone(CliSession *,id128 const &)",
+"same strings and constants"
+],
+[
+"0x14006afd0",
+"0x14006dab0",
+"AddSlotService::ConsumeItemFinished(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006b1c0",
+"0x14006dcb0",
+"AddSlotService::Finish(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006b3b0",
+"0x14006df60",
+"RenameCharacterService::Fetch(CliSession *,FragmentPacket *)",
+"same strings and constants"
+],
+[
+"0x14006b5e0",
+"0x14006e190",
+"RenameCharacterService::Start(CliSession *,uint,wchar_t const *,int)",
+"same strings and constants"
+],
+[
+"0x14006b890",
+"0x14006e440",
+"RenameCharacterService::ConsumeItemTried(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006ba80",
+"0x14006e640",
+"RenameCharacterService::TaskDone(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006bc70",
+"0x14006e840",
+"RenameCharacterService::ConsumeItemFinished(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006be60",
+"0x14006ea40",
+"RenameCharacterService::Finish(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006c080",
+"0x14006ec40",
+"RenameUserService::Fetch(CliSession *,FragmentPacket *)",
+"same strings and constants"
+],
+[
+"0x14006c140",
+"0x14006edf0",
+"RenameUserService::Finish(CliSession *,unsigned __int64,uint)",
+"same strings and constants"
+],
+[
+"0x14006c310",
+"0x14006f000",
+"ExtendJumpingCharacterCreationQuotaService::Fetch(CliSession *,FragmentPacket *)",
+"same strings and constants"
+],
+[
+"0x14006c4c0",
+"0x14006f1b0",
+"ExtendJumpingCharacterCreationQuotaService::Start(CliSession *,uint)",
+"same strings and constants"
+],
+[
+"0x14006c670",
+"0x14006f360",
+"ExtendJumpingCharacterCreationQuotaService::ConsumeItemTried(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006c860",
+"0x14006f560",
+"ExtendJumpingCharacterCreationQuotaService::TaskDone(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006ca50",
+"0x14006f760",
+"ExtendJumpingCharacterCreationQuotaService::ConsumeItemFinished(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006cc40",
+"0x14006f960",
+"ExtendJumpingCharacterCreationQuotaService::Finish(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006ce30",
+"0x14006fc10",
+"ChangeCharacterSexService::Fetch(CliSession *,FragmentPacket *)",
+"same strings and constants"
+],
+[
+"0x14006d040",
+"0x14006fe20",
+"ChangeCharacterSexService::Start(CliSession *,uint,char,char *,int)",
+"same strings and constants"
+],
+[
+"0x14006d240",
+"0x140070040",
+"ChangeCharacterSexService::ConsumeItemTried(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006d430",
+"0x140070240",
+"ChangeCharacterSexService::TaskDone(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006d620",
+"0x140070440",
+"ChangeCharacterSexService::ConsumeItemFinished(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006d810",
+"0x140070640",
+"ChangeCharacterSexService::Finish(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006da00",
+"0x140070900",
+"ChangeCharacterRaceService::Fetch(CliSession *,FragmentPacket *)",
+"same strings and constants"
+],
+[
+"0x14006dc10",
+"0x140070b10",
+"ChangeCharacterRaceService::Start(CliSession *,uint,char,char,char *,int)",
+"same strings and constants"
+],
+[
+"0x14006de30",
+"0x140070d50",
+"ChangeCharacterRaceService::ConsumeItemTried(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006e020",
+"0x140070f50",
+"ChangeCharacterRaceService::TaskDone(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006e210",
+"0x140071150",
+"ChangeCharacterRaceService::ConsumeItemFinished(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006e400",
+"0x140071350",
+"ChangeCharacterRaceService::Finish(CliSession *)",
+"same strings and constants"
+],
+[
+"0x14006e8e0",
+"0x140071700",
+"SecondPasswordGetStatusJob::init(void *)",
+"same strings and constants"
+],
+[
+"0x14006ec70",
+"0x140071a60",
+"SecondPasswordGetStatusJob::requestGetStatus(void)",
+"same strings and constants"
+],
+[
+"0x14006f530",
+"0x140072bf0",
+"SecondPasswordIsVerifiedJob::expireIsVerified(void)",
+"same strings; constants differ"
+],
+[
+"0x14006f670",
+"0x1400722c0",
+"SecondPasswordIsVerifiedJob::init(void *)",
+"same strings and constants"
+],
+[
+"0x14006fa30",
+"0x140072640",
+"SecondPasswordIsVerifiedJob::requestIsVerified(void)",
+"same strings and constants"
+],
+[
+"0x140070300",
+"0x140072eb0",
+"SetupNpScheduleInfoJob::work(int,void *)",
+"same strings and constants"
+],
+[
+"0x140070660",
+"0x140073160",
+"SetupNpScheduleInfoJob::listCurrentPromotionsAck(void *)",
+"same strings and constants"
+],
+[
+"0x140072810",
+"0x140076150",
+"StartChargeJob::expireStartCharge(void)",
+"same strings; constants differ"
+],
+[
+"0x140072940",
+"0x140075830",
+"StartChargeJob::init(void)",
+"same strings and constants"
+],
+[
+"0x140073990",
+"0x140076550",
+"StartCliSessionWlobbyTokenJob::init(void)",
+"same strings and constants"
+],
+[
+"0x140073b50",
+"0x140076720",
+"StartCliSessionWlobbyTokenJob::getGradeLevelReq(void)",
+"same strings and constants"
+],
+[
+"0x140073e50",
+"0x140076a50",
+"StartCliSessionWlobbyTokenJob::getGradeLevelResponse(void *)",
+"same strings and constants"
+],
+[
+"0x140074330",
+"0x140077050",
+"StartCliSessionWlobbyTokenJob::listAllGradesReq(void)",
+"same strings and constants"
+],
+[
+"0x1400745e0",
+"0x140077340",
+"StartCliSessionWlobbyTokenJob::listAllGradesResponse(void *)",
+"same strings and constants"
+],
+[
+"0x140074a90",
+"0x140077910",
+"StartCliSessionWlobbyTokenJob::start(void)",
+"same strings and constants"
+],
+[
+"0x140074fd0",
+"0x140078290",
+"StopChargeJob::requestChargeStop(void)",
+"same strings; constants differ"
+],
+[
+"0x140075e10",
+"0x140079a00",
+"TakeAccountTimeBasedPlayRewardJob::takeAccountTimeBasedPlayRewardExpire(void)",
+"same strings; constants differ"
+],
+[
+"0x140075f70",
+"0x140078a50",
+"TakeAccountTimeBasedPlayRewardJob::init(TakeAccountTimeBasedPlayRewardReqParam *)",
+"same strings and constants"
+],
+[
+"0x1400767e0",
+"0x140079220",
+"TakeAccountTimeBasedPlayRewardJob::takeAccountTimeBasedPlayRewardResponse(void *)",
+"same strings and constants"
+],
+[
+"0x140077740",
+"0x14007ab30",
+"TakeGoodsJob::takeGoodsTimeout(void)",
+"same strings; constants differ"
+],
+[
+"0x140077890",
+"0x14007a190",
+"TakeGoodsJob::init(void)",
+"same strings and constants"
+],
+[
+"0x140077c10",
+"0x14007a540",
+"TakeGoodsJob::takeGoodsReq(void)",
+"same strings and constants"
+],
+[
+"0x140078360",
+"0x14007ae80",
+"TencentUIC::CheckNameFilter(uint,wchar_t const *)",
+"same strings and constants"
+],
+[
+"0x140078630",
+"0x14007b170",
+"TransactionChannel::InitializeTransactionChannel(long)",
+"same strings and constants"
+],
+[
+"0x140078750",
+"0x14007b2b0",
+"TransactionChannel::TSend(TransactionChannel::Transaction *,Packet const *)",
+"same strings and constants"
+],
+[
+"0x1400789c0",
+"0x14007b440",
+"TransactionChannel::Manager::add(TransactionChannel::Transaction *)",
+"same strings and constants"
+],
+[
+"0x140078a40",
+"0x14007b540",
+"TransactionChannel::Manager::Tick(__int64)",
+"same strings and constants"
+],
+[
+"0x140078ef0",
+"0x14007cfe0",
+"TryEnterGameWorldJob::restorePcExpired(void)",
+"same strings; constants differ"
+],
+[
+"0x140079150",
+"0x14007bcf0",
+"TryEnterGameWorldJob::init(void)",
+"same strings and constants"
+],
+[
+"0x140079ad0",
+"0x14007c660",
+"TryEnterGameWorldJob::restorePcReq(void)",
+"same strings and constants"
+],
+[
+"0x14007a3b0",
+"0x14007d0e0",
+"TryEnterGameWorldJob::checkSecondPasswordStatus(void)",
+"same strings and constants"
+],
+[
+"0x14007a6a0",
+"0x14007d400",
+"TryEnterGameWorldJob::checkSecondPasswordStatusResponse(void *)",
+"same strings and constants"
+],
+[
+"0x14007ab80",
+"0x14007d900",
+"TryEnterGameWorldJob::checkSecondPasswordStatusExpire(void)",
+"same strings and constants"
+],
+[
+"0x14007ad20",
+"0x14007daa0",
+"TryEnterGameWorldJob::checkSecondPasswordVerified(void)",
+"same strings and constants"
+],
+[
+"0x14007b010",
+"0x14007ddc0",
+"TryEnterGameWorldJob::checkSecondPasswordVerifiedResponse(void *)",
+"same strings and constants"
+],
+[
+"0x14007b330",
+"0x14007e0f0",
+"TryEnterGameWorldJob::checkSecondPasswordVerifiedExpire(void)",
+"same strings and constants"
+],
+[
+"0x14007b4d0",
+"0x14007e290",
+"TryEnterGameWorldJob::requestGetSlot(void)",
+"same strings and constants"
+],
+[
+"0x14007b770",
+"0x14007e570",
+"TryEnterGameWorldJob::responseGetSlot(void *)",
+"same strings; constants differ"
+],
+[
+"0x14007bdd0",
+"0x14007eb60",
+"TryEnterGameWorldJob::expireGetSlot(void)",
+"same strings and constants"
+],
+[
+"0x14007bf60",
+"0x14007ecf0",
+"TryEnterGameWorldJob::requestChargeGetInfo(void)",
+"same strings and constants"
+],
+[
+"0x14007c200",
+"0x14007efd0",
+"TryEnterGameWorldJob::responseChargeGetInfo(void *)",
+"same strings and constants"
+],
+[
+"0x14007cbf0",
+"0x14007fa60",
+"TryEnterGameWorldJob::expireChargeGetInfo(void)",
+"same strings and constants"
+],
+[
+"0x14007cd80",
+"0x14007fbf0",
+"TryEnterGameWorldJob::tryEnterGameWorld(void)",
+"same strings and constants"
+],
+[
+"0x14007d5d0",
+"0x1400805b0",
+"GamedChannelManager::Acquire(short)",
+"same strings and constants"
+],
+[
+"0x14007d6a0",
+"0x140080680",
+"GamedChannelManager::OnAccept(Session const *)",
+"same strings and constants"
+],
+[
+"0x14007d700",
+"0x1400806e0",
+"GamedChannelManager::OnConnect(Session const *,bool)",
+"same strings and constants"
+],
+[
+"0x14007da00",
+"0x140080980",
+"GamedChannelManager::PacketHandler(Session const *,Packet const *)",
+"same strings and constants"
+],
+[
+"0x1400806d0",
+"0x1400850c0",
+"EnterGameWorldJob::init(void)",
+"same strings; constants differ"
+],
+[
+"0x140082190",
+"0x1400865e0",
+"KickJob::kick(void)",
+"same strings; constants differ"
+],
+[
+"0x140083640",
+"0x140087a40",
+"LeaveGameWorldJob::init(void)",
+"same strings and constants"
+],
+[
+"0x140083ee0",
+"0x140088260",
+"HandleLobbyGame_HelloReq(Session const *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400849f0",
+"0x140088cd0",
+"HandleLobbyGame_ServiceOpenNotify(Session const *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140084c40",
+"0x140088f30",
+"HandleLobbyGame_NPPresenceKickReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140085030",
+"0x140089270",
+"HandleLobbyGame_EnterWorldReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400858b0",
+"0x1400899a0",
+"HandleLobbyGame_LeaveWorldReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140085d60",
+"0x140089d90",
+"HandleLobbyGame_UpdateBotScoreNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140086050",
+"0x14008a060",
+"HandleLobbyGame_LogoutNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400863e0",
+"0x14008a400",
+"HandleLobbyGame_KickOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140086540",
+"0x14008a560",
+"HandleLobbyGame_KickFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140086720",
+"0x14008a7c0",
+"HandleLobbyGame_CreateCharacterOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400869b0",
+"0x14008aad0",
+"HandleLobbyGame_CreateCharacterFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140086b90",
+"0x14008ad30",
+"HandleLobbyGame_DeleteCharacterOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140086d70",
+"0x14008af90",
+"HandleLobbyGame_DeleteCharacterFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140086f50",
+"0x14008b1f0",
+"HandleLobbyGame_RestoreCharacterOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400870b0",
+"0x14008b350",
+"HandleLobbyGame_RestoreCharacterFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140087290",
+"0x14008b5b0",
+"HandleLobbyGame_StartChargeReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140087610",
+"0x14008b9b0",
+"HandleLobbyGame_StopChargeReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140087ba0",
+"0x14008be60",
+"HandleLobbyGame_AbandonChargeNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140088070",
+"0x14008c250",
+"HandleLobbyGame_UpdateCharacterDataReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140088560",
+"0x14008c660",
+"HandleLobbyGame_UpdateAccountDataReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140089130",
+"0x14008d590",
+"HandleLobbyGame_TryRegisterGuildReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400895b0",
+"0x14008d9a0",
+"HandleLobbyGame_FinishRegisterGuildNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140089700",
+"0x14008db10",
+"HandleLobbyGame_CancelRegisterGuildNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140089850",
+"0x14008dc80",
+"HandleLobbyGame_TryRenameGuildReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140089c90",
+"0x14008e010",
+"HandleLobbyGame_FinishRenameGuildNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140089e60",
+"0x14008e220",
+"HandleLobbyGame_CancelRenameGuildNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140089fd0",
+"0x14008e390",
+"HandleLobbyGame_DeleteGuildNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008a130",
+"0x14008e520",
+"HandleLobbyGame_ChangeCharacterAppearanceOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008a4e0",
+"0x14008e820",
+"HandleLobbyGame_ChangeCharacterAppearanceFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008a6e0",
+"0x14008eab0",
+"HandleLobbyGame_ChangeCharacterSexOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008aa90",
+"0x14008edb0",
+"HandleLobbyGame_ChangeCharacterSexFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008ac90",
+"0x14008f040",
+"HandleLobbyGame_ChangeCharacterRaceOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008b040",
+"0x14008f340",
+"HandleLobbyGame_ChangeCharacterRaceFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008b240",
+"0x14008f5d0",
+"HandleLobbyGame_RenameCharacterOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008b450",
+"0x14008f870",
+"HandleLobbyGame_RenameCharacterFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008b650",
+"0x14008fb00",
+"HandleLobbyGame_ExtendJumpingCharacterCreationQuotaWithAccountInventoryItemReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008ba30",
+"0x14008ffc0",
+"HandleLobbyGame_UpgradeJumpingCharacterStateWithCreationQuotaReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008bd60",
+"0x1400903d0",
+"HandleLobbyGame_UpdateJumpingCharacterStateReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008c090",
+"0x1400907e0",
+"HandleLobbyGame_SetAppDataNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008c920",
+"0x140090f70",
+"HandleLobbyGame_FriendMessageNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008d7a0",
+"0x140091ab0",
+"HandleLobbyGame_SecondPasswordGetStatusReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008da80",
+"0x140091e80",
+"HandleLobbyGame_SecondPasswordIsVerifiedReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008dda0",
+"0x140092280",
+"HandleLobbyGame_AuctionEscrowOk(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008df30",
+"0x140092400",
+"HandleLobbyGame_AuctionEscrowFail(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008e140",
+"0x1400926a0",
+"HandleLobbyGame_AuctionBidReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008e6f0",
+"0x140092ca0",
+"HandleLobbyGame_GetGradeListReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008e950",
+"0x140092f00",
+"HandleLobbyGame_ActivateGradeReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x14008efc0",
+"0x1400934f0",
+"DepositGameMileageCallback::`vector deleting destructor'(uint)",
+"same strings and constants"
+],
+[
+"0x14008f030",
+"0x140093540",
+"HandleLobbyGame_DepositGameMileageReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400901d0",
+"0x140094780",
+"HandleLobbyGame_BoastEventInWorldNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400904e0",
+"0x140094910",
+"HandleLobbyGame_TakeAccountTimeBasedPlayRewardReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400908d0",
+"0x140094df0",
+"HandleLobbyGame_UpdateAccountExpReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140090dc0",
+"0x1400951f0",
+"HandleLobbyGame_UpdateAccountContentQuotaReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400913f0",
+"0x140095890",
+"HandleLobbyGame_UpdateAccountRecycleTimeReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x140091b80",
+"0x140096830",
+"LobbyToken::Verify(int,unsigned __int64,unsigned __int64,ulong)",
+"same strings and constants"
+],
+[
+"0x140091ee0",
+"0x140096b00",
+"LobbyToken::Expire(void)",
+"same strings and constants"
+],
+[
+"0x1400921a0",
+"0x140096e20",
+"LobbyTokenDesk::Issue(LobbyToken *)",
+"same strings and constants"
+],
+[
+"0x1400923e0",
+"0x140096fb0",
+"LobbyTokenDesk::Verify(int,unsigned __int64,unsigned __int64,ulong,bool &)",
+"same strings and constants"
+],
+[
+"0x140092700",
+"0x140097240",
+"LobbyTokenDesk::Tick(__int64)",
+"same strings and constants"
+],
+[
+"0x140092c30",
+"0x140097bf0",
+"LogoutJob::init(int,void *)",
+"same strings; constants differ"
+],
+[
+"0x140092db0",
+"0x140097d30",
+"LogoutJob::logout(void)",
+"same strings and constants"
+],
+[
+"0x140094620",
+"0x140099220",
+"LobbyDaemon::ShortName(void)",
+"same strings and constants"
+],
+[
+"0x140094630",
+"0x140099230",
+"LobbyDaemon::Name(void)",
+"same strings and constants"
+],
+[
+"0x140094640",
+"0x140099240",
+"LobbyDaemon::ServiceName(void)",
+"same strings and constants"
+],
+[
+"0x140094650",
+"0x140099250",
+"LobbyDaemon::Descriptions(void)",
+"same strings and constants"
+],
+[
+"0x1400947f0",
+"0x1400993c0",
+"GenerateClikey(void)",
+"same strings and constants"
+],
+[
+"0x140094840",
+"0x140099410",
+"GenerateJobid(void)",
+"same strings and constants"
+],
+[
+"0x140094890",
+"0x140099460",
+"GenerateLobbyTokenkey(void)",
+"same strings and constants"
+],
+[
+"0x1400951b0",
+"0x140099ef0",
+"TimeBasedPlaySeasonSchedule::Compose(RepeatPacketComposer &,Packet &)",
+"same strings and constants"
+],
+[
+"0x1400954a0",
+"0x1400e1c80",
+"Daemon::Daemon(void)",
+"same strings; constants differ"
+],
+[
+"0x140096300",
+"0x14009b0c0",
+"LobbyDaemon::FailedEventObjectHandler(EventObject *)",
+"same strings and constants"
+],
+[
+"0x140099ee0",
+"0x14009e2f0",
+"LobbyDaemon::shutdown(void)",
+"same strings and constants"
+],
+[
+"0x14009ba20",
+"0x1400e7f70",
+"Db::AllocTransaction(uint)",
+"same strings and constants"
+],
+[
+"0x14009bb70",
+"0x1400e8510",
+"DbTransaction::BindCol(int,void *,unsigned __int64,int,unsigned __int64 *)",
+"same strings; constants differ"
+],
+[
+"0x14009bc40",
+"0x1400e8690",
+"DbTransaction::BindParam(int,int,void *,unsigned __int64,unsigned __int64,int,int,int,unsigned __int64 *)",
+"same strings; constants differ"
+],
+[
+"0x1400bc520",
+"0x1400bbcf0",
+"StopPlayTimerEvent::HandleEvent(EventContext *,ulong)",
+"same strings and constants"
+],
+[
+"0x1400c0160",
+"0x1400c0d50",
+"LobbyGateChannelManager::Acquire(short)",
+"same strings and constants"
+],
+[
+"0x1400c02e0",
+"0x1400c0f20",
+"LobbyGateChannelManager::OnAccept(Session const *)",
+"same strings and constants"
+],
+[
+"0x1400c0340",
+"0x1400c0f80",
+"LobbyGateChannelManager::OnConnect(Session const *,bool)",
+"same strings and constants"
+],
+[
+"0x1400c0ad0",
+"0x1400c1710",
+"LobbyJob::transit(int)",
+"same strings and constants"
+],
+[
+"0x1400c0c90",
+"0x1400c1b40",
+"LobbyJobManager::Initialize(int)",
+"same strings and constants"
+],
+[
+"0x1400c0dd0",
+"0x1400c1c90",
+"LobbyJobManager::Register(LobbyJob *)",
+"same strings and constants"
+],
+[
+"0x1400c12f0",
+"0x1400c20a0",
+"LobbyJobManager::ExecuteW(unsigned __int64,int,void *)",
+"same strings and constants"
+],
+[
+"0x1400c1390",
+"0x1400c2140",
+"LobbyJobManager::ResumeW(unsigned __int64,int,int,void *)",
+"same strings and constants"
+],
+[
+"0x1400c1730",
+"0x1400c25c0",
+"HandleLobbyLobbyGate_HelloReq(Session const *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c2040",
+"0x1400c2d90",
+"HandleLobbyLobbyGate_InitSessionWithNPTokenReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c2740",
+"0x1400c3380",
+"HandleLobbyLobbyGate_StartSessionWithNPTokenReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c2d60",
+"0x1400c3890",
+"HandleLobbyLobbyGate_InitSessionWithLobbyTokenReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c3460",
+"0x1400c3e70",
+"HandleLobbyLobbyGate_StartSessionWithLobbyTokenReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c37f0",
+"0x1400c4180",
+"HandleLobbyLobbyGate_LostAnonymousConnectionNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c3a60",
+"0x1400c43f0",
+"HandleLobbyLobbyGate_LostConnectionNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c3cc0",
+"0x1400c4650",
+"HandleLobbyLobbyGate_LogoutNotify(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c3f20",
+"0x1400c48b0",
+"HandleLobbyLobbyGate_GetEnterWorldTokenReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c4610",
+"0x1400c4df0",
+"HandleLobbyLobbyGate_GetWaitInfoReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c4860",
+"0x1400c5040",
+"HandleLobbyLobbyGate_GiveupWaitReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c4c00",
+"0x1400c5360",
+"HandleLobbyLobbyGate_GetCharacterInfoListReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c50a0",
+"0x1400c5630",
+"HandleLobbyLobbyGate_GetCharacterInfoReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c5760",
+"0x1400c5b10",
+"HandleLobbyLobbyGate_CreateCharacterReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c5e10",
+"0x1400c6190",
+"HandleLobbyLobbyGate_DeleteCharacterReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c6510",
+"0x1400c67e0",
+"HandleLobbyLobbyGate_CancelWaitCharacterDeletionReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c6c10",
+"0x1400c6e30",
+"HandleLobbyLobbyGate_RecoverCharacterReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c7520",
+"0x1400c7540",
+"HandleLobbyLobbyGate_BindCharacterSlotReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c7aa0",
+"0x1400c7af0",
+"HandleLobbyLobbyGate_GetChargeInfoReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c7db0",
+"0x1400c7df0",
+"HandleLobbyLobbyGate_GetGoodsCountReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c8040",
+"0x1400c8080",
+"HandleLobbyLobbyGate_ListGoodsReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c82d0",
+"0x1400c83d0",
+"HandleLobbyLobbyGate_TakeGoodsReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c84d0",
+"0x1400c85e0",
+"HandleLobbyLobbyGate_ListLobbyServiceItemInfoReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c8740",
+"0x1400c8860",
+"HandleLobbyLobbyGate_GetLobbyServiceItemInfoReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c8980",
+"0x1400c8aa0",
+"HandleLobbyLobbyGate_GetServiceEntryListReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c8da0",
+"0x1400c8d00",
+"HandleLobbyLobbyGate_ChangeCharacterAppearanceWithAccountInventoryItemReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c92e0",
+"0x1400c9300",
+"HandleLobbyLobbyGate_ChangeCharacterSexWithAccountInventoryItemReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c9860",
+"0x1400c9940",
+"HandleLobbyLobbyGate_ChangeCharacterRaceWithAccountInventoryItemReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400c9e20",
+"0x1400c9fc0",
+"HandleLobbyLobbyGate_RenameCharacterWithAccountInventoryItemReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400ca310",
+"0x1400ca560",
+"HandleLobbyLobbyGate_AddSlotWithAccountInventoryItemReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400ca5a0",
+"0x1400ca8b0",
+"HandleLobbyLobbyGate_ChangeUserNameWithAccountInventoryItemReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400ca890",
+"0x1400cac70",
+"HandleLobbyLobbyGate_ExtendJumpingCharacterCreationQuotaWithAccountInventoryItemReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400cab30",
+"0x1400cafd0",
+"HandleLobbyLobbyGate_CreateInitialUserNameReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400cadd0",
+"0x1400cb330",
+"HandleLobbyLobbyGate_ActivateGradeReq(SharedChannel *,Packet const *)",
+"handler table: same command and formats"
+],
+[
+"0x1400cb680",
+"0x1400cbcb0",
+"Handle_SrvGate_RegisterService(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cb7f0",
+"0x1400cbe00",
+"Handle_SrvProfile_GetUserProfile(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cb890",
+"0x1400cbea0",
+"Handle_SrvGameTime_GetGameTime(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cb930",
+"0x1400cbf40",
+"Handle_SrvAuth_ConsumeGameToken(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"same strings and constants"
+],
+[
+"0x1400cb9d0",
+"0x1400cbfe0",
+"Handle_SrvAuth_IsUserNameChangeableIncomplete(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cbb10",
+"0x1400cc110",
+"Handle_SrvAuth_GetUserNameChangeableIncomplete(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cbc50",
+"0x1400cc240",
+"Handle_SrvAuth_ChangeMyUserNameIncomplete(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cc4b0",
+"0x1400cca30",
+"Handle_CommonSlot_GetSlot(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cc550",
+"0x1400ccad0",
+"Handle_CommonSlot_ListSlots(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"same strings and constants"
+],
+[
+"0x1400cc5f0",
+"0x1400ccb70",
+"Handle_SrvSlot_CreateSlots(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cc690",
+"0x1400ccc10",
+"Handle_SrvSlot_SetData(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cc730",
+"0x1400cccb0",
+"Handle_SrvPres_Login(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cc7d0",
+"0x1400ccd50",
+"Handle_SrvPres_Logout(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cc910",
+"0x1400cce80",
+"Handle_SrvPres_GetUserInfo(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cc9a0",
+"0x1400ccf10",
+"Handle_CommonPres_UserInfo(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"same strings and constants"
+],
+[
+"0x1400ccb10",
+"0x1400cd070",
+"Handle_SrvPres_Message(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400ccc70",
+"0x1400cd1a0",
+"Handle_SrvPres_Kick(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400ccdd0",
+"0x1400cd2d0",
+"Handle_SrvCharge_GetInfo(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cce70",
+"0x1400cd370",
+"Handle_SrvCharge_Start(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400ccf10",
+"0x1400cd410",
+"Handle_SrvCharge_Stop(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cd050",
+"0x1400cd540",
+"Handle_SrvCharge_Abandon(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cd0f0",
+"0x1400cd5e0",
+"Handle_SrvCharge_RequestStop(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cd700",
+"0x1400cdaa0",
+"Handle_SrvCharge_NotifyApplyNewChargeItem(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id (2907); 381 IDB name is wrong"
+],
+[
+"0x1400cd9f0",
+"0x1400cdda0",
+"Handle_SrvCharge_NotifyRemainTime(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cdd30",
+"0x1400ce140",
+"Handle_SrvFriend_SendMessage(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cde80",
+"0x1400ce280",
+"Handle_CommonSecondPassword_GetStatus(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cdfd0",
+"0x1400ce3c0",
+"Handle_SrvSecondPassword_IsVerified(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400ce120",
+"0x1400ce500",
+"Handle_SrvGameAccount_ListUserLastPresences(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400ce1c0",
+"0x1400ce5a0",
+"Handle_CommonGrade_ListGrades(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400ce260",
+"0x1400ce640",
+"Handle_CommonGrade_ListAllGrades(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400ce300",
+"0x1400ce6e0",
+"Handle_CommonGrade_GetLevel(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400ce3a0",
+"0x1400ce780",
+"Handle_SrvGrade_ActivateGrade(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400ce440",
+"0x1400ce820",
+"Handle_SrvGrade_NotifyGradeChanged(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400ce990",
+"0x1400ced00",
+"Handle_SrvGrade_NotifyScoreChanged(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cee90",
+"0x1400cf0b0",
+"Handle_SrvAuction_Escrow(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cf020",
+"0x1400cf270",
+"Handle_SrvAuction_RollbackEscrow(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cf1e0",
+"0x1400cf440",
+"Handle_SrvAuction_Deliver(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cf3f0",
+"0x1400cf570",
+"Handle_SrvAuction_Bid(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cf4a0",
+"0x1400cf620",
+"Handle_SrvContentBan_ListUserBans(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cf540",
+"0x1400cf6c0",
+"Handle_SrvRMS_Inquiry(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cf5e0",
+"0x1400cf760",
+"Handle_SrvVirtualCurrency_Deposit(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cf680",
+"0x1400cf800",
+"Handle_SrvPromotionStamp_ListCurrentPromotions(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cf720",
+"0x1400cf8a0",
+"Handle_SrvPromotionStamp_GetPromotionPolicy(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cf7c0",
+"0x1400cf940",
+"Handle_SrvPromotionStamp_GetUserPromotionStatus(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cf860",
+"0x1400cf9e0",
+"Handle_SrvPromotionStamp_AttendPromotionSecured(NPChannel *,StsMsgLib::_StsMsg *,NPTransaction *)",
+"NP dispatch: same message id"
+],
+[
+"0x1400cf970",
+"0x1400cfac0",
+"NPGameServiceChannelCmdDispatcher(uint,StsMsgLib::ECommand &)",
+"same strings and constants"
+],
+[
+"0x1400d0150",
+"0x1400d03d0",
+"NPGameServiceChannel::SendRequestSlotGetSlot(NPTransaction *,id128 const &,id128 const &)",
+"same strings and constants"
+],
+[
+"0x1400d01e0",
+"0x1400d0800",
+"NPGameServiceChannel::SendRequestPresenceLogout(id128 const &)",
+"same strings and constants"
+],
+[
+"0x1400d04a0",
+"0x1400d0e90",
+"NPGameServiceChannel::SendRequestChargeGetInfo(NPTransaction *,id128 const &,ulong)",
+"same strings and constants"
+],
+[
+"0x1400d06d0",
+"0x1400d1410",
+"NPGameServiceChannel::SendRequestGradeListAllGrades(NPTransaction *,id128 const &)",
+"same strings and constants"
+],
+[
+"0x1400d0ab0",
+"0x1400d2250",
+"NPLobbyJobTransaction::Expire(void)",
+"same strings and constants"
+],
+[
+"0x1400d1a50",
+"0x1400d2840",
+"StartCliSessionWnpTokenJob::init(int,void *)",
+"same strings and constants"
+],
+[
+"0x1400d27e0",
+"0x1400d3500",
+"StartCliSessionWnpTokenJob::consumeTokenResponse(int,void *)",
+"same strings and constants"
+],
+[
+"0x1400d3250",
+"0x1400d4050",
+"StartCliSessionWnpTokenJob::listUserLastPresencesResponse(void *)",
+"same strings; constants differ"
+],
+[
+"0x1400d38b0",
+"0x1400d47e0",
+"StartCliSessionWnpTokenJob::listSlotsReq(void)",
+"same strings and constants"
+],
+[
+"0x1400d3c20",
+"0x1400d4b90",
+"StartCliSessionWnpTokenJob::listSlotsResponse(void *)",
+"same strings and constants"
+],
+[
+"0x1400d4770",
+"0x1400d5770",
+"StartCliSessionWnpTokenJob::createSlotsResponse(void *)",
+"same strings and constants"
+],
+[
+"0x1400d5190",
+"0x1400d62b0",
+"StartCliSessionWnpTokenJob::setSlotDataResponse(void *)",
+"same strings and constants"
+],
+[
+"0x1400d6a00",
+"0x1400d7930",
+"StartCliSessionWnpTokenJob::getUserProfileResponse(void *)",
+"same strings and constants"
+],
+[
+"0x1400d7320",
+"0x1400d8360",
+"StartCliSessionWnpTokenJob::getGameTimeResponse(void *)",
+"same strings; constants differ"
+],
+[
+"0x1400d7b50",
+"0x1400d8c30",
+"StartCliSessionWnpTokenJob::getGradeLevelReq(void)",
+"same strings and constants"
+],
+[
+"0x1400d7e50",
+"0x1400d8f60",
+"StartCliSessionWnpTokenJob::getGradeLevelResponse(void *)",
+"same strings and constants"
+],
+[
+"0x1400d8300",
+"0x1400d9540",
+"StartCliSessionWnpTokenJob::listAllGradesReq(void)",
+"same strings and constants"
+],
+[
+"0x1400d8630",
+"0x1400d98b0",
+"StartCliSessionWnpTokenJob::listAllGradesResponse(void *)",
+"same strings and constants"
+],
+[
+"0x1400d8ea0",
+"0x1400da1a0",
+"StartCliSessionWnpTokenJob::listUserBansResponse(void *)",
+"same strings and constants"
+],
+[
+"0x1400da050",
+"0x1400db400",
+"StartCliSessionWnpTokenJob::getUserPromotionStatusResponse(void *)",
+"same strings and constants"
+],
+[
+"0x1400dae10",
+"0x1400dc310",
+"StartCliSessionWnpTokenJob::checkIntialUserName(wchar_t const *)",
+"same strings and constants"
+],
+[
+"0x1400db0e0",
+"0x1400dc720",
+"WaitQueue::Remove(short const &,unsigned __int64)",
+"same strings and constants"
+],
+[
+"0x1400db630",
+"0x140118d60",
+"std::basic_string<wchar_t,std::char_traits<wchar_t>,BannedWordFilterAllocator<wchar_t>>::_Grow(unsigned __int64,bool)",
+"same strings; constants differ"
+],
+[
+"0x1400dbb00",
+"0x1401191f0",
+"BannedWordFilterLoader::LoadNameFilter(char *)",
+"same strings and constants"
+],
+[
+"0x1400dc040",
+"0x1400dd6c0",
+"Log::Name(void)",
+"same strings and constants"
+],
+[
+"0x1400dc3b0",
+"0x1400dda90",
+"Log::Write(Log::Type,wchar_t const *,int,wchar_t const *,...)",
+"same strings and constants"
+],
+[
+"0x1400dc4a0",
+"0x1400dd910",
+"Log::WriteV(wchar_t const *,int,long,wchar_t const *,char *)",
+"same strings; constants differ"
+],
+[
+"0x1400dc940",
+"0x1400dfc00",
+"makeDirectory",
+"same strings; constants differ"
+],
+[
+"0x1400dcaf0",
+"0x1400dfd80",
+"ExceptionCodeString",
+"same strings and constants"
+],
+[
+"0x1400dcea0",
+"0x1400dfff0",
+"DumpRegister(void *,_EXCEPTION_POINTERS *)",
+"same strings and constants"
+],
+[
+"0x1400dd050",
+"0x1400e01a0",
+"InitSymbol(SymbolFunctions *,wchar_t const *)",
+"same strings and constants"
+],
+[
+"0x1400dd200",
+"0x1400e0340",
+"DumpStack(void *,SymbolFunctions *,_EXCEPTION_POINTERS *)",
+"same strings and constants"
+],
+[
+"0x1400dd610",
+"0x1400e0990",
+"CrashHandler::SetLogPath(wchar_t const *)",
+"same strings and constants"
+],
+[
+"0x1400dd890",
+"0x1400e0c00",
+"CrashHandler::handleCrash(_EXCEPTION_POINTERS *)",
+"same strings; constants differ"
+],
+[
+"0x1400de2d0",
+"0x1400decf0",
+"RepeatPacketComposer::PushRepeatCount(Packet *)",
+"same strings and constants"
+],
+[
+"0x1400de860",
+"0x1400df520",
+"RepeatPacketDecomposer::PushRepeatCount(char const *,int)",
+"same strings and constants"
+],
+[
+"0x1400deb60",
+"0x1400df880",
+"PacketConcatenateBuffer::Decompose(int,...)",
+"same strings and constants"
+],
+[
+"0x1400df070",
+"0x1400de080",
+"Packet::Compose(char const *,...)",
+"same strings and constants"
+],
+[
+"0x1400df130",
+"0x1400de140",
+"Packet::Compose(PacketComposer *,int,...)",
+"same strings and constants"
+],
+[
+"0x1400df230",
+"0x1400de270",
+"Packet::ComposeV(PacketComposer *,int,char *)",
+"same strings and constants"
+],
+[
+"0x1400df720",
+"0x1400de780",
+"Packet::Decompose(char const *,...)",
+"same strings and constants"
+],
+[
+"0x1400df7c0",
+"0x1400de820",
+"Packet::Decompose(PacketDecomposer *,int,...)",
+"same strings and constants"
+],
+[
+"0x1400df910",
+"0x1400dcc20",
+"AlertSender::Name(void)",
+"same strings and constants"
+],
+[
+"0x1400e0380",
+"0x1400e1620",
+"printUsage",
+"same strings and constants"
+],
+[
+"0x1400e10b0",
+"0x1400e2120",
+"Daemon::Reload(wchar_t * *,int)",
+"same strings and constants"
+],
+[
+"0x1400e11d0",
+"0x1400e2240",
+"Daemon::Cooldown(void)",
+"same strings and constants"
+],
+[
+"0x1400e13e0",
+"0x1400eee10",
+"TimerQueue::Remove(Timer *)",
+"same strings and constants"
+],
+[
+"0x1400e2440",
+"0x1400e2d20",
+"Daemon::LoadVersion(Daemon::Version *,wchar_t *,unsigned __int64)",
+"same strings and constants"
+],
+[
+"0x1400e25d0",
+"0x1400e2f90",
+"Daemon::setAddress(void)",
+"same strings; constants differ"
+],
+[
+"0x1400e2c70",
+"0x1400e3560",
+"Daemon::timerMain(Network *)",
+"same strings and constants"
+],
+[
+"0x1400e2f60",
+"0x1400e5100",
+"String::GetId128FromGuidString(wchar_t const *,id128 *)",
+"same strings; constants differ"
+],
+[
+"0x1400e35d0",
+"0x1400e4410",
+"Network::OpenPort(uint,ushort,int,SessionHandler const *,PacketBufferHandler const *,uint,bool,bool,bool)",
+"same strings; constants differ"
+],
+[
+"0x1400e3c40",
+"0x1400e4cd0",
+"Network::initializeSocketInterface(void)",
+"same strings and constants"
+],
+[
+"0x1400f3cb0",
+"0x1400e5820",
+"Session::Connect(Port *,unsigned __int64,ulong,ushort,long,bool,bool)",
+"same strings and constants"
+],
+[
+"0x1400f4270",
+"0x1400e5f20",
+"Session::reconnect(void)",
+"same strings and constants"
+],
+[
+"0x1400f4d70",
+"0x1400e69d0",
+"Session::handlePacket(void)",
+"same strings and constants"
+],
+[
+"0x1400f50d0",
+"0x1400e6d10",
+"Session::SendV(char const *,char *)",
+"same strings and constants"
+],
+[
+"0x1400f57c0",
+"0x1400e7390",
+"RefCntHistory::dump(RefCntObject *)",
+"same strings and constants"
+],
+[
+"0x1400f5e60",
+"0x1400e7ae0",
+"PerfCounterProvider::loadLibrary(void)",
+"same strings and constants"
+],
+[
+"0x1400f6470",
+"0x1400e9930",
+"LogFile::MakeFilename(tm *,wchar_t *,int)",
+"same strings and constants"
+],
+[
+"0x1400f6740",
+"0x1400e9bf0",
+"LogFile::makeDirectory(wchar_t *)",
+"same strings; constants differ"
+],
+[
+"0x1400f6a30",
+"0x1400e9eb0",
+"LogFile::writeFile(void)",
+"same strings and constants"
+],
+[
+"0x1400f6bf0",
+"0x1400ea070",
+"LogFile::writeToBuffer(Log::Type,_SYSTEMTIME,wchar_t const *,int,wchar_t const *)",
+"same strings and constants"
+],
+[
+"0x1400f72c0",
+"0x1400e8cd0",
+"TrustedPacketBufferHandler::ToPacket(Session const *,char const *,int,int,char const * *)",
+"same strings; constants differ"
+],
+[
+"0x1400f80e0",
+"0x1400eac10",
+"LogBuffer::GetLog(wchar_t *,unsigned __int64)",
+"same strings and constants"
+],
+[
+"0x1400f8530",
+"0x1400eb1e0",
+"PacketBuffer::Compose(char *,uint,char const *,unsigned __int64,char *)",
+"same strings and constants"
+],
+[
+"0x1400f88c0",
+"0x1400eb570",
+"PacketBuffer::CheckCompose(char *,uint,char const *,char * &)",
+"same strings and constants"
+],
+[
+"0x1400f8c20",
+"0x1400eb8d0",
+"PacketBuffer::Decompose(char const *,uint,char const *,unsigned __int64,char *)",
+"same strings and constants"
+],
+[
+"0x1400f90b0",
+"0x1400ebd50",
+"PacketBuffer::encrypt(PacketCrypt *,Security3rdParty *)",
+"same strings and constants"
+],
+[
+"0x1400f99c0",
+"0x1400ef3f0",
+"WindowConsoleOnReload",
+"same strings and constants"
+],
+[
+"0x1400f9ef0",
+"0x1400ef8f0",
+"WindowConsole::SetState(int)",
+"same strings and constants"
+],
+[
+"0x1401005c0",
+"0x1400ed6e0",
+"PipeConsole::checkFrozenThread(void)",
+"same strings and constants"
+],
+[
+"0x140100970",
+"0x1400edb10",
+"PipeConsole::writeStateInfo(wchar_t *,int &)",
+"same strings and constants"
+],
+[
+"0x140100e20",
+"0x1400ee250",
+"PipeConsole::connectPipe(void *,_OVERLAPPED *)",
+"same strings and constants"
+],
+[
+"0x1401014d0",
+"0x1400efd10",
+"WinServiceConsole::ServiceMain(ulong,wchar_t * *)",
+"same strings and constants"
+],
+[
+"0x1401017d0",
+"0x1400effe0",
+"WinServiceConsole::getLastErrorText(wchar_t *,int)",
+"same strings and constants"
+],
+[
+"0x140101890",
+"0x1400f0090",
+"WinServiceConsole::addLog(bool,wchar_t const *)",
+"same strings and constants"
+],
+[
+"0x1401019d0",
+"0x1400f01c0",
+"WinServiceConsole::InstallService(Daemon *,wchar_t const *,wchar_t const *)",
+"same strings and constants"
+],
+[
+"0x140101c60",
+"0x1400f0440",
+"WinServiceConsole::UninstallService(Daemon *,wchar_t const *)",
+"same strings and constants"
+],
+[
+"0x140102a50",
+"0x1400f1f90",
+"IoWorker::run(void)",
+"same strings and constants"
+],
+[
+"0x1401037a0",
+"0x1400f1330",
+"Port::Clear(void)",
+"same strings and constants"
+],
+[
+"0x140103a10",
+"0x1400f1680",
+"Port::RemoveSession(Session *)",
+"same strings and constants"
+],
+[
+"0x140103b90",
+"0x1400f1980",
+"Port::makeSession(unsigned __int64 &)",
+"same strings and constants"
+],
+[
+"0x140104110",
+"0x1400f2c10",
+"SessionSendBuffer::Clear(void)",
+"same strings and constants"
+],
+[
+"0x1401045f0",
+"0x1400f24e0",
+"PagePoolMemoryManager::Initialize(unsigned __int64)",
+"same strings and constants"
+],
+[
+"0x140104720",
+"0x1400f2710",
+"StaticPageMemoryManager::allocate(unsigned __int64,wchar_t const *,int)",
+"same strings and constants"
+],
+[
+"0x140104840",
+"0x1400f3140",
+"Connection::AsyncConnect(AsyncConnectContext *,bool)",
+"same strings and constants"
+],
+[
+"0x140104a30",
+"0x1400f3470",
+"Connection::AsyncSend(AsyncSendContext *)",
+"same strings and constants"
+],
+[
+"0x140104ab0",
+"0x1400f34f0",
+"Connection::makeConnectSocket(bool)",
+"same strings and constants"
+],
+[
+"0x140104c40",
+"0x1401097a0",
+"PortListener::`vector deleting destructor'(uint)",
+"same strings and constants"
+],
+[
+"0x140104cc0",
+"0x140109810",
+"PortListener::Initialize(Port *,void *,ushort)",
+"same strings and constants"
+],
+[
+"0x140105040",
+"0x140109c30",
+"PortListener::asyncAccept(int)",
+"same strings and constants"
+],
+[
+"0x1401054b0",
+"0x14010a480",
+"SSN::Generate(BloodCert::Module,ulong,uchar const * const,uchar *,int)",
+"same strings; constants differ"
+],
+[
+"0x14010f6d0",
+"0x140114e80",
+"aes128TableSetupEncKey(uint *,uchar const *,int)",
+"same strings and constants"
+],
+[
+"0x14010fb70",
+"0x1401150d0",
+"aes128TableSetupDecKey(uint *,uint const *)",
+"same strings and constants"
+],
+[
+"0x1401101c0",
+"0x1401152a0",
+"aes128TableEncrypt(uint *,uint const *,uint const *)",
+"same strings and constants"
+],
+[
+"0x140110760",
+"0x140115820",
+"aes128TableDecrypt(uint *,uint const *,uint const *)",
+"same strings and constants"
+]
+]
+}
