@@ -37,9 +37,11 @@ Context budget (each tool result is read again on every later turn):
 - The Rust port does not copy a bug or an exploit (user rule, 2026-11-11). Each quirk row gets a column "Port": `fixed` (write the correct behaviour) or `keep value` (game data or scripts need the value that the bug returns; the port gives this value in a safe way, with no memory error).
 
 Abuse notes (all slices):
-- The port copies the original behaviour, also when a player can abuse it. Full parity comes first.
-- If you see a way that a player can abuse the code (dupe, skipped check, trusted client value, missing rate limit, race), do not fix it and do not ignore it. Write it in `Docs/Plan/abuse-notes/<slice id>.md`.
-- One table row for each case: | name | file:line or address | what a player can do | how to fix it later |
+- The port does not copy exploits (`Docs/Architecture/scale-rules.md` §1).
+- If you see a way that a player can abuse the original code (dupe, skipped check, trusted client value, missing rate limit, race), write it in `Docs/Plan/abuse-notes/<slice id>.md`. The runner keeps this file local. It never goes to GitHub.
+- One table row for each case: | name | file:line or address | what a player can do | how to fix it |
+- In the spec, write only the correct behaviour and "bug, not ported". Do not write how to abuse it.
+- The Rust card tells the builder which fix to write.
 - Use the names in `Docs/Plan/known-exploits.md` if one fits. Else give a new name `exploit_<name>`.
 - This file is always an allowed path. Write it in addition to the handoff.
 
