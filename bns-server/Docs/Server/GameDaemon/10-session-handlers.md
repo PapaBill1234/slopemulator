@@ -176,14 +176,62 @@ No runtime identity, address, password or key value is included here.
 - **Charge success:** `0x140153CF0` applies the charge to the user before state 16. Copy response remaining time at +132, base at +136, item at +140, reservations at +144. The apply type is 0. A missing user does not authorize success. Charge-application failure performs loaded-PC rollback. ❓ Exact ownership, omitted failure reasons and conditional kicks remain open.
 - **❓ Missing:** Backend reply codecs and DB procedures, PC decode/ownership, optional recovery helpers, complete rollback and conditional kick paths. Command 24 is no longer a body gap. No key material is specified.
 
-## 26 — G_ReturnToLobbyReqCmd — partial
+## 26 — G_ReturnToLobbyReqCmd
+
+End-to-end sequence: `Docs/Server/LobbyDaemon/23-return-to-lobby.md`.
+
+### 26.1 Handler
 
 - **381:** `0x140371500`. **348:** `HandleGame_ReturnToLobbyReq`, `0x14036F0F0`.
-- **Wire:** No request-body decoder.
-- **Checks/order:** PC dispatch; reject arena config (+237 and +248); acquire PC user +20696 only if present and +20752 is zero; call `UserManager::LogoutUser` at `0x1403F0340`; construct `ReturnToLobbyTran`; register and start the transaction.
-- **State:** Logout helper can change user-manager state before transaction registration. Transaction vtable is `0x140C42E80`. Its ID is stored at +24.
-- **Failure/output:** Send 28, `hh`: arena reason 5, logout failure 1954, transaction start failure 2. The omitted arguments are verified in instructions. Return true. No direct broadcast or universal kick rule.
-- **❓ Missing:** Logout helper, transaction body, success reply, daemon commands, DB procedures, rollback and final close path. See doc 07 part 4 for the separate kick boundary.
+- **Wire:** No request-body decoder. Client packet size 16 (`game-commands.tsv` row 26).
+- **Order:** (1) If arena config +237 is nonzero and +248 is nonzero: send 28 `hh` reason 5, return true. Do not follow the arena path. (2) Read the user at PC +20696. If the user is null or PC +20752 is nonzero: log only, return true. (3) Log `pcDbId` (user +216) and `cliKey` (user +248). (4) Call `UserManager::LogoutUser` `0x1403F0340` (348 `0x1403EAE90`). False → send 28 `hh` reason 1954, return true. (5) Allocate the transaction (0xA0 bytes, base constructor `0x14002F440(tran, user)`, vtable `0x140C42E80`, type value 205066 at +8, byte +104 = 0). Transaction ID = new ID from GameDaemon +5128, stored at +24. (6) Register in the transaction manager (`0x1400D4FE0`). Success → start with event 9 (`0x1400D4A80(mgr, tran, 9, 0)`). Register failure → send 28 `hh` reason 2, release the transaction. Source: `0x140371500` lines 11–74.
+- **Important:** The user leaves the user manager in step 4, before the transaction runs. A later socket close does not start a `LogoutTran` (see 26.5).
+
+### 26.2 UserManager::LogoutUser (`0x1403F0340`, 348 `0x1403EAE90`)
+
+- Find the user in the active list by `PcDbId`. If found and `CliKey` and `AuthWaitKey` are equal to the stored user: remove the entry; send external-integration notices (348: `SecurityRemoveClient`, `StopGamePlayTime`, `ChangeStatus(2, 20)`; do not port, integration path); release one reference; return true.
+- Else search the waiting list by `AuthWaitKey` and remove a match. ❓ The return value on this path (348 line 141 returns 0 on one path).
+- No save, no zone leave and no notice to other players in this function. Other callers: `0x140037880` ❓, `0x14007B970` (socket close).
+
+### 26.3 ReturnToLobbyTran (subclass of LeaveWorldTran)
+
+348 names: `ReturnToLobbyTran::work` `0x14013BC10`, `init` `0x14013BBE0`, `failProcess` `0x14013BDC0`, `tryLeaveWorld` `0x14013BE20`, `leaveWorldOk` `0x14013BF80`, `leaveWorldFail` `0x14013C030`. Definition: `LeaveWorldTran::_def` (fin state 8). 381 vtable `0x140C42E80`: +0x30 work `0x14013AC70`, +0x38 init `0x14013AC40`, +0x40 failProcess `0x14013B0D0`.
+
+Transaction fields (381): +24 ID, +32 state, +80 user, +88 PC object (optional), +96 showcase object.
+
+| State | Event 0 (try) | Events | Next |
+| ---: | --- | --- | --- |
+| 0 | init `0x14013AC40`: event 9 → `LeaveWorldTran::init` `0x140138D80`; other event → state 8 | | 1 or 2 |
+| init | If config +76: allocate the showcase object at +96. If config +1540 and the account name (user +132) is not empty: post a game-log record (kind 13) to service +5824. User +260 == 1 → state 1; else log "skip" → state 2. | | |
+| 1 | `tryStopCharge` `0x140138FA0`: charge key (user +264) empty → state 2. Else Lobby 33 `hqqqs` (tid, pcDbId, cliKey, charge key) to world user +236. Send failure → log, state 2. | 41 ok `0x1401390B0` → 2; 42 fail `0x140139120` → 2 | 2 |
+| 2 | `tryLeaveZone` `0x140139190`: PC with a zone → `World::leave(world, pc, tid, &arena)` posts the zone leave; wait. Arena result → arena branch (not followed; only that branch sets an expire token, event 52, when config `_transactionExpiredCheckEnable`). Zone null → PC cleanup (`0x140608770`, `0x14060DD30`), `0x1403EA930(user, 0)`, state 3. | 48 leave ok `0x1401396A0` (remove expire token, restore mobile position, `User::ResetPc`) → 3; 49 expire `0x1401397B0` (destroy zone object, reason "leave zone fail by expired(leave world)", `ResetPc`) → 3; 52 arena ok `0x140139990` → 3 | 3 |
+| 3 | `tryUpdateCharacterInfo` `0x140139C20`: `SendUpdateCharacterDataReq` (`0x14014A700`) to Lobby (tid, pcDbId, …, showcase). Command 39 `UpdateCharacterDataReq`, format string `hqqqhb` (`0x14014A700` line 50, writer init with 39; only caller `0x140139C20`). Send failure → state 4. | 43 ok → 4; 44 fail → 4 | 4 |
+| 4 | If config +1946 and `User::AutoTakeTimeBasedReward(user, tid, 1, 0, 0)` (`0x1403EC9E0`) is true: wait. Else state 5. | 47 response → 5 | 5 |
+| 5 | `tryUpdateAccountInfo` `0x140139DF0`: `User::CalcTimeBasedPlay`, then `SendUpdateAccountDataReq` (Lobby 42; tid, pcDbId, cliKey, bot score, time, time-based-play list, account exp, content quota, recycle times). | 45 ok `0x14013A310` → 6; 46 fail `0x14013A380` → 6 ❓ | 6 |
+| 6 | `tryUnloadCharacter` `0x14013A820`: Cached 35 `hqq` (tid, pcDbId) on the hashed cache channel. | 37 ok → 7; 38 fail → 7 | 7 |
+| 7 | `tryLeaveWorld`: if +96 set, `clearArenaSession(pcDbId, +96 name)` (`0x14013AAB0`). Lobby 8 `hqqq` (tid, pcDbId user +216, cliKey user +248) to world user +236 (send at `0x14013AEFC`). Send failure → client 28 `hh` 1952, return false (→ fin 8). | 31 → client 27 `hq` (token key from Lobby 9), state 8. 32 → reason short r; r in 21..23 → 28 `hh` 1954, else 28 `hh` 1. State 8. | 8 |
+
+- Each step failure does not stop the leave: the next step runs. Only the send failure at state 7 ends the transaction early.
+- **Lobby replies:** 381 handler `0x14013EB10` decodes 9 `hqq` and runs event 31 with a pointer to the token key. `0x14013EBF0` decodes 10 `hqE` and runs event 32 with the reason. Unknown transaction ID → log only, no client reply.
+- **failProcess** `0x14013B0D0`: send client 28 `hh` 1952. ❓ Trigger (expiry/manager path) not read.
+- **Timeout:** No expire token is set for states 1, 3, 5, 6, 7 on the ordinary path (expire tokens: callers of `GameTranExpireToken::Set` 348 `0x140225AE0`; only the arena branch of `tryLeaveZone`). The global checker lifetime is set at 348 `GameDaemon::initNetwork` → `SetExpireChecker`. ❓ Value.
+- **Client 27:** `hq`, lobby token key (Lobby 9 field 2). Size 24. Client 28: `hh` reason; reasons 5, 1954 (handler), 2, 1952, 1954, 1.
+- **Socket close:** The transaction does not close the client socket. ❓ The client closes it after 27.
+
+### 26.4 Quirks
+
+| Name | Address | Behaviour | Port |
+| --- | --- | --- | --- |
+| `quirk_rtl_no_timeout` | `0x14013AC70` state 7 | No expire token: if the Lobby never replies 9/10, the transaction and the client wait without end. | fixed (add a timeout that sends 28/1952; see `Docs/Plan/cards/lp2-3-rust.md`) |
+| `quirk_leave_fail_as_enter_fail` | LobbyDaemon `0x140088470` lines 82, 101 | Job init/start failure sends 7 `EnterWorldFail` (reasons 2, 4), not 10. GameDaemon ReturnToLobbyTran has no event for 7, so the transaction waits (see above). | fixed (send 10) |
+
+### 26.5 Other exits that send Lobby 12 LogoutNotify
+
+- **LogoutTran** (348 vtable `0x140904180`, work `0x14013C130`; 381 vtable `0x1408D5BB0`, work `0x14013B180`). Same states 1–6 as 26.3 (state 2 uses the logout reason). Final step (348 `LogoutTran::logoutNotify` `0x14013C2B0`; 381 send `0x14013B40C`): `clearArenaSession`; Lobby 12 `hqq` (pcDbId, cliKey) to world user +236; if reason at +162 is nonzero, client 951 `hU` (348: 917) reason; state 8.
+- **Start 1 — socket close** `0x14007B970` (348 `ClientSessionHandler::OnClose` `0x14007D850`): needs a user and session byte +208 zero. Arena config → `UserManager::Kick`. Else `LogoutUser`; true → new LogoutTran, start event 9. False → log only (this is the path after ReturnToLobby).
+- **Start 2 — kick** `0x1403EF8E0` (348 `UserManager::Kick` `0x1403EA430`, 26 callers in 381): arena branch not followed. Else find the user (`0x1403F0040`), then LogoutTran with the kick reason, event 9. ❓ Lines 64–98 detail.
+- **KickTran** (Lobby 14 KickReq; 381 work `0x14013B4C0`): kick ok → Lobby 15 (lobby tid) `0x14013B700`; failProcess → Lobby 16 `hqE` (lobby tid, 2) `0x14013B6B0`.
+- Lobby 12 `hqq` is also sent by the lobby-token-auth rollback (`0x14014CCB0`, many sites).
 
 ## 29 — G_CleanUserConnectionInfoInCligateReqCmd — done
 
