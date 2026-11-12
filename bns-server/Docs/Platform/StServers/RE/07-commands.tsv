@@ -1,0 +1,48 @@
+service	command	id	handler address	request	reply	errors
+IpCheckSrv	Invalid	0	none	-	-	52 ErrBadCommand (module 4, line 382)
+IpCheckSrv	Connect	1	0x1400C6CD0	ip (grid key)	empty Reply	3721 ErrNotAllowedIp@181; 3005 ErrFlooding@206; OK@219
+IpCheckSrv	LoginSuccess	2	none	-	-	52 ErrBadCommand
+IpCheckSrv	LoginFailure	3	none	-	-	52 ErrBadCommand
+IpCheckSrv	Logout	4	none	-	-	52 ErrBadCommand
+IpCheckSrv	Disconnect	5	0x1400C6F20	ip	empty Reply	3032 ErrConnNotFound@227; OK@237
+IpCheckSrv	AddBlackIp	6	0x1400C7070	StartNetAddress, EndNetAddress or NetAddress	empty Reply (after DB, line 473)	10 ErrBadParam; DB bad ip@465
+IpCheckSrv	AddWhiteIp	7	0x1400C7070	StartNetAddress, EndNetAddress or NetAddress	empty Reply	10 ErrBadParam
+IpCheckSrv	DeleteBlackIp	8	0x1400C7070	StartNetAddress, EndNetAddress or NetAddress	empty Reply	10 ErrBadParam
+IpCheckSrv	DeleteWhiteIp	9	0x1400C7070	StartNetAddress, EndNetAddress or NetAddress	empty Reply	10 ErrBadParam
+IpCheckSrv	ListBlackIps	10	none	-	-	52 ErrBadCommand
+IpCheckSrv	ListWhiteIps	11	none	-	-	52 ErrBadCommand
+IpCheckSrv	PageBlackIps	12	none	-	-	52 ErrBadCommand
+IpCheckSrv	PageWhiteIps	13	none	-	-	52 ErrBadCommand
+IpCheckSrv	CheckIp	14	0x1400C6770	ip	empty Reply	3721 ErrNotAllowedIp@246; OK@251
+IpCheckSrv	SetDirty	15	inline in 0x1400C86A0	ip	none (one-way)	-
+IpCheckSrv	AddIpRequestLimit	16	0x1400C7070	range, MaxRequestCount, UnitTime, ProhibitTimePeriod	empty Reply	10 ErrBadParam
+IpCheckSrv	ChangeIpRequestLimit	17	0x1400C7070	range, MaxRequestCount, UnitTime, ProhibitTimePeriod	empty Reply	10 ErrBadParam
+IpCheckSrv	DeleteIpRequestLimit	18	0x1400C7070	range	empty Reply	10 ErrBadParam
+IpCheckSrv	ListIpRequestLimits	19	none	-	-	52 ErrBadCommand
+IpCheckSrv	PageIpRequestLimits	20	none	-	-	52 ErrBadCommand
+IpCheckSrv	CheckIpLimit	21	0x1400C68C0	ip	empty Reply	10@655; 3779 ErrLimitOverMaxRequestCount@677; OK@674/685
+IpCheckSrv	ResetCacheIpLimit	22	0x1400C74E0	ip	empty Reply	OK@698
+ExAuthSrv	(default)	-	0x1400D0B80	-	-	52 ErrBadCommand (module 1, line 3917)
+ExAuthSrv	AuthenticateToken	1	0x1400CB9B0	AuthProviderCode, AuthnToken, AppId	linked account (UserId, ExternalAccountKey, ...) via 0x1400D2360	10@4016/4021/4026; 3327 ErrAuthProviderNotFound@4039; 3301 ErrTokenNotFound (0x1400D1730)
+ExAuthSrv	AuthenticateTokenInternal	2	0x1400CBCC0	UserId, external account fields	via txn types 4/9	10@4062; 3327
+ExAuthSrv	AssociateExternalAccount	3	0x1400CAF60	AuthProviderCode, UserId, ExternalAccountKey, ExternalAccountName, ExternalAccountData, AppId	via txn type 0 chain	3327@4124/4165; 10@4129/4134/4139/4144
+ExAuthSrv	AssociateMyExternalAccount	4	0x1400CB650	AuthProviderCode, UserId, AuthnToken, AppId	via 0x1400D2360	3327@4177/4211; 10@4182/4187/4192/4197
+ExAuthSrv	AssociateExternalAccountInternal	5	0x1400CB280	AuthProviderCode, UserId, ExternalAccountKey, AppGroupCode	via txn type 5	3327@4234/4264; 10@4239/4244/4249; 3003 ErrAccountExists@2021
+ExAuthSrv	AssociateMyExternalAccountInternal	6	0x1400CB280	as id 5	via txn type 5	as id 5
+ExAuthSrv	GetExternalAccountInfo	7	0x1400CCE60	UserId, AuthProviderCode (optional), AppId (optional)	UserId, AuthProviderCode, ExternalAccountKey, ExternalAccountName, ExternalAccountData, Created	10@4291
+ExAuthSrv	DissociateExternalAccount	8	0x1400CC250	UserId, AuthProviderCode, AppId	forwarded reply of id 9	10@4336/4341/4346
+ExAuthSrv	DissociateExternalAccountInternal	9	0x1400CC4C0	UserId, AuthProviderCode, AppId	via txn chain	10@4370/4375/4380; 3327@4394; 7606 ErrCannotDissociate@2559
+ExAuthSrv	GetExternalAccounts	10	0x1400CD380	AuthProviderCode, ExternalAccountNames[] {ExternalAccountName}	ExternalAccounts[] {UserId, UserDatacenter, AuthProviderCode, ExternalAccountKey, ExternalAccountName, ExternalAccountData}	10@4415/4428/4458/4462
+ExAuthSrv	Exec	11	0x1400CC780	ProcName, Param, exGameAccountKey	proc result	10@3936/3941/3956/3966/3987/3994
+ExAuthSrv	RequestGuestToken	12	0x1400CE290	AppId	TokenId, AuthnToken	3327@4487
+ExAuthSrv	RequestExAccessToken	13	0x1400CDE60	UserId, AppId, AuthProviderCode	reply of id 14	10@4510/4515/4520
+ExAuthSrv	RequestExAccessTokenInternal	14	0x1400CE0D0	UserId, AppId, AuthProviderCode	via 0x1400D2360 (proc GetExternalTokenData)	10@4540/4545/4550; 3327@4564
+ExAuthSrv	UpdateExAccessToken	15	0x1400CE410	UserId, AppId, AuthProviderCode, AuthnToken	via 0x1400D2360	10@4574/4579/4584; 3327@4598
+ExAuthSrv	UpdateExAccessTokenInternal	16	0x1400CE6C0	two UserIds	as id 2	10@4621
+ExAuthSrv	DeleteUser	17	0x1400CC120	UserId	via txn type 21	-
+ExAuthSrv	DeleteLocalUser	18	0x1400CC000	UserId	proc result	-
+ExAuthSrv	PageExternalAccountChanges	19	0x1400CDC50	page parameters (64-bit, PageSize, PageIndex)	PageSize, PageIndex, TotalCount, TotalPages, ExternalAccounts[]	10@4680/4683; 4 ErrBadData@2834/2840
+ExAuthSrv	LinkMyExternalGameAccount	20	0x1400CD8D0	AuthProviderCode, UserId, AuthnToken, AppId	via 0x1400D2360 (txn type 20)	3327@4711/4745; 10@4716/4721/4726/4731
+ExAuthnSrv	(default)	-	0x1400DE650	-	-	52 ErrBadCommand (module 2, line 163)
+ExAuthnSrv	AuthenticateToken	1	0x1400DDC50	AuthProviderCode, AuthnToken, AppId (16 bytes)	Reply {ExternalAccountKey, ExternalAccountName, ExternalAccountData, ExternalUserAppKey, ExternalUserAppToken, ExternalAccountContact} (0x1400DE0F0)	3327 (no line); 10@172/175; 3327@184; provider errors
+ExAuthnSrv	RequestToken	2	0x1400DDEA0	AuthProviderCode, ExternalUserAppToken, AppId	as id 1	3327; 10@202/205; 3327@214; 51 ErrNotImplemented (all providers except facebook, google)
