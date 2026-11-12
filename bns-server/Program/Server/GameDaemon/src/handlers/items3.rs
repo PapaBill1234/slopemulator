@@ -230,7 +230,7 @@ pub fn handle_change_badge_equip_page(ctx: &mut Context<'_>, req: &[u8]) -> Outc
 
 /// parity: 1143 12c-item-handlers.md#command-1143--g_synthesisbadgereqcmd partial
 pub fn handle_synthesis_badge(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1145;
+    const F: u16 = ids::G_SynthesisBadgeFailCmd;
     if !ctx.world.badge_enabled {
         return Outcome::reason(F, 1);
     }

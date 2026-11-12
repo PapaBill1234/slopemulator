@@ -150,7 +150,7 @@ fn object_kind(id: u64) -> u16 {
 
 /// parity: 830 12c-item-handlers.md#command-830--g_passingitemabilityreqcmd partial
 pub fn handle_passing_item_ability(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 832;
+    const F: u16 = ids::G_PassingItemAbilityFailCmd;
     if !ctx.world.ability_passing_enabled {
         return reason_u64(F, 2013, 0);
     }
@@ -187,7 +187,7 @@ pub fn handle_pick_gem_card(_: &mut Context<'_>, _: &[u8]) -> Outcome {
 
 /// parity: 947 12c-item-handlers.md#command-947--g_changeweaponappearancereqcmd partial
 pub fn handle_change_weapon_appearance(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 949;
+    const F: u16 = ids::G_ChangeWeaponAppearanceFailCmd;
     if !ctx.world.weapon_appearance_enabled {
         return Outcome::reason(F, 2189);
     }
@@ -209,7 +209,7 @@ pub fn handle_change_weapon_appearance(ctx: &mut Context<'_>, req: &[u8]) -> Out
 
 /// parity: 1010 12c-item-handlers.md#command-1010--g_exchangeitemreqcmd partial
 pub fn handle_exchange_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1012;
+    const F: u16 = ids::G_ExchangeItemFailCmd;
     if !u0_passes(ctx) {
         return Outcome::reason(F, 2302);
     }
@@ -232,7 +232,7 @@ pub fn handle_exchange_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1050 12c-item-handlers.md#command-1050--g_makecustomdressreqcmd partial
 pub fn handle_make_custom_dress(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1052;
+    const F: u16 = ids::G_MakeCustomDressFailCmd;
     if !ctx.world.custom_dress_enabled {
         return Outcome::reason(F, 2360);
     }
@@ -465,7 +465,7 @@ fn zone_and_kind(ctx: &Context<'_>, fail: (u16, u16)) -> Option<Outcome> {
 
 /// parity: 1306 12c-item-handlers.md#command-1306--g_pickupitemreqcmd partial
 pub fn handle_pickup_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1309;
+    const F: u16 = ids::G_PickupItemFailCmd;
     let mut r = Reader(req);
     let (Some(pouch), Some(selector)) = (r.quad(), r.byte()) else {
         return Outcome::reason(F, 505);
@@ -497,7 +497,7 @@ pub fn handle_pickup_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1311 12c-item-handlers.md#command-1311--g_takecontributionrewardreqcmd partial
 pub fn handle_take_contribution_reward(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1313;
+    const F: u16 = ids::G_TakeContributionRewardFailCmd;
     let Some(selector) = Reader(req).quad() else {
         return Outcome::unsupported(UNCHECKED_DECODE);
     };
@@ -520,7 +520,7 @@ pub fn handle_take_contribution_reward(ctx: &mut Context<'_>, req: &[u8]) -> Out
 
 /// parity: 1316 12c-item-handlers.md#command-1316--g_distributeitemreqcmd partial
 pub fn handle_distribute_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1319;
+    const F: u16 = ids::G_DistributeItemFailCmd;
     let mut r = Reader(req);
     // ❓ String limit 32 UTF-16 units; the decoder's exact bound is modelled
     // as length ≤ 32 (task copy is `wcsncpy(..., 32)`).
@@ -554,7 +554,7 @@ pub fn handle_distribute_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1321 12c-item-handlers.md#command-1321--g_completedistributionreqcmd partial
 pub fn handle_complete_distribution(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1323;
+    const F: u16 = ids::G_CompleteDistributionFailCmd;
     let Some(pouch) = Reader(req).quad() else {
         return Outcome::reason(F, 2);
     };

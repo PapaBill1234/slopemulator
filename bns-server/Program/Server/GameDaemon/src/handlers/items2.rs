@@ -553,7 +553,7 @@ pub fn handle_repair_with_campfire(ctx: &mut Context<'_>, req: &[u8]) -> Outcome
 
 /// parity: 1395 12b-item-handlers.md#command-1395--g_decomposeitem2reqcmd partial
 pub fn handle_decompose_item2(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1397;
+    const F: u16 = ids::G_DecomposeItem2FailCmd;
     if !u0_passes(ctx) {
         return Outcome::reason(F, 489);
     }

@@ -528,7 +528,7 @@ pub(super) fn counted<T>(
 /// parity: 1226 13-skill-handlers.md#1226--g_useskillreqcmd--partial partial
 /// parity: 1228 13-skill-handlers.md#1228--g_useskilltogroundreqcmd--partial partial
 pub fn handle_use_skill(ctx: &mut Context<'_>, req: &[u8], ground: bool) -> Outcome {
-    const F: u16 = 1227;
+    const F: u16 = ids::G_UseSkillFailCmd;
     let fail = |reason: u16, selector: u8, skill: u32, variation: u8| {
         let mut body = reason.to_le_bytes().to_vec();
         body.push(selector);
@@ -670,7 +670,7 @@ pub fn handle_gather_cancel(ctx: &mut Context<'_>, _: &[u8]) -> Outcome {
 
 /// parity: 1272 13-skill-handlers.md#1272--g_lootreqcmd--partial partial
 pub fn handle_loot(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1273;
+    const F: u16 = ids::G_LootFailCmd;
     let Some(target) = Reader(req).quad() else {
         return Outcome::unsupported(UNCHECKED_DECODE);
     };
@@ -694,7 +694,7 @@ pub fn handle_loot(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 71 13-skill-handlers.md#71--g_recallsummonreqcmd--partial partial
 pub fn handle_recall_summon(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 72;
+    const F: u16 = ids::G_RecallSummonFailCmd;
     let pc = ctx.pc();
     let Some(s) = pc
         .summon
@@ -781,7 +781,7 @@ pub fn handle_select_target(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 139 13-skill-handlers.md#139--g_helprestorationreqcmd--partial partial
 pub fn handle_help_restoration(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 141;
+    const F: u16 = ids::G_HelpRestorationFailCmd;
     let mut r = Reader(req);
     let (Some(selector), Some(target)) = (r.byte(), r.quad()) else {
         return Outcome::unsupported(UNCHECKED_DECODE);
@@ -1251,7 +1251,7 @@ const PAGE_NAME_CAPACITY: usize = 33;
 
 /// parity: 1491 13-skill-handlers.md#1491--g_expandskillpagereqcmd--partial partial
 pub fn handle_expand_skill_page(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1493;
+    const F: u16 = ids::G_ExpandSkillPageFailCmd;
     let mut r = Reader(req);
     let (Some(page), Some(name)) = (r.byte(), r.string(PAGE_NAME_CAPACITY)) else {
         let mut out = Outcome::reason(1330, 1);
@@ -1298,7 +1298,7 @@ pub fn handle_rename_skill_page(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1497 13-skill-handlers.md#1497--g_traintraitreqcmd--partial partial
 pub fn handle_train_trait(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1499;
+    const F: u16 = ids::G_TrainTraitFailCmd;
     let fail = |reason: u16, selectors: [u8; 2]| {
         let mut body = reason.to_le_bytes().to_vec();
         body.extend(selectors);

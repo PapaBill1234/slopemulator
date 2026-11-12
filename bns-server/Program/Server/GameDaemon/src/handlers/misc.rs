@@ -90,7 +90,7 @@ fn logged(mut out: Outcome, text: &'static str) -> Outcome {
 
 /// parity: 165 19-misc-handlers.md#165--g_stopcinematicreqcmd--partial partial
 pub fn handle_stop_cinematic(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 167;
+    const F: u16 = ids::G_StopCinematicFailCmd;
     // The decode result is ignored: a short body leaves the value at 0.
     let value = Reader(req).int().unwrap_or(0) as i32;
     let Some(zone) = ctx.pc().zone else {
@@ -125,7 +125,7 @@ pub fn handle_write_client_log(_ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 419 19-misc-handlers.md#419--g_reportbotspammerreqcmd--partial partial
 pub fn handle_report_bot_spammer(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 421;
+    const F: u16 = ids::G_ReportBotSpammerFailCmd;
     let now = ctx.world.tick;
     if ctx.pc().bot_report_tick + 2000 > now {
         return Outcome::log("report bot spammer: too frequent request");
@@ -209,7 +209,7 @@ fn native_false(text: &'static str) -> Outcome {
 
 /// parity: 1130 19-misc-handlers.md#1130--g_challengelistsreqcmd--partial partial
 pub fn handle_challenge_lists(ctx: &mut Context<'_>, _req: &[u8]) -> Outcome {
-    const F: u16 = 1132;
+    const F: u16 = ids::G_ChallengeListsFailCmd;
     let Some(zone) = ctx.pc().zone else {
         return logged(Outcome::reason(F, 2), "challenge lists: failed to get zone");
     };
@@ -223,7 +223,7 @@ pub fn handle_challenge_lists(ctx: &mut Context<'_>, _req: &[u8]) -> Outcome {
 
 /// parity: 1137 19-misc-handlers.md#1137--g_secrettreasureexpirationtimereqcmd--partial partial
 pub fn handle_secret_treasure_expiration_time(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1139;
+    const F: u16 = ids::G_SecretTreasureExpirationTimeFailCmd;
     let Some(request) = Reader(req).short().map(|v| v as i16) else {
         return logged(Outcome::reason(F, 2), "secret treasure: decompose failed");
     };
@@ -246,7 +246,7 @@ pub fn handle_secret_treasure_expiration_time(ctx: &mut Context<'_>, req: &[u8])
 
 /// parity: 1188 19-misc-handlers.md#1188--g_setslateampslotreqcmd--partial partial
 pub fn handle_set_slate_amp_slot(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1190;
+    const F: u16 = ids::G_SetSlateAmpSlotFailCmd;
     if ctx.world.arena || session::arena_blocked(ctx.pc()) {
         return logged(
             Outcome::reason(F, 5),
@@ -294,7 +294,7 @@ pub fn handle_set_slate_amp_slot(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1423 19-misc-handlers.md#1423--g_challengelisttakerewardreqcmd--partial partial
 pub fn handle_challenge_list_take_reward(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1425;
+    const F: u16 = ids::G_ChallengeListTakeRewardFailCmd;
     // The decode result is ignored: the default sub type is −1.
     let sub_type = Reader(req).byte().unwrap_or(0xFF);
     let Some(zone) = ctx.pc().zone else {

@@ -152,7 +152,7 @@ pub fn handle_activate_game_grade(ctx: &mut Context<'_>, req: &[u8]) -> Outcome 
 
 /// parity: 1041 16-chat-social-handlers.md#1041--g_takeachievementrewardreqcmd--partial partial
 pub fn handle_take_achievement_reward(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1043;
+    const F: u16 = ids::G_TakeAchievementRewardFailCmd;
     let mut r = Reader(req);
     let (Some(id), Some(step)) = (r.short(), r.short()) else {
         return Outcome::log("TakeAchievementRewardReq; cannot decompose");
@@ -196,7 +196,7 @@ pub fn handle_take_achievement_reward(ctx: &mut Context<'_>, req: &[u8]) -> Outc
 
 /// parity: 1044 16-chat-social-handlers.md#1044--g_timebasedplayinforeqcmd--partial partial
 pub fn handle_time_based_play_info(ctx: &mut Context<'_>, _: &[u8]) -> Outcome {
-    const F: u16 = 1046;
+    const F: u16 = ids::G_TimeBasedPlayInfoFailCmd;
     if !ctx.world.time_play_enabled || ctx.world.arena {
         return Outcome::reason(F, 2274);
     }
@@ -208,7 +208,7 @@ pub fn handle_time_based_play_info(ctx: &mut Context<'_>, _: &[u8]) -> Outcome {
 
 /// parity: 1047 16-chat-social-handlers.md#1047--g_taketimebasedplayrewardreqcmd--partial partial
 pub fn handle_take_time_based_play_reward(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1049;
+    const F: u16 = ids::G_TakeTimeBasedPlayRewardFailCmd;
     if !ctx.world.time_play_enabled || ctx.world.arena {
         return Outcome::reason(F, 2275);
     }

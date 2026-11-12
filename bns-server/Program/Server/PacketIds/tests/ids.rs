@@ -1,6 +1,7 @@
 use packet_ids::{
-    generate, generated_dir, is_valid_ident, sanitize, workspace_root,
-    AcquireSkillBuildUpPointReason, GameCmd, GenError, InfoGateCmd, LobbyCmd, StsCmd,
+    generate, generate_lobbyd, generated_dir, is_valid_ident, sanitize, workspace_root,
+    AccountInventoryLobbydCmd, AcquireSkillBuildUpPointReason, GameCmd, GameLobbydCmd, GenError,
+    InfoGateCmd, LobbyCmd, LobbyGateLobbydCmd, StsCmd,
 };
 
 #[test]
@@ -18,6 +19,42 @@ fn generated_is_current() {
         enums == old_enums,
         "enums.rs is old: run `cargo run -q -p packet-ids --bin gen-ids`"
     );
+    let lobbyd = generate_lobbyd(&root).expect("lobbyd generator runs");
+    let old_lobbyd = std::fs::read_to_string(dir.join("lobbyd.rs")).expect("lobbyd.rs");
+    assert!(
+        lobbyd == old_lobbyd,
+        "lobbyd.rs is old: run `cargo run -q -p packet-ids --bin gen-ids`"
+    );
+}
+
+#[test]
+fn lobbyd_names_from_table() {
+    assert_eq!(
+        LobbyGateLobbydCmd::from_id(9),
+        Some(LobbyGateLobbydCmd::StartSessionWithNPTokenReq)
+    );
+    assert_eq!(
+        LobbyGateLobbydCmd::from_id(24),
+        Some(LobbyGateLobbydCmd::GetEnterWorldTokenReq)
+    );
+    assert_eq!(
+        LobbyGateLobbydCmd::from_id(28),
+        Some(LobbyGateLobbydCmd::GetWaitInfoReq)
+    );
+    assert_eq!(LobbyGateLobbydCmd::GetWaitInfoReq.id(), 28);
+    assert_eq!(LobbyGateLobbydCmd::GetWaitInfoReq.name(), "GetWaitInfoReq");
+    assert_eq!(LobbyGateLobbydCmd::COUNT, 35);
+}
+
+#[test]
+fn lobbyd_unverified_absent() {
+    // Only the rows with a verified name are in the enums.
+    assert_eq!(GameLobbydCmd::COUNT, 15);
+    assert_eq!(AccountInventoryLobbydCmd::COUNT, 3);
+    // 4 is `ServiceOpenNotify` in the table, but its name is not verified.
+    assert_eq!(GameLobbydCmd::from_id(4), None);
+    assert_eq!(GameLobbydCmd::from_id(1), Some(GameLobbydCmd::HelloReq));
+    assert_eq!(AccountInventoryLobbydCmd::from_id(2), None);
 }
 
 #[test]

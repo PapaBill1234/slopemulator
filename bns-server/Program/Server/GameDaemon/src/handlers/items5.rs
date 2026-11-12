@@ -114,7 +114,7 @@ fn zone_then_post(
 
 /// parity: 1398 12c-item-handlers.md#command-1398--g_revealitemabilityreqcmd partial
 pub fn handle_reveal_item_ability(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1399;
+    const F: u16 = ids::G_RevealItemAbilityFailCmd;
     if !u0_passes(ctx) {
         return Outcome::reason(F, 575);
     }
@@ -139,7 +139,7 @@ pub fn handle_reveal_item_ability(ctx: &mut Context<'_>, req: &[u8]) -> Outcome 
 
 /// parity: 1400 12c-item-handlers.md#command-1400--g_attachequipgempiecereqcmd partial
 pub fn handle_attach_equip_gem_piece(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1401;
+    const F: u16 = ids::G_AttachEquipGemPieceFailCmd;
     if !u0_passes(ctx) {
         return Outcome::reason(F, 585);
     }
@@ -162,7 +162,7 @@ pub fn handle_attach_equip_gem_piece(ctx: &mut Context<'_>, req: &[u8]) -> Outco
 
 /// parity: 1430 12c-item-handlers.md#command-1430--g_r_enchanttoitemreqcmd partial
 pub fn handle_enchant_to_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1432;
+    const F: u16 = ids::G_R_EnchantToItemFailCmd;
     let mut r = Reader(req);
     let (Some(selector), Some(slot), Some(value)) = (r.byte(), r.short(), r.quad()) else {
         return Outcome::reason(F, 2);
@@ -180,7 +180,7 @@ pub fn handle_enchant_to_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1433 12c-item-handlers.md#command-1433--g_r_resetenchantiteminforeqcmd partial
 pub fn handle_reset_enchant_item_info(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1435;
+    const F: u16 = ids::G_R_ResetEnchantItemInfoFailCmd;
     let mut r = Reader(req);
     let (Some(selector), Some(slot)) = (r.byte(), r.short()) else {
         return Outcome::reason(F, 2);
@@ -191,7 +191,7 @@ pub fn handle_reset_enchant_item_info(ctx: &mut Context<'_>, req: &[u8]) -> Outc
 
 /// parity: 1442 12c-item-handlers.md#command-1442--g_r_polishtoitemreqcmd partial
 pub fn handle_polish_to_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1444;
+    const F: u16 = ids::G_R_PolishToItemFailCmd;
     let mut r = Reader(req);
     let (Some(selector), Some(slot)) = (r.byte(), r.short()) else {
         return Outcome::reason(F, 2);
@@ -229,7 +229,7 @@ fn aliases(container: u8, a: u16, pairs: &[(u16, u16)]) -> bool {
 
 /// parity: 1402 12c-item-handlers.md#command-1402--g_growthitemreqcmd partial
 pub fn handle_growth_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1404;
+    const F: u16 = ids::G_GrowthItemFailCmd;
     if !ctx.world.item_growth_enabled {
         return Outcome::reason(F, 586);
     }
@@ -294,7 +294,7 @@ pub fn handle_two_group(ctx: &mut Context<'_>, req: &[u8], command: u16, feeding
 
 /// parity: 1445 12c-item-handlers.md#command-1445--g_processitemfusionreqcmd partial
 pub fn handle_process_item_fusion(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1447;
+    const F: u16 = ids::G_ProcessItemFusionFailCmd;
     if !u0_passes(ctx) {
         return Outcome::reason(F, 2612);
     }
@@ -314,7 +314,7 @@ pub fn handle_process_item_fusion(ctx: &mut Context<'_>, req: &[u8]) -> Outcome 
 
 /// parity: 1411 12c-item-handlers.md#command-1411--g_takewarehouseitemreqcmd partial
 pub fn handle_take_warehouse_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1413;
+    const F: u16 = ids::G_TakeWarehouseItemFailCmd;
     if !ctx.world.account_inventory_enabled {
         return Outcome::reason(F, 2);
     }
@@ -336,7 +336,7 @@ pub fn handle_take_warehouse_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome 
 
 /// parity: 1581 12c-item-handlers.md#command-1581--g_transformitemreqcmd partial
 pub fn handle_transform_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1583;
+    const F: u16 = ids::G_TransformItemFailCmd;
     if !u0_passes(ctx) {
         return reason_u64(F, 2012, 0);
     }

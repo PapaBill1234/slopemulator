@@ -6,17 +6,20 @@
 use std::path::{Path, PathBuf};
 
 mod gen;
-pub use gen::{generate, is_valid_ident, sanitize, GenError};
+pub use gen::{generate, generate_lobbyd, is_valid_ident, sanitize, GenError};
 
 pub mod generated {
     #[rustfmt::skip]
     pub mod commands;
     #[rustfmt::skip]
     pub mod enums;
+    #[rustfmt::skip]
+    pub mod lobbyd;
 }
 
 pub use generated::commands::{GameCmd, InfoGateCmd, LobbyCmd, StsCmd};
 pub use generated::enums::*;
+pub use generated::lobbyd::{AccountInventoryLobbydCmd, GameLobbydCmd, LobbyGateLobbydCmd};
 
 /// Workspace root, found from the location of this crate.
 pub fn workspace_root() -> PathBuf {

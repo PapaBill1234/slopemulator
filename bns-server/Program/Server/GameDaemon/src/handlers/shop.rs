@@ -203,7 +203,7 @@ pub fn handle_restore_vitality(_ctx: &mut Context<'_>, _req: &[u8]) -> Outcome {
 
 /// parity: 940 22-shop-handlers.md#940--g_depositmileagereqcmd--partial partial
 pub fn handle_deposit_mileage(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 942;
+    const F: u16 = ids::G_DepositMileageFailCmd;
     if ctx.world.arena || session::arena_blocked(ctx.pc()) {
         return Outcome::reason(F, 5);
     }
@@ -265,7 +265,7 @@ pub fn handle_retrieve_mysterious_store(ctx: &mut Context<'_>, req: &[u8]) -> Ou
 
 /// parity: 1008 22-shop-handlers.md#1008--g_sellolditemreqcmd--partial partial
 pub fn handle_sell_old_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1009;
+    const F: u16 = ids::G_SellOldItemFailCmd;
     if let Some(out) = fatigue(ctx, Outcome::reason(F, 2291)) {
         return out;
     }
@@ -294,7 +294,7 @@ pub fn handle_sell_old_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1345 22-shop-handlers.md#1345--g_mysteriousbuyreqcmd--partial partial
 pub fn handle_mysterious_buy(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1347;
+    const F: u16 = ids::G_MysteriousBuyFailCmd;
     if let Some(out) = fatigue(ctx, Outcome::reason(F, 355)) {
         return out;
     }
@@ -584,7 +584,7 @@ pub fn handle_take_random_store_draw_reward(ctx: &mut Context<'_>, req: &[u8]) -
 
 /// parity: 1584 22-shop-handlers.md#1584--g_buycollectionitemsreqcmd--partial partial
 pub fn handle_buy_collection_items(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1586;
+    const F: u16 = ids::G_BuyCollectionItemsFailCmd;
     // Arena form A here: configuration only.
     if ctx.world.arena {
         return Outcome::reason(F, 5);

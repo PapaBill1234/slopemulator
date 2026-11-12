@@ -137,7 +137,7 @@ fn queue_task(
 
 /// parity: 1068 18-challenge-party-handlers.md#1068--g_createchallengepartyreqcmd--partial partial
 pub fn handle_create_challenge_party(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1070;
+    const F: u16 = ids::G_CreateChallengePartyFailCmd;
     if let Some(out) = preflight(ctx, F) {
         return out;
     }
@@ -179,7 +179,7 @@ pub fn handle_create_challenge_party(ctx: &mut Context<'_>, req: &[u8]) -> Outco
 
 /// parity: 1071 18-challenge-party-handlers.md#1071--g_invitechallengepartyreqcmd--partial partial
 pub fn handle_invite_challenge_party(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1074;
+    const F: u16 = ids::G_InviteChallengePartyFailCmd;
     if let Some(out) = preflight(ctx, F) {
         return out;
     }
@@ -199,7 +199,7 @@ pub fn handle_invite_challenge_party(ctx: &mut Context<'_>, req: &[u8]) -> Outco
 
 /// parity: 1075 18-challenge-party-handlers.md#1075--g_confirminvitationchallengepartyreqcmd--partial partial
 pub fn handle_confirm_invitation_challenge_party(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1077;
+    const F: u16 = ids::G_ConfirmInvitationChallengePartyFailCmd;
     if let Some(out) = preflight(ctx, F) {
         return out;
     }
@@ -237,7 +237,7 @@ pub fn handle_reject_invitation_challenge_party(ctx: &mut Context<'_>, req: &[u8
 
 /// parity: 1080 18-challenge-party-handlers.md#1080--g_leavechallengepartyreqcmd--partial partial
 pub fn handle_leave_challenge_party(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1082;
+    const F: u16 = ids::G_LeaveChallengePartyFailCmd;
     if let Some(out) = preflight(ctx, F) {
         return out;
     }

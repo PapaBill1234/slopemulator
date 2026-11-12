@@ -418,7 +418,7 @@ pub fn handle_enter_arena(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 955 26-arena-event-handlers.md#955--g_choicereturntoarenalobbyreqcmd--partial partial
 pub fn handle_choice_return_to_arena_lobby(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 958;
+    const F: u16 = ids::G_ChoiceReturnToArenaLobbyFailCmd;
     if !ctx.world.party_config.arena_enabled {
         return Outcome::reason(F, 2206);
     }
@@ -504,7 +504,7 @@ pub fn handle_choice_return_to_arena_lobby(ctx: &mut Context<'_>, req: &[u8]) ->
 
 /// parity: 723 26-arena-event-handlers.md#723--g_arenaeventteleporttoreqcmd--partial partial
 pub fn handle_arena_event_teleport_to(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 725;
+    const F: u16 = ids::G_ArenaEventTeleportToFailCmd;
     if !authorized(ctx.pc()) {
         return logged(
             Outcome::reason(F, 2),
@@ -535,7 +535,7 @@ pub fn handle_arena_event_teleport_to(ctx: &mut Context<'_>, req: &[u8]) -> Outc
 
 /// parity: 726 26-arena-event-handlers.md#726--g_arenaeventrecallreqcmd--partial partial
 pub fn handle_arena_event_recall(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 728;
+    const F: u16 = ids::G_ArenaEventRecallFailCmd;
     if !in_arena(ctx) {
         return logged(Outcome::reason(F, 2), "arena event recall: not is arena");
     }
@@ -574,7 +574,7 @@ pub fn handle_arena_event_recall(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 729 26-arena-event-handlers.md#729--g_arenaeventwarptoposreqcmd--partial partial
 pub fn handle_arena_event_warp_to_pos(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 731;
+    const F: u16 = ids::G_ArenaEventWarpToPosFailCmd;
     if !in_arena(ctx) {
         return logged(Outcome::reason(F, 2), "arena event warp: not is arena");
     }
@@ -600,7 +600,7 @@ pub fn handle_arena_event_warp_to_pos(ctx: &mut Context<'_>, req: &[u8]) -> Outc
 /// parity: 732 26-arena-event-handlers.md#732--g_arenaeventduelgamestartreqcmd--partial partial
 pub fn handle_arena_event_duel_game_start(ctx: &mut Context<'_>, _req: &[u8]) -> Outcome {
     // Native quirk: every failure replies 282 (G_DuelReadyRoundAck), not 734.
-    const F: u16 = 282;
+    const F: u16 = ids::G_DuelReadyRoundFailCmd;
     if !ctx.world.party_config.arena_enabled {
         return logged(
             Outcome::reason(F, 2),
@@ -655,7 +655,7 @@ fn send(
 
 /// parity: 733 26-arena-event-handlers.md#733--g_arenaeventfindarenasessionreqcmd--partial partial
 pub fn handle_arena_event_find_arena_session(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 735;
+    const F: u16 = ids::G_ArenaEventFindArenaSessionFailCmd;
     if !ctx.world.party_config.arena_enabled {
         return logged(
             Outcome::reason(F, 1919),
@@ -709,7 +709,7 @@ pub fn handle_arena_event_find_arena_session(ctx: &mut Context<'_>, req: &[u8]) 
 
 /// parity: 736 26-arena-event-handlers.md#736--g_arenaeventmovetoarenareqcmd--partial partial
 pub fn handle_arena_event_move_to_arena(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 738;
+    const F: u16 = ids::G_ArenaEventMoveToArenaFailCmd;
     if !ctx.world.party_config.arena_enabled {
         return logged(
             Outcome::reason(F, 1921),
@@ -759,7 +759,7 @@ fn portal(ctx: &mut Context<'_>, portal_key: u64) -> Option<bool> {
 
 /// parity: 739 26-arena-event-handlers.md#739--g_arenaeventreturntoarenalobbyreqcmd--partial partial
 pub fn handle_arena_event_return_to_arena_lobby(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 741;
+    const F: u16 = ids::G_ArenaEventReturnToArenaLobbyFailCmd;
     if !ctx.world.party_config.arena_enabled {
         return logged(
             Outcome::reason(F, 1928),
@@ -805,7 +805,7 @@ pub fn handle_arena_event_return_to_arena_lobby_all_pc(
     ctx: &mut Context<'_>,
     req: &[u8],
 ) -> Outcome {
-    const F: u16 = 744;
+    const F: u16 = ids::G_ArenaEventReturnToArenaLobbyAllPcFailCmd;
     if !in_arena(ctx) {
         return logged(
             Outcome::reason(F, 2),
@@ -852,7 +852,7 @@ pub fn handle_arena_event_return_to_arena_lobby_all_pc(
 
 /// parity: 745 26-arena-event-handlers.md#745--g_arenaeventretreivepcassetreqcmd--partial partial
 pub fn handle_arena_event_retrieve_pc_asset(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 747;
+    const F: u16 = ids::G_ArenaEventRetreivePcAssetFailCmd;
     if !authorized(ctx.pc()) {
         return logged(
             Outcome::reason(F, 2),
@@ -891,7 +891,7 @@ pub fn handle_arena_event_retrieve_pc_asset(ctx: &mut Context<'_>, req: &[u8]) -
 
 /// parity: 748 26-arena-event-handlers.md#748--g_arenaeventwarptoduelroundstartpcspawnreqcmd--partial partial
 pub fn handle_arena_event_warp_to_duel_round_start(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 750;
+    const F: u16 = ids::G_ArenaEventWarpToDuelRoundStartPcSpawnFailCmd;
     if !ctx.world.party_config.arena_enabled {
         return logged(
             Outcome::reason(F, 1933),
@@ -948,7 +948,7 @@ fn eq_ignore_case(text: &[u16], literal: &str) -> bool {
 
 /// parity: 751 26-arena-event-handlers.md#751--g_arenaeventsetbattleroyalstatereqcmd--partial partial
 pub fn handle_arena_event_set_battle_royal_state(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 753;
+    const F: u16 = ids::G_ArenaEventSetBattleRoyalStateFailCmd;
     if !in_arena(ctx) {
         return logged(
             Outcome::reason(F, 2),
@@ -1170,7 +1170,7 @@ fn reason_name(command: u16, reason: u16, name: &[u16]) -> Outcome {
 
 /// parity: 714 26-arena-event-handlers.md#714--g_arenaspectategamereqcmd--partial partial
 pub fn handle_arena_spectate_game(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 716;
+    const F: u16 = ids::G_ArenaSpectateGameFailCmd;
     let mut r = Reader(req);
     let (Some(portal_key), Some(name)) = (r.quad(), r.string(33)) else {
         return logged(reason_name(F, 2, &[]), "arena spectate: decompose failed");
@@ -1228,7 +1228,7 @@ pub fn handle_arena_spectate_game(ctx: &mut Context<'_>, req: &[u8]) -> Outcome 
 
 /// parity: 717 26-arena-event-handlers.md#717--g_arenaspectatereturntoarenalobbyreqcmd--partial partial
 pub fn handle_arena_spectate_return_to_arena_lobby(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 719;
+    const F: u16 = ids::G_ArenaSpectateReturnToArenaLobbyFailCmd;
     if !ctx.world.party_config.arena_enabled {
         return logged(
             Outcome::reason(F, 1907),
@@ -1271,7 +1271,7 @@ pub fn handle_arena_spectate_return_to_arena_lobby(ctx: &mut Context<'_>, req: &
 
 /// parity: 720 26-arena-event-handlers.md#720--g_listarenaspectategamereqcmd--partial partial
 pub fn handle_list_arena_spectate_game(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 722;
+    const F: u16 = ids::G_ListArenaSpectateGameFailCmd;
     let mut r = Reader(req);
     let (Some(portal_key), Some(list_type), Some(page)) = (r.quad(), r.byte(), r.byte()) else {
         return logged(Outcome::reason(F, 2), "arena cannot list: decompose failed");

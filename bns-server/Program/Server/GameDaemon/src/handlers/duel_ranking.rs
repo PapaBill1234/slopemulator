@@ -135,7 +135,7 @@ pub fn handle_party_battle_start(ctx: &mut Context<'_>, _req: &[u8]) -> Outcome 
 
 /// parity: 1022 27-duel-ranking-handlers.md#1022--g_partybattlevotecastreqcmd--partial partial
 pub fn handle_party_battle_vote_cast(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1024;
+    const F: u16 = ids::G_PartyBattleVoteCastFailCmd;
     let Some(target) = Reader(req).quad() else {
         return logged(Outcome::reason(F, 2), "party battle vote: decompose failed");
     };
@@ -196,7 +196,7 @@ pub fn handle_duel_bot_challenge_use_strategic_tool(ctx: &mut Context<'_>, req: 
 
 /// parity: 1587 27-duel-ranking-handlers.md#1587--g_duelbottrainingroompickduelbotreqcmd--partial partial
 pub fn handle_duel_bot_training_room_pick_duel_bot(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1589;
+    const F: u16 = ids::G_DuelBotTrainingRoomPickDuelBotFailCmd;
     let mut r = Reader(req);
     let (Some(bot), Some(level)) = (r.int(), r.byte()) else {
         return logged(
@@ -215,7 +215,7 @@ pub fn handle_duel_bot_training_room_pick_duel_bot(ctx: &mut Context<'_>, req: &
 
 /// parity: 1590 27-duel-ranking-handlers.md#1590--g_duelbottrainingroomcombatstartreqcmd--partial partial
 pub fn handle_duel_bot_training_room_combat_start(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1592;
+    const F: u16 = ids::G_DuelBotTrainingRoomCombatStartFailCmd;
     if is_gm(ctx.pc()) {
         return logged(Outcome::reason(F, 2), "training room start: gm");
     }

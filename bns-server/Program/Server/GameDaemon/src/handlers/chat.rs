@@ -200,7 +200,7 @@ pub fn handle_god_say(_: &mut Context<'_>, _: &[u8]) -> Outcome {
 
 /// parity: 51 16-chat-social-handlers.md#51--g_messagereqcmd--partial partial
 pub fn handle_message(ctx: &mut Context<'_>, _: &[u8]) -> Outcome {
-    const F: u16 = 54;
+    const F: u16 = ids::G_MessageFailCmd;
     // Decode result ignored; no decoded field reaches a gate.
     if !ctx.world.chat_rule && ctx.pc().chat_state != 1 {
         let mut out = Outcome::reason(F, 90);
@@ -220,7 +220,7 @@ pub fn handle_message(ctx: &mut Context<'_>, _: &[u8]) -> Outcome {
 
 /// parity: 55 16-chat-social-handlers.md#55--g_messagebyitemreqcmd--partial partial
 pub fn handle_message_by_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 57;
+    const F: u16 = ids::G_MessageByItemFailCmd;
     if !ctx.world.item_message_enabled {
         return Outcome::log("message by item disabled");
     }
@@ -245,7 +245,7 @@ pub fn handle_message_by_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 58 16-chat-social-handlers.md#58--g_messagebydicereqcmd--partial partial
 pub fn handle_message_by_dice(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 60;
+    const F: u16 = ids::G_MessageByDiceFailCmd;
     let mut r = Reader(req);
     let (Some(min), Some(max)) = (r.short(), r.short()) else {
         return Outcome::reason(F, 2);
@@ -279,7 +279,7 @@ pub fn handle_talk_session_close(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1216 16-chat-social-handlers.md#1216--g_talksessionopenreqcmd--partial partial
 pub fn handle_talk_session_open(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1218;
+    const F: u16 = ids::G_TalkSessionOpenFailCmd;
     let Some(zone) = ctx.pc().zone else {
         let mut out = Outcome::reason(F, 2);
         out.logs.push("TalkSessionOpenReq; cannot find zone");
@@ -294,7 +294,7 @@ pub fn handle_talk_session_open(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 68 16-chat-social-handlers.md#68--g_setpcsocialreqcmd--partial partial
 pub fn handle_set_pc_social(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 70;
+    const F: u16 = ids::G_SetPcSocialFailCmd;
     let Some(zone) = ctx.pc().zone else {
         let mut out = Outcome::reason(F, 2);
         out.logs.push("SetPcSocialReq failed; cannot find zone");
@@ -380,7 +380,7 @@ fn petition_reply(command: u16, reason: u16) -> Outcome {
 
 /// parity: 1557 16-chat-social-handlers.md#1557--g_submitpetitionreqcmd--partial partial
 pub fn handle_submit_petition(ctx: &mut Context<'_>, _: &[u8]) -> Outcome {
-    const F: u16 = 1559;
+    const F: u16 = ids::G_SubmitPetitionFailCmd;
     if arena_config(ctx) {
         let mut out = petition_reply(F, 5);
         out.logs.push("SubmitPetitionReq: cannot process in arena");
@@ -423,7 +423,7 @@ pub fn handle_feedback_petition(ctx: &mut Context<'_>, _: &[u8]) -> Outcome {
 
 /// parity: 1185 16-chat-social-handlers.md#1185--g_boardgachatakeparticipationrewardreqcmd--partial partial
 pub fn handle_board_gacha_take_participation_reward(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1187;
+    const F: u16 = ids::G_BoardGachaTakeParticipationRewardFailCmd;
     if !ctx.world.board_gacha_enabled {
         return Outcome::reason(F, 2);
     }

@@ -1,4 +1,4 @@
-//! Write `src/generated/commands.rs` and `src/generated/enums.rs`.
+//! Write `src/generated/commands.rs`, `src/generated/enums.rs` and `src/generated/lobbyd.rs`.
 //!
 //! Usage: `cargo run -q -p packet-ids --bin gen-ids [workspace-root]`
 
@@ -17,8 +17,19 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    let lobbyd = match packet_ids::generate_lobbyd(&root) {
+        Ok(text) => text,
+        Err(e) => {
+            eprintln!("gen-ids: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
     let dir = packet_ids::generated_dir(&root);
-    for (name, text) in [("commands.rs", commands), ("enums.rs", enums)] {
+    for (name, text) in [
+        ("commands.rs", commands),
+        ("enums.rs", enums),
+        ("lobbyd.rs", lobbyd),
+    ] {
         let path = dir.join(name);
         if let Err(e) = std::fs::write(&path, text) {
             eprintln!("gen-ids: {}: {e}", path.display());

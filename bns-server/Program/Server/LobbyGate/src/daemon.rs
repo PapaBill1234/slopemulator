@@ -1,6 +1,7 @@
 //! Outbound LobbyDaemon transport. Spec 05 §§1.2, 2.
 use crate::{config::GateConfig, wire::invalid};
 use bloodlib::packet::{compose, PacketError, Value};
+use packet_ids::LobbyGateLobbydCmd;
 use std::{
     future::Future,
     io,
@@ -34,7 +35,7 @@ impl InitSession {
             LoginToken::Np { token, portal } => compose(
                 "hqooi",
                 &[
-                    Value::I16(6),
+                    Value::I16(LobbyGateLobbydCmd::InitSessionWithNPTokenReq.id()),
                     Value::U64(self.gate_key),
                     Value::Id(token),
                     Value::Id(portal),
@@ -44,7 +45,7 @@ impl InitSession {
             LoginToken::Lobby { client_key, token } => compose(
                 "hqqqi",
                 &[
-                    Value::I16(12),
+                    Value::I16(LobbyGateLobbydCmd::InitSessionWithLobbyTokenReq.id()),
                     Value::U64(self.gate_key),
                     Value::U64(client_key),
                     Value::U64(token),
@@ -182,7 +183,7 @@ impl TcpLobbyDaemon {
             let hello = compose(
                 "hhhh",
                 &[
-                    Value::I16(1),
+                    Value::I16(LobbyGateLobbydCmd::HelloReq.id()),
                     Value::I16(config.predefined_world_id as i16),
                     Value::I16(58),
                     Value::U16(config.internal_port),

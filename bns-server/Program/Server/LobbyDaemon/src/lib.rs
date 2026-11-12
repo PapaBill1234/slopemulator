@@ -3,6 +3,7 @@
 pub mod character;
 pub mod gamed;
 pub mod gamed_link;
+pub mod ids;
 pub mod jobs;
 #[cfg(feature = "mssql")]
 pub mod mssql;

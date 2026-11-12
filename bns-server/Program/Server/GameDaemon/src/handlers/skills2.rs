@@ -291,7 +291,7 @@ fn faction_gates(ctx: &Context<'_>, failure: u16, config: bool) -> Option<Outcom
 
 /// parity: 83 13-skill-handlers.md#83--g_exchangefactionscorereqcmd--partial partial
 pub fn handle_exchange_faction_score(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 85;
+    const F: u16 = ids::G_ExchangeFactionScoreFailCmd;
     if let Some(out) = faction_gates(ctx, F, false) {
         return out;
     }
@@ -541,7 +541,7 @@ pub fn handle_npc_manipulate(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1266 13-skill-handlers.md#1266--g_fishmanipulatereqcmd--partial partial
 pub fn handle_fish_manipulate(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1269;
+    const F: u16 = ids::G_FishManipulateFailCmd;
     if !ctx.world.fish_enabled {
         return Outcome::reason(F, 2);
     }
@@ -584,7 +584,7 @@ pub fn handle_fish_manipulate(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 630 13-skill-handlers.md#630--g_changesummonedreqcmd--partial partial
 pub fn handle_change_summoned(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 632;
+    const F: u16 = ids::G_ChangeSummonedFailCmd;
     let mut r = Reader(req);
     let (Some(key), Some(n)) = (r.quad(), r.short()) else {
         return Outcome::reason(F, 1331);
@@ -607,7 +607,7 @@ pub fn handle_change_summoned(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 633 13-skill-handlers.md#633--g_changesummonednamereqcmd--partial partial
 pub fn handle_change_summoned_name(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 635;
+    const F: u16 = ids::G_ChangeSummonedNameFailCmd;
     if !ctx.world.summon_rename_enabled {
         return Outcome::reason(F, 1342);
     }
@@ -644,7 +644,7 @@ pub fn handle_change_summoned_name(ctx: &mut Context<'_>, req: &[u8]) -> Outcome
 
 /// parity: 837 13-skill-handlers.md#837--g_setenergymultiplevaluereqcmd--partial partial
 pub fn handle_set_energy_multiple(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 839;
+    const F: u16 = ids::G_SetEnergyMultipleValueFailCmd;
     if !ctx.world.energy_enabled {
         return Outcome::reason(F, 2614);
     }
@@ -717,7 +717,7 @@ fn schedule(ctx: &mut Context<'_>, t: SkillTask, fail_log: Option<&'static str>)
 
 /// parity: 952 13-skill-handlers.md#952--g_feedpetfoodreqcmd--partial partial
 pub fn handle_feed_pet_food(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 953;
+    const F: u16 = ids::G_FeedPetFoodFailCmd;
     let mut r = Reader(req);
     let decoded = (|| Some((r.byte()?, [r.short()?, r.short()?], r.byte()?)))();
     let Some((selector, shorts, option)) = decoded else {
@@ -778,7 +778,7 @@ pub fn handle_skill_skin_acquired_list(ctx: &mut Context<'_>) -> Outcome {
 
 /// parity: 1065 13-skill-handlers.md#1065--g_applyskillskinreqcmd--partial partial
 pub fn handle_apply_skill_skin(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1067;
+    const F: u16 = ids::G_ApplySkillSkinFailCmd;
     if !ctx.world.skill_skin_enabled {
         return Outcome::reason(F, 2382);
     }
