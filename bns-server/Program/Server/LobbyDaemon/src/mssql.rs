@@ -282,6 +282,29 @@ fn character_from(v: CharacterValues<'_>) -> io::Result<Character> {
         last_play_end: 0,
     })
 }
+/// Size of the `@ShowcaseData` parameter of `usp_UpdateCharacterData`.
+const SHOWCASE_CAPACITY: usize = 4096;
+/// SQL `datetime` of the components. `None` stays NULL. Invalid components are an error.
+fn sql_datetime(value: Option<&SqlTimestamp>) -> io::Result<Option<NaiveDateTime>> {
+    let Some(v) = value else {
+        return Ok(None);
+    };
+    tiberius::time::chrono::NaiveDate::from_ymd_opt(
+        i32::from(v.year),
+        u32::from(v.month),
+        u32::from(v.day),
+    )
+    .and_then(|date| {
+        date.and_hms_nano_opt(
+            u32::from(v.hour),
+            u32::from(v.minute),
+            u32::from(v.second),
+            v.fraction,
+        )
+    })
+    .map(Some)
+    .ok_or_else(|| invalid("invalid SQL timestamp components"))
+}
 fn timestamp(row: &Row, index: usize) -> io::Result<Option<SqlTimestamp>> {
     let Some(value) = optional::<NaiveDateTime>(row, index)? else {
         return Ok(None);
@@ -574,6 +597,138 @@ impl Store for MssqlStore {
                 })
             })
             .collect()
+    }
+    async fn update_last_play_start(&self, pcid: u64, address: u32) -> io::Result<()> {
+        let mut q = rpc!("usp_UpdateLastPlayStart", "@P1, @P2");
+        q.bind(positive(pcid)?);
+        q.bind(ip_text(address));
+        no_rows(self.call(q).await?)
+    }
+    async fn update_last_play_end(&self, pcid: u64) -> io::Result<()> {
+        let mut q = rpc!("usp_UpdateLastPlayEnd", "@P1");
+        q.bind(positive(pcid)?);
+        no_rows(self.call(q).await?)
+    }
+    async fn update_character_data(
+        &self,
+        pcid: u64,
+        level: i16,
+        showcase: Vec<u8>,
+    ) -> io::Result<()> {
+        if showcase.len() > SHOWCASE_CAPACITY {
+            return Err(invalid("showcase exceeds 4096 bytes"));
+        }
+        // The gamed message has no job. The procedure takes the job, so the batch reads
+        // the stored job of the same character and passes it back unchanged.
+        let mut q = Query::new(
+            "DECLARE @rc int, @job smallint; \
+             SELECT @job = [Job] FROM dbo.[Character] WHERE PCID = @P1; \
+             EXEC @rc = dbo.usp_UpdateCharacterData @P1, @job, @P2, @P3; \
+             SELECT @rc AS __lobbyd_return;",
+        );
+        q.bind(positive(pcid)?);
+        q.bind(level);
+        q.bind(showcase);
+        no_rows(self.call(q).await?)
+    }
+    async fn update_character_level(&self, pcid: u64, level: i16) -> io::Result<()> {
+        let mut q = rpc!("usp_UpdateCharacterLevel", "@P1, @P2");
+        q.bind(positive(pcid)?);
+        q.bind(level);
+        no_rows(self.call(q).await?)
+    }
+    async fn update_time_based_play_info(
+        &self,
+        account: AccountId,
+        rows: Vec<TimeBasedPlayInfo>,
+    ) -> io::Result<()> {
+        for row in rows {
+            let mut q = rpc!(
+                "usp_UpdateGameAccountTimeBasedPlayInfo",
+                "@P1, @P2, @P3, @P4, @P5, @P6"
+            );
+            q.bind(guid(account));
+            q.bind(row.schedule);
+            q.bind(row.target_type);
+            q.bind(sql_datetime(row.expire.as_ref())?);
+            q.bind(i32::try_from(row.duration).map_err(|_| invalid("duration exceeds int"))?);
+            q.bind(sql_datetime(row.last_update.as_ref())?);
+            no_rows(self.call(q).await?)?;
+        }
+        Ok(())
+    }
+    async fn update_account_exp(&self, account: AccountId, row: AccountExp) -> io::Result<()> {
+        let mut q = rpc!("usp_UpdateGameAccountExp", "@P1, @P2, @P3, @P4");
+        q.bind(guid(account));
+        q.bind(row.exp);
+        q.bind(row.quota_per_day);
+        q.bind(row.last_update);
+        no_rows(self.call(q).await?)
+    }
+    async fn load_content_quota(&self, account: AccountId) -> io::Result<Vec<ContentQuota>> {
+        let mut q = rpc!("usp_LoadGameAccountContentQuota", "@P1");
+        q.bind(guid(account));
+        self.call(q)
+            .await?
+            .iter()
+            .map(|row| {
+                Ok(ContentQuota {
+                    data_id: required(row, 1)?,
+                    version: required(row, 2)?,
+                    quantity: required(row, 3)?,
+                    last_update: required(row, 4)?,
+                })
+            })
+            .collect()
+    }
+    async fn update_content_quota(&self, account: AccountId, row: ContentQuota) -> io::Result<()> {
+        let mut q = rpc!(
+            "usp_UpdateGameAccountContentQuota",
+            "@P1, @P2, @P3, @P4, @P5"
+        );
+        q.bind(guid(account));
+        q.bind(row.data_id);
+        q.bind(row.version);
+        q.bind(row.quantity);
+        q.bind(row.last_update);
+        no_rows(self.call(q).await?)
+    }
+    async fn load_recycle_time(&self, account: AccountId) -> io::Result<Vec<RecycleTime>> {
+        let mut q = rpc!("usp_LoadGameAccountRecycleTime", "@P1");
+        q.bind(guid(account));
+        self.call(q)
+            .await?
+            .iter()
+            .map(|row| {
+                Ok(RecycleTime {
+                    group: required(row, 1)?,
+                    time: required(row, 2)?,
+                })
+            })
+            .collect()
+    }
+    async fn update_recycle_time(&self, account: AccountId, row: RecycleTime) -> io::Result<()> {
+        let mut q = rpc!("usp_UpdateGameAccountRecycleTime", "@P1, @P2, @P3");
+        q.bind(guid(account));
+        q.bind(row.group);
+        q.bind(row.time);
+        no_rows(self.call(q).await?)
+    }
+    async fn load_random_store_schedule(&self) -> io::Result<[u64; 3]> {
+        let q = Query::new(
+            "DECLARE @rc int, @a bigint, @b bigint, @c bigint; \
+             EXEC @rc = dbo.usp_LoadRandomStoreInitializationSchedule @a OUTPUT, @b OUTPUT, @c OUTPUT; \
+             SELECT @a, @b, @c; \
+             SELECT @rc AS __lobbyd_return;",
+        );
+        let row = one(self.call(q).await?)?.ok_or_else(|| invalid("missing schedule row"))?;
+        let mut out = [0u64; 3];
+        for (index, slot) in out.iter_mut().enumerate() {
+            // A NULL output means no schedule: zero.
+            let value = optional::<i64>(&row, index)?.unwrap_or(0);
+            *slot = u64::try_from(value).map_err(|_| invalid("negative schedule time"))?;
+        }
+        Ok(out)
     }
     async fn load_service_detail(
         &self,

@@ -11,6 +11,18 @@ fn reply(cmd: i16, key: u64, slot: [u8; 16], state: i8, reason: i16) -> io::Resu
     v.push(Value::I16(reason));
     wire::packet(if cmd == 46 { "hqoE" } else { "hqoQE" }, &v)
 }
+/// Client reason of a gamed `DeleteCharacterFail` 25 (`16-jobs-d.md` §2.5):
+/// 28 → 139, 29 → 140, 30 → 141, 31 → 148, 32 → 149, else 2.
+fn delete_fail_code(reason: i16) -> i16 {
+    match reason {
+        28 => 139,
+        29 => 140,
+        30 => 141,
+        31 => 148,
+        32 => 149,
+        _ => 2,
+    }
+}
 fn success(cmd: i16, key: u64, slot: [u8; 16]) -> io::Result<Vec<u8>> {
     wire::packet("hqo", &[Value::I16(cmd), Value::U64(key), Value::Id(slot)])
 }
@@ -228,7 +240,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
             .await
             {
                 Ok(Ok(_level)) => {}
-                Ok(Err(_)) => {
+                Ok(Err(reason)) => {
                     if self.store.cancel_character_deletion(c.pcid).await.is_ok() {
                         self.set_character_state(key, c.pcid, CState::Normal);
                     }
@@ -243,7 +255,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
                             .unwrap()
                             .state
                             .wire(),
-                        2,
+                        delete_fail_code(reason),
                     )?]);
                 }
                 Err(_) => return Ok(vec![reply(fail, key, slot, 3, 2)?]),

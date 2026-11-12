@@ -1,6 +1,172 @@
 //! D24 local job. Await external decisions before committing session state.
 use super::*;
+use crate::character::ProcedureError;
 use crate::gamed::{ChargeMode, Eligibility};
+use crate::store::{
+    AccountExp, AccountId, ContentQuota, RecycleTime, SqlTimestamp, TimeBasedPlayInfo,
+    RESULT_BLOB_CAPACITY,
+};
+use packet::gamed_link::{
+    AccountExpInfo, AccountLists, Message, TimePlayInfo, UPDATE_ACCOUNT_CONTENT_QUOTA_FAIL_COMMAND,
+    UPDATE_ACCOUNT_CONTENT_QUOTA_OK_COMMAND, UPDATE_ACCOUNT_DATA_FAIL_COMMAND,
+    UPDATE_ACCOUNT_DATA_OK_COMMAND, UPDATE_ACCOUNT_EXP_FAIL_COMMAND, UPDATE_ACCOUNT_EXP_OK_COMMAND,
+    UPDATE_ACCOUNT_RECYCLE_TIME_FAIL_COMMAND, UPDATE_ACCOUNT_RECYCLE_TIME_OK_COMMAND,
+    UPDATE_CHARACTER_DATA_FAIL_COMMAND, UPDATE_CHARACTER_DATA_OK_COMMAND,
+};
+
+/// Most rows of one list in a gamed sync message. The limit is ours: the gamed link has no rate
+/// limit, so a list must not make an unbounded number of database calls.
+const MAX_SYNC_ROWS: usize = 512;
+
+/// The account data of a session for the 381 `EnterWorldOk` lists. Loaded at login, changed by
+/// the gamed updates 42, 107, 110 and 113.
+#[derive(Clone, Debug, Default)]
+pub(super) struct AccountCache {
+    time_based: Vec<TimeBasedPlayInfo>,
+    exp: Option<AccountExp>,
+    quotas: Vec<ContentQuota>,
+    recycle: Vec<RecycleTime>,
+}
+impl AccountCache {
+    /// Each load is best effort: an error gives an empty list (the loads are not a condition
+    /// of the login).
+    pub(super) async fn load<S: Store>(store: &S, id: AccountId) -> Self {
+        Self {
+            time_based: store
+                .load_time_based_play_info(id)
+                .await
+                .unwrap_or_default(),
+            exp: store.load_account_exp(id).await.ok().flatten(),
+            quotas: store.load_content_quota(id).await.unwrap_or_default(),
+            recycle: store.load_recycle_time(id).await.unwrap_or_default(),
+        }
+    }
+    fn lists(&self) -> AccountLists {
+        AccountLists {
+            time_based: self.time_based.iter().map(time_to_wire).collect(),
+            exp: self
+                .exp
+                .as_ref()
+                .map(|e| AccountExpInfo {
+                    exp: e.exp,
+                    quota_per_day: e.quota_per_day,
+                    last_update: e.last_update,
+                })
+                .unwrap_or_default(),
+            quotas: self.quotas.clone(),
+            recycle: self.recycle.clone(),
+        }
+    }
+    /// A quota row replaces the row with the same (data id, version).
+    fn put_quota(&mut self, row: ContentQuota) {
+        match self
+            .quotas
+            .iter_mut()
+            .find(|q| q.data_id == row.data_id && q.version == row.version)
+        {
+            Some(old) => *old = row,
+            None => self.quotas.push(row),
+        }
+    }
+    /// A recycle row replaces the row of its group. The larger time stays.
+    fn put_recycle(&mut self, row: RecycleTime) {
+        match self.recycle.iter_mut().find(|r| r.group == row.group) {
+            Some(old) => old.time = old.time.max(row.time),
+            None => self.recycle.push(row),
+        }
+    }
+}
+fn time_to_wire(row: &TimeBasedPlayInfo) -> TimePlayInfo {
+    TimePlayInfo {
+        target: row.target_type as i8,
+        schedule: row.schedule,
+        expire: row
+            .expire
+            .as_ref()
+            .and_then(SqlTimestamp::to_unix)
+            .unwrap_or(0),
+        last_update: 0,
+        duration: i32::try_from(row.duration).unwrap_or(i32::MAX),
+        acknowledged: 0,
+        rewards: [0; 4],
+    }
+}
+/// `None`: a time that is not zero and not a valid SQL date, or a negative target.
+fn time_to_store(row: &TimePlayInfo) -> Option<TimeBasedPlayInfo> {
+    let stamp = |value: i64| {
+        if value == 0 {
+            Some(None)
+        } else {
+            SqlTimestamp::from_unix(value).map(Some)
+        }
+    };
+    Some(TimeBasedPlayInfo {
+        schedule: row.schedule,
+        target_type: u8::try_from(row.target).ok()?,
+        expire: stamp(row.expire)?,
+        duration: i64::from(row.duration),
+        last_update: stamp(row.last_update)?,
+    })
+}
+/// The failure code of a store error: the code of a `ProcedureError`, else 2.
+/// ❓ `SqlStoreError::Procedure` is not mapped.
+fn failure_code(error: &io::Error) -> i16 {
+    error
+        .get_ref()
+        .and_then(|inner| inner.downcast_ref::<ProcedureError>())
+        .and_then(|p| i16::try_from(p.0).ok())
+        .filter(|code| *code != 0)
+        .unwrap_or(2)
+}
+fn reply(command: i16, transaction: u64, pcid: Option<u64>, reason: Option<i16>) -> Message {
+    Message::Reply {
+        command,
+        transaction,
+        pcid,
+        reason,
+    }
+}
+/// The Fail reply of a gamed sync request. `None`: the message has no reply (11) or is not a
+/// sync request.
+pub(crate) fn sync_failure(message: &Message, reason: i16) -> Option<Message> {
+    let reason = Some(reason);
+    Some(match message {
+        Message::UpdateCharacterData { transaction, .. } => reply(
+            UPDATE_CHARACTER_DATA_FAIL_COMMAND,
+            *transaction,
+            None,
+            reason,
+        ),
+        Message::UpdateAccountData { transaction, .. } => {
+            reply(UPDATE_ACCOUNT_DATA_FAIL_COMMAND, *transaction, None, reason)
+        }
+        Message::UpdateAccountExp {
+            transaction, pcid, ..
+        } => reply(
+            UPDATE_ACCOUNT_EXP_FAIL_COMMAND,
+            *transaction,
+            Some(*pcid),
+            reason,
+        ),
+        Message::UpdateAccountContentQuota {
+            transaction, pcid, ..
+        } => reply(
+            UPDATE_ACCOUNT_CONTENT_QUOTA_FAIL_COMMAND,
+            *transaction,
+            Some(*pcid),
+            reason,
+        ),
+        Message::UpdateAccountRecycleTime {
+            transaction, pcid, ..
+        } => reply(
+            UPDATE_ACCOUNT_RECYCLE_TIME_FAIL_COMMAND,
+            *transaction,
+            Some(*pcid),
+            reason,
+        ),
+        _ => return None,
+    })
+}
 
 #[derive(Clone, Debug)]
 pub(super) struct WorldToken {
@@ -38,6 +204,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
         }
         // `Character::EndGameWorldPlay`. `OnLeave` of the service location has no local state.
         session.playing = None;
+        self.play.ends.push(pcid);
         let issued = self
             .settings
             .lobby_token_lifetime
@@ -305,6 +472,280 @@ impl<S: Store, N: Np> Jobs<S, N> {
             world,
             pcid: pending.pcid,
         });
+        // EnterGameWorldJob: `usp_UpdateLastPlayStart`, written by the link task.
+        self.play.starts.push((pending.pcid, ipv4));
         Ok(pending.pcid)
+    }
+    /// The account lists of the session for the 381 `EnterWorldOk`. `None`: no session.
+    pub fn account_lists(&self, key: u64) -> Option<AccountLists> {
+        self.sessions.get(&key).map(|s| s.cache.lists())
+    }
+    /// The account id of session `key` when it plays `pcid` in `world` (state 4.0).
+    /// This is the identity check of every gamed sync request (`20-handlers.md` lines 97–121):
+    /// the client key, the PC id and the world of the link must all match.
+    fn playing_account(&self, key: u64, world: i16, pcid: u64) -> Option<AccountId> {
+        let session = self.sessions.get(&key)?;
+        let playing = session.playing?;
+        (pcid != 0
+            && session.state == State::World
+            && playing.world == world
+            && playing.pcid == pcid)
+            .then_some(())?;
+        session.account.as_ref().map(|a| a.id)
+    }
+    /// A gamed sync request of the world `world`: 11, 39, 42, 107, 110 and 113. `key` is the
+    /// client key of the message. `Some` is the reply for the GameDaemon (`None` for 11).
+    /// Reason 5: no session for the key, the session does not play this PC in this world, or
+    /// the message is not a sync request. Reason 2: a list of more than 512 rows, a showcase of
+    /// more than 512 bytes, a time that is not valid, or a database failure without a code.
+    /// The wait for the database runs in a job task (rule 3 of step 6).
+    pub async fn world_sync(&mut self, key: u64, world: i16, message: Message) -> Option<Message> {
+        let pcid = match &message {
+            Message::UpdateBotScore { pcid, .. }
+            | Message::UpdateCharacterData { pcid, .. }
+            | Message::UpdateAccountData { pcid, .. }
+            | Message::UpdateAccountExp { pcid, .. }
+            | Message::UpdateAccountContentQuota { pcid, .. }
+            | Message::UpdateAccountRecycleTime { pcid, .. } => *pcid,
+            _ => return None,
+        };
+        let Some(id) = self.playing_account(key, world, pcid) else {
+            return sync_failure(&message, 5);
+        };
+        let too_long = match &message {
+            Message::UpdateCharacterData { showcase, .. } => showcase.len() > RESULT_BLOB_CAPACITY,
+            Message::UpdateAccountData { lists, .. } => {
+                lists.time_based.len() > MAX_SYNC_ROWS
+                    || lists.quotas.len() > MAX_SYNC_ROWS
+                    || lists.recycle.len() > MAX_SYNC_ROWS
+            }
+            Message::UpdateAccountContentQuota { quotas, .. } => quotas.len() > MAX_SYNC_ROWS,
+            Message::UpdateAccountRecycleTime { recycle, .. } => recycle.len() > MAX_SYNC_ROWS,
+            _ => false,
+        };
+        if too_long {
+            return sync_failure(&message, 2);
+        }
+        match message {
+            Message::UpdateBotScore { score, .. } => {
+                // The score goes to `usp_UpdateLastLogout` when the session ends.
+                if let Some(account) = self.sessions.get_mut(&key).and_then(|s| s.account.as_mut())
+                {
+                    account.bot_score = score;
+                }
+                None
+            }
+            Message::UpdateCharacterData {
+                transaction,
+                level,
+                showcase,
+                ..
+            } => {
+                let written = self
+                    .store
+                    .update_character_data(pcid, level, showcase.clone())
+                    .await;
+                Some(match written {
+                    Ok(()) => {
+                        if let Some(character) = self
+                            .sessions
+                            .get_mut(&key)
+                            .and_then(|s| s.characters.iter_mut().find(|c| c.pcid == pcid))
+                        {
+                            character.showcase = showcase;
+                        }
+                        reply(UPDATE_CHARACTER_DATA_OK_COMMAND, transaction, None, None)
+                    }
+                    Err(error) => reply(
+                        UPDATE_CHARACTER_DATA_FAIL_COMMAND,
+                        transaction,
+                        None,
+                        Some(failure_code(&error)),
+                    ),
+                })
+            }
+            Message::UpdateAccountData {
+                transaction,
+                bot_score,
+                lists,
+                ..
+            } => {
+                if let Some(account) = self.sessions.get_mut(&key).and_then(|s| s.account.as_mut())
+                {
+                    account.bot_score = bot_score;
+                }
+                // All four steps run. The first failure code goes in the reply.
+                let mut first: Option<i16> = None;
+                let steps = [
+                    self.sync_time(key, id, &lists.time_based).await,
+                    self.sync_exp(key, id, &lists.exp).await,
+                    self.sync_quotas(key, id, &lists.quotas, false).await,
+                    self.sync_recycle(key, id, &lists.recycle, false).await,
+                ];
+                for step in steps {
+                    if let Err(code) = step {
+                        first.get_or_insert(code);
+                    }
+                }
+                Some(match first {
+                    None => reply(UPDATE_ACCOUNT_DATA_OK_COMMAND, transaction, None, None),
+                    Some(code) => reply(
+                        UPDATE_ACCOUNT_DATA_FAIL_COMMAND,
+                        transaction,
+                        None,
+                        Some(code),
+                    ),
+                })
+            }
+            Message::UpdateAccountExp {
+                transaction, exp, ..
+            } => Some(match self.sync_exp(key, id, &exp).await {
+                Ok(()) => reply(UPDATE_ACCOUNT_EXP_OK_COMMAND, transaction, Some(pcid), None),
+                Err(code) => reply(
+                    UPDATE_ACCOUNT_EXP_FAIL_COMMAND,
+                    transaction,
+                    Some(pcid),
+                    Some(code),
+                ),
+            }),
+            Message::UpdateAccountContentQuota {
+                transaction,
+                quotas,
+                ..
+            } => Some(match self.sync_quotas(key, id, &quotas, true).await {
+                Ok(()) => reply(
+                    UPDATE_ACCOUNT_CONTENT_QUOTA_OK_COMMAND,
+                    transaction,
+                    Some(pcid),
+                    None,
+                ),
+                Err(code) => reply(
+                    UPDATE_ACCOUNT_CONTENT_QUOTA_FAIL_COMMAND,
+                    transaction,
+                    Some(pcid),
+                    Some(code),
+                ),
+            }),
+            Message::UpdateAccountRecycleTime {
+                transaction,
+                recycle,
+                ..
+            } => Some(match self.sync_recycle(key, id, &recycle, true).await {
+                Ok(()) => reply(
+                    UPDATE_ACCOUNT_RECYCLE_TIME_OK_COMMAND,
+                    transaction,
+                    Some(pcid),
+                    None,
+                ),
+                Err(code) => reply(
+                    UPDATE_ACCOUNT_RECYCLE_TIME_FAIL_COMMAND,
+                    transaction,
+                    Some(pcid),
+                    Some(code),
+                ),
+            }),
+            _ => None,
+        }
+    }
+    /// `usp_UpdateGameAccountTimeBasedPlayInfo`. The list replaces the cached list.
+    async fn sync_time(
+        &mut self,
+        key: u64,
+        id: AccountId,
+        rows: &[TimePlayInfo],
+    ) -> Result<(), i16> {
+        let rows: Vec<TimeBasedPlayInfo> = rows
+            .iter()
+            .map(time_to_store)
+            .collect::<Option<_>>()
+            .ok_or(2i16)?;
+        self.store
+            .update_time_based_play_info(id, rows.clone())
+            .await
+            .map_err(|e| failure_code(&e))?;
+        if let Some(session) = self.sessions.get_mut(&key) {
+            session.cache.time_based = rows;
+        }
+        Ok(())
+    }
+    /// `usp_UpdateGameAccountExp`.
+    async fn sync_exp(&mut self, key: u64, id: AccountId, exp: &AccountExpInfo) -> Result<(), i16> {
+        let row = AccountExp {
+            exp: exp.exp,
+            quota_per_day: exp.quota_per_day,
+            last_update: exp.last_update,
+        };
+        self.store
+            .update_account_exp(id, row.clone())
+            .await
+            .map_err(|e| failure_code(&e))?;
+        if let Some(session) = self.sessions.get_mut(&key) {
+            session.cache.exp = Some(row);
+        }
+        Ok(())
+    }
+    /// `usp_UpdateGameAccountContentQuota`, one call for each row, in order. `stop`: the first
+    /// failure ends the list. Else all rows run. `Err` is the first failure code. A row that
+    /// was written goes to the cache.
+    async fn sync_quotas(
+        &mut self,
+        key: u64,
+        id: AccountId,
+        rows: &[ContentQuota],
+        stop: bool,
+    ) -> Result<(), i16> {
+        let mut first = None;
+        for row in rows {
+            match self.store.update_content_quota(id, row.clone()).await {
+                Ok(()) => {
+                    if let Some(session) = self.sessions.get_mut(&key) {
+                        session.cache.put_quota(row.clone());
+                    }
+                }
+                Err(error) => {
+                    first.get_or_insert(failure_code(&error));
+                    if stop {
+                        break;
+                    }
+                }
+            }
+        }
+        first.map_or(Ok(()), Err)
+    }
+    /// `usp_UpdateGameAccountRecycleTime`, one call for each row, in order. A group keeps the
+    /// larger time, so the row that is written is the larger of the cached and the new time
+    /// (❓ the 381 merge rule is not verified). `stop` as for [`Self::sync_quotas`].
+    async fn sync_recycle(
+        &mut self,
+        key: u64,
+        id: AccountId,
+        rows: &[RecycleTime],
+        stop: bool,
+    ) -> Result<(), i16> {
+        let mut first = None;
+        for row in rows {
+            let mut row = row.clone();
+            if let Some(old) = self
+                .sessions
+                .get(&key)
+                .and_then(|s| s.cache.recycle.iter().find(|r| r.group == row.group))
+            {
+                row.time = row.time.max(old.time);
+            }
+            match self.store.update_recycle_time(id, row.clone()).await {
+                Ok(()) => {
+                    if let Some(session) = self.sessions.get_mut(&key) {
+                        session.cache.put_recycle(row);
+                    }
+                }
+                Err(error) => {
+                    first.get_or_insert(failure_code(&error));
+                    if stop {
+                        break;
+                    }
+                }
+            }
+        }
+        first.map_or(Ok(()), Err)
     }
 }

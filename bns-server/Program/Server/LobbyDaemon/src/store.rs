@@ -177,6 +177,49 @@ pub struct TimeBasedPlayInfo {
     pub duration: i64,
     pub last_update: Option<SqlTimestamp>,
 }
+pub use packet::gamed_link::{ContentQuota, RecycleTime};
+impl SqlTimestamp {
+    /// The components of a Unix time in seconds (UTC). `None`: out of the SQL year range.
+    pub fn from_unix(seconds: i64) -> Option<Self> {
+        let days = seconds.div_euclid(86_400);
+        let rest = seconds.rem_euclid(86_400);
+        // Civil date from days since 1970-01-01 (proleptic Gregorian).
+        let z = days + 719_468;
+        let era = z.div_euclid(146_097);
+        let day_of_era = z.rem_euclid(146_097);
+        let year_of_era =
+            (day_of_era - day_of_era / 1460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;
+        let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+        let shifted_month = (5 * day_of_year + 2) / 153;
+        let day = day_of_year - (153 * shifted_month + 2) / 5 + 1;
+        let month = if shifted_month < 10 {
+            shifted_month + 3
+        } else {
+            shifted_month - 9
+        };
+        let year = year_of_era + era * 400 + i64::from(month <= 2);
+        if !(1753..=9999).contains(&year) {
+            return None;
+        }
+        Some(Self {
+            year: i16::try_from(year).ok()?,
+            month: u16::try_from(month).ok()?,
+            day: u16::try_from(day).ok()?,
+            hour: u16::try_from(rest / 3600).ok()?,
+            minute: u16::try_from(rest % 3600 / 60).ok()?,
+            second: u16::try_from(rest % 60).ok()?,
+            fraction: 0,
+        })
+    }
+    /// Unix seconds (UTC) of the components. `None`: not a valid date.
+    pub fn to_unix(&self) -> Option<i64> {
+        let time = self.to_system_time()?;
+        match time.duration_since(UNIX_EPOCH) {
+            Ok(after) => i64::try_from(after.as_secs()).ok(),
+            Err(before) => i64::try_from(before.duration().as_secs()).ok().map(|s| -s),
+        }
+    }
+}
 fn unsupported() -> io::Error {
     io::Error::new(io::ErrorKind::Unsupported, "Store operation unsupported")
 }
@@ -264,6 +307,48 @@ pub trait SyncStore: Send + 'static {
     fn finish_character_restoration(&mut self, _pcid: u64) -> io::Result<()> {
         Err(unsupported())
     }
+    fn update_last_play_start(&mut self, _pcid: u64, _address: u32) -> io::Result<()> {
+        Err(unsupported())
+    }
+    fn update_last_play_end(&mut self, _pcid: u64) -> io::Result<()> {
+        Err(unsupported())
+    }
+    fn update_character_data(
+        &mut self,
+        _pcid: u64,
+        _level: i16,
+        _showcase: Vec<u8>,
+    ) -> io::Result<()> {
+        Err(unsupported())
+    }
+    fn update_character_level(&mut self, _pcid: u64, _level: i16) -> io::Result<()> {
+        Err(unsupported())
+    }
+    fn update_time_based_play_info(
+        &mut self,
+        _id: AccountId,
+        _rows: Vec<TimeBasedPlayInfo>,
+    ) -> io::Result<()> {
+        Err(unsupported())
+    }
+    fn update_account_exp(&mut self, _id: AccountId, _row: AccountExp) -> io::Result<()> {
+        Err(unsupported())
+    }
+    fn load_content_quota(&mut self, _id: AccountId) -> io::Result<Vec<ContentQuota>> {
+        Err(unsupported())
+    }
+    fn update_content_quota(&mut self, _id: AccountId, _row: ContentQuota) -> io::Result<()> {
+        Err(unsupported())
+    }
+    fn load_recycle_time(&mut self, _id: AccountId) -> io::Result<Vec<RecycleTime>> {
+        Err(unsupported())
+    }
+    fn update_recycle_time(&mut self, _id: AccountId, _row: RecycleTime) -> io::Result<()> {
+        Err(unsupported())
+    }
+    fn load_random_store_schedule(&mut self) -> io::Result<[u64; 3]> {
+        Err(unsupported())
+    }
     fn load_game_account(&mut self, id: AccountId) -> io::Result<Option<Account>>;
     fn register_game_account(&mut self, account: Account, ipv4: u32) -> io::Result<()>;
     fn update_last_login(&mut self, id: AccountId, ipv4: u32) -> io::Result<()>;
@@ -334,6 +419,63 @@ pub trait Store: Clone + Send + Sync + 'static {
         &self,
         pcid: u64,
     ) -> impl Future<Output = io::Result<()>> + Send;
+    /// `usp_UpdateLastPlayStart`. The card names `world`; the procedure takes the client IPv4.
+    fn update_last_play_start(
+        &self,
+        pcid: u64,
+        address: u32,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    /// `usp_UpdateLastPlayEnd`.
+    fn update_last_play_end(&self, pcid: u64) -> impl Future<Output = io::Result<()>> + Send;
+    /// `usp_UpdateCharacterData`. ❓ The job argument is not in the gamed message.
+    fn update_character_data(
+        &self,
+        pcid: u64,
+        level: i16,
+        showcase: Vec<u8>,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    /// `usp_UpdateCharacterLevel`.
+    fn update_character_level(
+        &self,
+        pcid: u64,
+        level: i16,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    /// `usp_UpdateGameAccountTimeBasedPlayInfo`, one call for each row.
+    fn update_time_based_play_info(
+        &self,
+        id: AccountId,
+        rows: Vec<TimeBasedPlayInfo>,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    /// `usp_UpdateGameAccountExp`.
+    fn update_account_exp(
+        &self,
+        id: AccountId,
+        row: AccountExp,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    /// `usp_LoadGameAccountContentQuota` (381 only).
+    fn load_content_quota(
+        &self,
+        id: AccountId,
+    ) -> impl Future<Output = io::Result<Vec<ContentQuota>>> + Send;
+    /// `usp_UpdateGameAccountContentQuota` (381 only).
+    fn update_content_quota(
+        &self,
+        id: AccountId,
+        row: ContentQuota,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    /// `usp_LoadGameAccountRecycleTime` (381 only).
+    fn load_recycle_time(
+        &self,
+        id: AccountId,
+    ) -> impl Future<Output = io::Result<Vec<RecycleTime>>> + Send;
+    /// `usp_UpdateGameAccountRecycleTime` (381 only).
+    fn update_recycle_time(
+        &self,
+        id: AccountId,
+        row: RecycleTime,
+    ) -> impl Future<Output = io::Result<()>> + Send;
+    /// `usp_LoadRandomStoreInitializationSchedule`: three bigint output values.
+    fn load_random_store_schedule(&self) -> impl Future<Output = io::Result<[u64; 3]>> + Send;
     fn load_game_account(
         &self,
         id: AccountId,
@@ -445,6 +587,48 @@ impl<S: SyncStore> Store for Shared<S> {
     async fn finish_character_restoration(&self, pcid: u64) -> io::Result<()> {
         self.lock().finish_character_restoration(pcid)
     }
+    async fn update_last_play_start(&self, pcid: u64, address: u32) -> io::Result<()> {
+        self.lock().update_last_play_start(pcid, address)
+    }
+    async fn update_last_play_end(&self, pcid: u64) -> io::Result<()> {
+        self.lock().update_last_play_end(pcid)
+    }
+    async fn update_character_data(
+        &self,
+        pcid: u64,
+        level: i16,
+        showcase: Vec<u8>,
+    ) -> io::Result<()> {
+        self.lock().update_character_data(pcid, level, showcase)
+    }
+    async fn update_character_level(&self, pcid: u64, level: i16) -> io::Result<()> {
+        self.lock().update_character_level(pcid, level)
+    }
+    async fn update_time_based_play_info(
+        &self,
+        id: AccountId,
+        rows: Vec<TimeBasedPlayInfo>,
+    ) -> io::Result<()> {
+        self.lock().update_time_based_play_info(id, rows)
+    }
+    async fn update_account_exp(&self, id: AccountId, row: AccountExp) -> io::Result<()> {
+        self.lock().update_account_exp(id, row)
+    }
+    async fn load_content_quota(&self, id: AccountId) -> io::Result<Vec<ContentQuota>> {
+        self.lock().load_content_quota(id)
+    }
+    async fn update_content_quota(&self, id: AccountId, row: ContentQuota) -> io::Result<()> {
+        self.lock().update_content_quota(id, row)
+    }
+    async fn load_recycle_time(&self, id: AccountId) -> io::Result<Vec<RecycleTime>> {
+        self.lock().load_recycle_time(id)
+    }
+    async fn update_recycle_time(&self, id: AccountId, row: RecycleTime) -> io::Result<()> {
+        self.lock().update_recycle_time(id, row)
+    }
+    async fn load_random_store_schedule(&self) -> io::Result<[u64; 3]> {
+        self.lock().load_random_store_schedule()
+    }
     async fn load_game_account(&self, id: AccountId) -> io::Result<Option<Account>> {
         self.lock().load_game_account(id)
     }
@@ -486,6 +670,20 @@ pub struct MemoryStore {
     pub jumping_creation_quota: HashMap<AccountId, Option<JumpingCreationQuota>>,
     pub login_updates: Vec<(AccountId, u32)>,
     pub logout_updates: Vec<(AccountId, i32)>,
+    /// Content quota and recycle time rows. A missing key is an empty list.
+    pub content_quota: HashMap<AccountId, Vec<ContentQuota>>,
+    pub recycle_time: HashMap<AccountId, Vec<RecycleTime>>,
+    /// Result of `load_random_store_schedule`.
+    pub random_store: [u64; 3],
+    /// Play start (PC id, client IPv4) and play end (PC id) writes.
+    pub play_starts: Vec<(u64, u32)>,
+    pub play_ends: Vec<u64>,
+    /// `update_character_data` (PC id, level, showcase) and `update_character_level` writes.
+    pub character_data: Vec<(u64, i16, Vec<u8>)>,
+    pub character_levels: Vec<(u64, i16)>,
+    /// Names of the account update calls of `ld381-r1`, in call order. A call that fails by
+    /// `character_failures` is not in the log.
+    pub write_log: Vec<&'static str>,
     /// Wall clock of this store. `None`: the system clock. Tests set a fixed clock.
     pub clock: Option<fn() -> SystemTime>,
 }
@@ -622,6 +820,101 @@ impl SyncStore for MemoryStore {
         }
         self.restored.push(pcid);
         Ok(())
+    }
+    fn update_last_play_start(&mut self, pcid: u64, address: u32) -> io::Result<()> {
+        self.character_failure("update_last_play_start")?;
+        self.play_starts.push((pcid, address));
+        Ok(())
+    }
+    fn update_last_play_end(&mut self, pcid: u64) -> io::Result<()> {
+        self.character_failure("update_last_play_end")?;
+        self.play_ends.push(pcid);
+        Ok(())
+    }
+    fn update_character_data(
+        &mut self,
+        pcid: u64,
+        level: i16,
+        showcase: Vec<u8>,
+    ) -> io::Result<()> {
+        self.character_failure("update_character_data")?;
+        check_blob(&showcase)?;
+        if level <= 0 {
+            return Err(crate::character::procedure_error(1));
+        }
+        for row in self
+            .characters
+            .values_mut()
+            .flatten()
+            .filter(|row| row.pcid == pcid)
+        {
+            row.showcase = showcase.clone();
+        }
+        self.character_data.push((pcid, level, showcase));
+        self.write_log.push("update_character_data");
+        Ok(())
+    }
+    fn update_character_level(&mut self, pcid: u64, level: i16) -> io::Result<()> {
+        self.character_failure("update_character_level")?;
+        if level <= 0 {
+            return Err(crate::character::procedure_error(1));
+        }
+        self.character_levels.push((pcid, level));
+        self.write_log.push("update_character_level");
+        Ok(())
+    }
+    fn update_time_based_play_info(
+        &mut self,
+        id: AccountId,
+        rows: Vec<TimeBasedPlayInfo>,
+    ) -> io::Result<()> {
+        self.character_failure("update_time_based_play_info")?;
+        self.time_based_play_info.insert(id, rows);
+        self.write_log.push("update_time_based_play_info");
+        Ok(())
+    }
+    fn update_account_exp(&mut self, id: AccountId, row: AccountExp) -> io::Result<()> {
+        self.character_failure("update_account_exp")?;
+        // As the procedure: no row is an error, a negative value is an error.
+        if row.exp < 0 || row.quota_per_day < 0 || row.last_update < 0 {
+            return Err(crate::character::procedure_error(1));
+        }
+        match self.account_exp.get_mut(&id) {
+            Some(Some(slot)) => *slot = row,
+            _ => return Err(crate::character::procedure_error(1)),
+        }
+        self.write_log.push("update_account_exp");
+        Ok(())
+    }
+    fn load_content_quota(&mut self, id: AccountId) -> io::Result<Vec<ContentQuota>> {
+        Ok(self.content_quota.get(&id).cloned().unwrap_or_default())
+    }
+    fn update_content_quota(&mut self, id: AccountId, row: ContentQuota) -> io::Result<()> {
+        self.character_failure("update_content_quota")?;
+        let rows = self.content_quota.entry(id).or_default();
+        match rows.iter_mut().find(|r| r.data_id == row.data_id) {
+            Some(slot) => *slot = row,
+            None => rows.push(row),
+        }
+        self.write_log.push("update_content_quota");
+        Ok(())
+    }
+    fn load_recycle_time(&mut self, id: AccountId) -> io::Result<Vec<RecycleTime>> {
+        Ok(self.recycle_time.get(&id).cloned().unwrap_or_default())
+    }
+    fn update_recycle_time(&mut self, id: AccountId, row: RecycleTime) -> io::Result<()> {
+        self.character_failure("update_recycle_time")?;
+        let rows = self.recycle_time.entry(id).or_default();
+        // As the procedure (MERGE): the later time stays.
+        match rows.iter_mut().find(|r| r.group == row.group) {
+            Some(slot) => slot.time = slot.time.max(row.time),
+            None => rows.push(row),
+        }
+        self.write_log.push("update_recycle_time");
+        Ok(())
+    }
+    fn load_random_store_schedule(&mut self) -> io::Result<[u64; 3]> {
+        Ok(self.random_store)
     }
     fn load_game_account(&mut self, id: AccountId) -> io::Result<Option<Account>> {
         Ok(self.accounts.get(&id).cloned())
