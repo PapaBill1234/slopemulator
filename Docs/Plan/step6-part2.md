@@ -45,3 +45,26 @@ Later (not carded): delete and restore on GameDaemon, full NP start sequence (`1
 | 2 | The job core stays as part 1b (link task, job task on a copy). A slow job is an `async fn` on the copy. | Rule O1 holds. A per-job state machine type gives no client-visible gain. |
 | 3 | The gamed link stays our own protocol (`packet::gamed_link::Message`). New messages are added at both ends. | Tier 2 in `scale-rules.md` §1. |
 | 4 | Original bugs are fixed and marked "bug, not ported" in the spec (example: `20-handlers.md` §4.1, rename Fail command). | `scale-rules.md` §1. |
+
+## 4. Target 381 and the last slices (2026-11-12)
+
+The target changed from LobbyDaemon 307 to 381 (`BnS_2020/LobbyDaemon` = build 381.775). The user decided the source rule:
+
+| What | Source |
+| --- | --- |
+| Logic: jobs, checks, order of steps, database calls, timers | 2019 + PDB (specs `13` to `21`) |
+| Packets: command ids, formats, field order and sizes, reply codes | 381 |
+| 381 logic that differs from 2019 and the client can see it | 381 wins |
+
+| Slice | Model | Work | Deps |
+| --- | --- | --- | --- |
+| `ld381-1` | Opus (IDA) | 381 tables and formats, logic changes against 2019 + PDB → `24-compare-381.md`, `command-tables-381.json`, `fn-map-381.json`; writes `ld381-1-rust` | — |
+| `ld381-1-rust` | Sonnet | Apply the 381 changes | `ld381-1` |
+| `ld381-2` | Opus (no IDA) | Coverage audit → `25-rust-coverage.md`; writes `ld381-r1` to `ld381-r5` | `ld381-1-rust` |
+| `ld381-r1` | Sonnet | gamed link: world entry, leave, logout notify, kick (work of the blocked `lp2-4-rust`) | `ld381-2` |
+| `ld381-r2` | Sonnet | Account inventory link and its jobs | `ld381-r1` |
+| `ld381-r3` | Sonnet | Manage port, InfoGate, timers | `ld381-r2` |
+| `ld381-r4` | Sonnet | NP requests and notifies, charge, goods, grade | `ld381-r3` |
+| `ld381-r5` | Sonnet | Database: live SQL, error maps, time conversion, last wrappers | `ld381-r4` |
+
+All Rust slices follow `Docs/Architecture/scale-rules.md` and the decisions in §3. After `ld381-r5`: end-to-end test with the 381 client (operator).

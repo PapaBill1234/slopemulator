@@ -110,6 +110,14 @@ pub struct Settings {
     /// Account inventory is always off (no account-inventory link): commands 82 to 100
     /// always fail with code 7.
     pub grade: bool,
+    /// Wall clock for the deletion countdown. Tests set a fixed clock.
+    pub clock: fn() -> std::time::SystemTime,
+    /// Period of the deletion scheduler (`character-deletion-scheduler-period`).
+    /// ❓ The original default is not verified. Local value 60 s.
+    pub deletion_scheduler_period: Duration,
+    /// Rows of one scheduler tick (`character-deletion-scheduler-concurrent-processing-count`).
+    /// ❓ The original default is not verified. Local value 16.
+    pub deletion_scheduler_batch: u32,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -126,6 +134,9 @@ impl Default for Settings {
             worlds: Vec::new(),
             charge: false,
             grade: false,
+            clock: std::time::SystemTime::now,
+            deletion_scheduler_period: Duration::from_secs(60),
+            deletion_scheduler_batch: 16,
         }
     }
 }
@@ -139,8 +150,6 @@ pub struct Jobs<S, N> {
     next_key: Arc<AtomicU64>,
     capacity: Arc<tokio::sync::Semaphore>,
     owners: Arc<std::sync::Mutex<HashMap<u64, LinkId>>>,
-    character_states: HashMap<u64, crate::character::InternalState>,
-    deletion_deadlines: HashMap<u64, Instant>,
     /// Last-logout writes that wait for [`Jobs::flush`] or [`Jobs::take_logouts`].
     logouts: Vec<(crate::store::AccountId, i32)>,
 }
@@ -171,11 +180,6 @@ impl<S: Store, N: Np + Clone> Jobs<S, N> {
     /// The caller must not change the session of `key` before the merge.
     pub fn checkout(&self, link: LinkId, key: u64) -> Self {
         let session = self.sessions.get(&key).cloned();
-        let pcids = || {
-            session
-                .iter()
-                .flat_map(|s| s.characters.iter().map(|c| c.pcid))
-        };
         Self {
             store: self.store.clone(),
             np: self.np.clone(),
@@ -185,25 +189,12 @@ impl<S: Store, N: Np + Clone> Jobs<S, N> {
             next_key: self.next_key.clone(),
             capacity: self.capacity.clone(),
             owners: self.owners.clone(),
-            character_states: pcids()
-                .filter_map(|id| Some((id, *self.character_states.get(&id)?)))
-                .collect(),
-            deletion_deadlines: pcids()
-                .filter_map(|id| Some((id, *self.deletion_deadlines.get(&id)?)))
-                .collect(),
             sessions: session.map(|s| (key, s)).into_iter().collect(),
             logouts: Vec::new(),
         }
     }
     /// Take back the result of a job that ran on [`Jobs::checkout`].
     pub fn merge(&mut self, key: u64, mut job: Self) {
-        if let Some(old) = self.sessions.get(&key) {
-            for character in &old.characters {
-                self.deletion_deadlines.remove(&character.pcid);
-            }
-        }
-        self.deletion_deadlines.extend(job.deletion_deadlines);
-        self.character_states.extend(job.character_states);
         self.logouts.append(&mut job.logouts);
         match job.sessions.remove(&key) {
             Some(session) => self.sessions.insert(key, session),
@@ -219,6 +210,8 @@ impl<S: Store, N: Np> Jobs<S, N> {
             || settings.world_token_lifetime.is_some_and(|v| v.is_zero())
             || settings.lobby_token_lifetime.is_some_and(|v| v.is_zero())
             || settings.init_timeout.is_some_and(|v| v.is_zero())
+            || settings.deletion_scheduler_period.is_zero()
+            || settings.deletion_scheduler_batch == 0
             || settings.max_sessions == 0
             || settings.max_links == 0
             || settings
@@ -238,8 +231,6 @@ impl<S: Store, N: Np> Jobs<S, N> {
             sessions: HashMap::new(),
             next_key: Arc::new(AtomicU64::new(1)),
             owners: Arc::default(),
-            character_states: HashMap::new(),
-            deletion_deadlines: HashMap::new(),
             logouts: Vec::new(),
         })
     }

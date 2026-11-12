@@ -1,0 +1,29 @@
+service	database	proc	call site
+IpCheckSrv	MasterDb	ListNetAddressStatuses	0x1400C75C0; 0x1400C7790
+IpCheckSrv	MasterDb	GetNetAddressRequestLimit	0x1400C8090; 0x1400CB240
+IpCheckSrv	MasterDb	AddNetAddress	0x1400C7070
+IpCheckSrv	MasterDb	DeleteNetAddress	0x1400C7070
+IpCheckSrv	MasterDb	AddNetAddressRequestLimit	0x1400C7070
+IpCheckSrv	MasterDb	ChangeNetAddressRequestLimit	0x1400C7070
+IpCheckSrv	MasterDb	DeleteNetAddressRequestLimit	0x1400C7070
+IpCheckSrv	MasterDb	ListNetAddresses	0x1400CA730
+IpCheckSrv	MasterDb	PageNetAddresses	0x1400CAD90
+IpCheckSrv	MasterDb	ListNetAddressRequestLimits	0x1400CA430
+IpCheckSrv	MasterDb	PageNetAddressRequestLimits	0x1400CAA50
+ExAuthSrv	AssociationAcctDb	ListExGameAccountsByUserId	0x1400CBEFA (0x1400CBCC0); 0x1400CD2B7 (0x1400CD0C0); 0x1400D0797 (0x1400D0680); 0x1400D4AD3 (0x1400D4A00); 0x1400D26DD (0x1400D2360)
+ExAuthSrv	AssociationAcctDb	ExAcctGetExAcctByUserId	0x1400CCFE1 (0x1400CCE60); 0x1400D1094 (0x1400D0E40)
+ExAuthSrv	AssociationAcctDb	ExAcctGetExAcctByUserIdAndAuthProviderCode	0x1400CCF8D (0x1400CCE60)
+ExAuthSrv	AssociationAcctDb	ExAcctGetExAcctsByExAcctNameAndAuthProviderCode	0x1400CD55A (0x1400CD380)
+ExAuthSrv	AssociationAcctDb	ExAcctGetExAcctsByExAcctName	0x1400CD776 (0x1400CD380)
+ExAuthSrv	AssociationAcctDb	GetLastLinkedIdByExGameAccountKey	0x1400CCC17 (0x1400CC780)
+ExAuthSrv	AssociationAcctDb	ExAcctDeleteExAcct	0x1400CC194 (0x1400CC120)
+ExAuthSrv	AssociationAcctDb	DeleteLinkGameAccounts	0x1400CC06E (0x1400CC000)
+ExAuthSrv	AssociationAcctDb	ExAcctListExAcctChanges	0x1400CDD36 (0x1400CDC50)
+ExAuthSrv	AssociationAcctDb	GetExternalTokenData	0x1400D27D6 (0x1400D2360)
+ExAuthSrv	AssociationAcctDb	ExAcctAssociate	wrapper 0x1400C8350 (slot +0x108); called 0x1400C6C9D (0x1400C6BC0)
+ExAuthSrv	AssociationAcctDb	ExAcctAssociateApp	wrapper 0x1400C8180 (slot +0x110); called 0x1400C71E6 (0x1400C70E0); 0x1400D015F (0x1400D0030); 0x1400D11C2 (0x1400D0E40)
+ExAuthSrv	AssociationAcctDb	ExAcctDissociate	wrapper 0x1400C8BA0 (slot +0x118); called 0x1400CAC60, 0x1400CACDB (0x1400CABD0)
+ExAuthSrv	AssociationAcctDb	ExAcctDissociateApp	wrapper 0x1400C8AF0 (slot +0x120); called 0x1400C6F75 (0x1400C6E40); 0x1400CFE26 (0x1400CFC40)
+ExAuthSrv	AssociationAcctDb	ExAcctUpdateExAcct	wrapper 0x1400C94F0 (slot +0x128); called 0x1400D11E7 (0x1400D0E40)
+ExAuthSrv	AssociationAcctDb	ExAcctUpdateExAcctByUserId	wrapper 0x1400C9430 (slot +0x130); called 0x1400C966A (0x1400C95C0)
+ExAuthSrv	AssociationAcctDb	LinkExGameAccount	wrapper 0x1400C9010 (slot +0x138); called 0x1400C7020 (0x1400C6E40); 0x1400C738F (0x1400C7240); 0x1400C7578 (0x1400C7450); 0x1400C7BF6 (0x1400C7760); 0x1400D2940 (0x1400D2360); 0x1400D493F (0x1400D4880)

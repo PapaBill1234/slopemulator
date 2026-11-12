@@ -373,6 +373,25 @@ These are design requirements, not recovered target behavior.
 ❓ A target-compatible pending-entry cancellation rule still needs proof.
 The checked playing-session logout path is not that proof.
 
+### Rust Hello identity checks (2026-11-12)
+
+The Rust LobbyDaemon (`LobbyDaemon/src/gamed_link.rs`, `LinkPeer`) does these checks.
+Before this change, Hello accepted every world from every peer.
+
+| Check | Rust result | Original |
+| --- | --- | --- |
+| World, cluster and peer address match one `LinkPeer` | Else HelloFail 1, then close | ✅ identity check `0x140086D50 -> 0x14003F920`; ❓ reason value |
+| The world has no channel | Else HelloFail 12, then close | ✅ registration failure 12; duplicate closes the channel |
+| One Hello for each connection | A second Hello closes the channel | Rust safety rule |
+| ServiceOpenNotify 4 one time, same cluster | Else close the channel | ✅ duplicate live closes, `0x1400877B0` |
+| CreateCharacter reply 21 or 22 | Only the channel of the target world can complete it | Rust safety rule |
+| Hello internal port | Not checked | ✅ checked in the original; ❓ the port has no configured internal port |
+
+`lobbyd` makes one `LinkPeer` for each `--world`, with the address `127.0.0.1`.
+The link listens on loopback only.
+A process on the same host can still dial the link. The link has no secret.
+❓ A cluster network needs a peer address for each world.
+
 ## G4 — First real link checklist
 
 This is a Rust implementation checklist. No network test ran.

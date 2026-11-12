@@ -59,6 +59,29 @@ pub enum InternalState {
     Deleted,
 }
 impl InternalState {
+    /// The `CharacterState` column of LobbyDB: 1 creating, 2 normal, 3 deleting,
+    /// 4 waiting, 5 restoring, 6 deleted (`11-character-select.md` §15).
+    pub fn from_db(code: u8) -> Option<Self> {
+        Some(match code {
+            1 => Self::Creating,
+            2 => Self::Normal,
+            3 => Self::Deleting,
+            4 => Self::Waiting,
+            5 => Self::Restoring,
+            6 => Self::Deleted,
+            _ => return None,
+        })
+    }
+    pub fn db(self) -> u8 {
+        match self {
+            Self::Creating => 1,
+            Self::Normal => 2,
+            Self::Deleting => 3,
+            Self::Waiting => 4,
+            Self::Restoring => 5,
+            Self::Deleted => 6,
+        }
+    }
     pub fn wire(self) -> i8 {
         match self {
             Self::Normal => 1,

@@ -27,23 +27,30 @@ impl<S: Store, N: Np> Jobs<S, N> {
         s.state = State::InitialName;
         Ok(())
     }
+    /// The remaining seconds of each deletion wait, from the stored wall-clock time.
     pub(super) fn refresh_deletion_counts(&mut self, key: u64) {
-        if let Some(s) = self.sessions.get_mut(&key) {
-            for c in &mut s.characters {
-                if let Some(deadline) = self.deletion_deadlines.get(&c.pcid) {
-                    c.last_play_end = deadline
-                        .saturating_duration_since(Instant::now())
-                        .as_secs()
-                        .min(i32::MAX as u64) as u32;
-                }
+        let Some(s) = self.sessions.get_mut(&key) else {
+            return;
+        };
+        if !s.characters.iter().any(|c| c.state == CState::Waiting) {
+            return;
+        }
+        let now = (self.settings.clock)();
+        for c in &mut s.characters {
+            if let (CState::Waiting, Some(time)) = (c.state, c.deletion_time) {
+                c.last_play_end = time
+                    .duration_since(now)
+                    .map_or(0, |left| left.as_secs().min(i32::MAX as u64) as u32);
             }
         }
     }
     fn set_character_state(&mut self, key: u64, pcid: u64, state: CState) {
-        self.character_states.insert(pcid, state);
         if let Some(s) = self.sessions.get_mut(&key) {
             if let Some(c) = s.characters.iter_mut().find(|c| c.pcid == pcid) {
-                c.state = state.wire();
+                c.state = state;
+                if state != CState::Waiting {
+                    c.deletion_time = None;
+                }
             }
         }
     }
@@ -79,7 +86,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
             return Ok(vec![]);
         }
         let current = s.characters.iter().find(|c| c.slot == slot).cloned();
-        let state = current.as_ref().map_or(0, |c| c.state);
+        let state = current.as_ref().map_or(0, |c| c.state.wire());
         let failure = |reason| -> io::Result<Vec<Vec<u8>>> {
             Ok(vec![reply(fail, key, slot, state, reason)?])
         };
@@ -145,12 +152,11 @@ impl<S: Store, N: Np> Jobs<S, N> {
                     world: *world,
                     name: name.clone(),
                     showcase: vec![],
-                    deletion_time: 0,
-                    state: 0,
+                    deletion_time: None,
+                    state: CState::Creating,
                     jumping_state: 0,
                     last_play_end: 0,
                 });
-            self.character_states.insert(pcid, CState::Creating);
             let result = tokio::time::timeout(
                 self.settings.world_timeout,
                 self.gamed
@@ -205,7 +211,9 @@ impl<S: Store, N: Np> Jobs<S, N> {
         if !policy.worlds.contains(&c.world) {
             return failure(2);
         }
-        let internal = self.character_states.get(&c.pcid).copied();
+        // The lifecycle comes from the character list of the store. The store procedures
+        // check it again, so a change through another link or the scheduler is refused there.
+        let internal = Some(c.state);
         if cmd == DeleteCharacterReq {
             if internal != Some(CState::Normal)
                 || self.store.try_character_deletion(c.pcid).await.is_err()
@@ -233,7 +241,8 @@ impl<S: Store, N: Np> Jobs<S, N> {
                             .iter()
                             .find(|r| r.pcid == c.pcid)
                             .unwrap()
-                            .state,
+                            .state
+                            .wire(),
                         2,
                     )?]);
                 }
@@ -261,8 +270,17 @@ impl<S: Store, N: Np> Jobs<S, N> {
                     .characters
                     .retain(|r| r.pcid != c.pcid);
             } else {
-                self.deletion_deadlines
-                    .insert(c.pcid, Instant::now() + Duration::from_secs(seconds.into()));
+                // The store keeps the same time (`usp_FinishCharacterDeletion`). The countdown
+                // of this reply is exactly `seconds`, so the cache starts from the local clock.
+                let time = (self.settings.clock)() + Duration::from_secs(seconds.into());
+                if let Some(r) = self
+                    .sessions
+                    .get_mut(&key)
+                    .and_then(|s| s.characters.iter_mut().find(|r| r.pcid == c.pcid))
+                {
+                    r.deletion_time = Some(time);
+                    r.last_play_end = seconds;
+                }
             }
             return Ok(vec![wire::packet(
                 "hqoQi",
@@ -277,16 +295,13 @@ impl<S: Store, N: Np> Jobs<S, N> {
         }
         if cmd == CancelWaitCharacterDeletionReq {
             if internal != Some(CState::Waiting)
-                || self
-                    .deletion_deadlines
-                    .get(&c.pcid)
-                    .is_none_or(|d| *d <= Instant::now())
+                || c.deletion_time
+                    .is_none_or(|time| time <= (self.settings.clock)())
                 || self.store.try_character_restoration(c.pcid).await.is_err()
             {
                 return failure(2);
             }
             self.set_character_state(key, c.pcid, CState::Restoring);
-            self.deletion_deadlines.remove(&c.pcid);
             self.sessions
                 .get_mut(&key)
                 .unwrap()

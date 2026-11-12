@@ -1,0 +1,13 @@
+service	command	id	handler	request	reply	errors	note
+RoleSrv	Role/(unknown)	0	0x1400C66B0 default	-	-	51/2/130 ErrNotImplemented	default case of CRoleConn::OnRequest
+RoleSrv	Role/AddNetAddressRoles	1	0x1400C46E0	AppGroupId, RoleId, FirstNetAddress, LastNetAddress	DB reply body (txn 1)	10/2/248 invalid parameter; 10/2/260 invalid parameter (address type mismatch)	proc AddNetAddressRoles; Last+1 (quirk_role_last_plus_one)
+RoleSrv	Role/AddUserRole	2	0x1400C4B00	AppGroupId, UserId, RoleId	DB reply body (txn 1 after txn 4)	10/2/180 invalid appgroupid or userid; 10/2/538 missing data; 3734/2/542; 3734/2/545	AppAuth/GetGroupInfo first, AppGroupType must be 5
+RoleSrv	Role/CreateRole	3	0x1400C4C60	RoleId, RoleName, RoleType	DB reply body (txn 1)	10/2/136 missing roleId or roleName	proc CreateRole
+RoleSrv	Role/DeleteRole	4	0x1400C4DF0	RoleId	DB reply body (txn 1)	10/2/152 missing roleId	proc DeleteRole
+RoleSrv	Role/DeleteUser	5	0x1400C4F40	UserId	DB reply body (txn 1)	10/2/366 userid	proc RemoveUserRolesByUserId
+RoleSrv	Role/Inquiry	6	0x1400C50C0	AppId, UserId, ClientNetAddress	Roles array of RoleId (txn 3)	10/2/349 app; 10/2/350 userid; 10/2/352 netaddress; 2/562 missing row	AppAuth/ListAppGroups(AppId, 5), then proc GetLoginRoles
+RoleSrv	Role/ListNetAddressRoles	7	0x1400C52F0	AppId or AppGroupId, ClientNetAddress	Roles array of RoleId (txn 3)	10/2/311 missing app; 10/2/314 missing netaddress	AppGroupId 0: ListAppGroups first
+RoleSrv	Role/ListUserRoles	8	0x1400C5780	AppId or AppGroupId, UserId	Roles array of RoleId (txn 3)	10/2/211 (text ❓)	AppGroupId 0: ListAppGroups first
+RoleSrv	Role/ListRoles	9	0x1400C5640	RoleType (0 = all)	Roles array of Role {RoleId, RoleName, RoleType, Registered} (txn 2)	-	proc ListRoles
+RoleSrv	Role/RemoveNetAddressRoles	10	0x1400C59D0	AppGroupId, RoleId, FirstNetAddress, LastNetAddress	DB reply body (txn 1)	10/2/281 missing; 10/2/293 type mismatch	proc RemoveNetAddressRoles; Last+1
+RoleSrv	Role/RemoveUserRole	11	0x1400C5DF0	UserId, AppGroupId, RoleId	DB reply body (txn 1 ❓)	none	quirk_role_remove_no_check

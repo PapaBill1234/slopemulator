@@ -4,10 +4,11 @@
 //! peer of both links.
 use bloodlib::packet::Value;
 use lobbydaemon::{
+    character::InternalState,
     gamed::{
         Admission, ChargeMode, Eligibility, GameDaemon, GameFuture, StubGameDaemon, WorldFixture,
     },
-    gamed_link::LinkGameDaemon,
+    gamed_link::{LinkGameDaemon, LinkPeer},
     jobs::Settings,
     np::{Identity, Np, NpFuture, StubNp},
     protocol as w,
@@ -126,8 +127,8 @@ fn character(index: u64) -> Character {
         world: 1,
         name: vec![65],
         showcase: vec![],
-        deletion_time: 0,
-        state: 0,
+        deletion_time: None,
+        state: InternalState::Normal,
         jumping_state: 0,
         last_play_end: 0,
     }
@@ -201,7 +202,11 @@ impl Rig {
             logouts: AtomicUsize::new(0),
         });
         let store = Shared::new(store);
-        let gamed = Arc::new(LinkGameDaemon::default());
+        let gamed = Arc::new(LinkGameDaemon::new(vec![LinkPeer {
+            world: 1,
+            cluster: 1,
+            address: Ipv4Addr::LOCALHOST.into(),
+        }]));
         let server = Arc::new(
             Server::new(
                 store.clone(),

@@ -11,8 +11,8 @@ fn character(size: usize) -> Character {
         world: 1,
         name: vec![65],
         showcase: vec![0x5a; size],
-        deletion_time: 0,
-        state: 5,
+        deletion_time: None,
+        state: lobbydaemon::character::InternalState::Restoring,
         jumping_state: 0,
         last_play_end: 0,
     }
@@ -149,7 +149,10 @@ fn restoration_commits_cached_fixture_state_once() {
     assert!(store.finish_character_restoration(700).is_err());
     store.restoration_allowed.insert(700);
     store.finish_character_restoration(700).unwrap();
-    assert_eq!(store.load_character_list([84; 16]).unwrap()[0].state, 2);
+    assert_eq!(
+        store.load_character_list([84; 16]).unwrap()[0].state,
+        lobbydaemon::character::InternalState::Normal
+    );
     assert!(store.finish_character_restoration(700).is_err());
     assert_eq!(store.restored, vec![700]);
 }

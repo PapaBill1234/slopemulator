@@ -18,6 +18,11 @@ impl MemoryStore {
             .find(|c| c.pcid == pcid)
             .ok_or_else(absent)
     }
+    pub(super) fn now(&self) -> SystemTime {
+        self.clock.map_or_else(SystemTime::now, |clock| clock())
+    }
+    /// The state of the row is the truth, as in LobbyDB. `character_states` mirrors it
+    /// for tests and keeps a tombstone for a PCID that left the list.
     pub(super) fn transition(
         &mut self,
         op: &'static str,
@@ -26,11 +31,55 @@ impl MemoryStore {
         to: State,
     ) -> io::Result<()> {
         self.character_failure(op)?;
-        if self.character_states.get(&pcid) != Some(&from) {
+        let row = self.character_mut(pcid).map_err(|_| procedure_error(1))?;
+        if row.state != from {
             return Err(procedure_error(1));
         }
-        self.character_mut(pcid)?.state = to.wire();
+        row.state = to;
+        if to != State::Waiting {
+            row.deletion_time = None;
+        }
         self.character_states.insert(pcid, to);
+        Ok(())
+    }
+    pub(super) fn expired_waiting(&mut self, max: u32) -> io::Result<Vec<ExpiredDeletion>> {
+        self.character_failure("retrieve_expired")?;
+        if max == 0 {
+            return Err(procedure_error(1));
+        }
+        let now = self.now();
+        let mut rows: Vec<_> = self
+            .characters
+            .iter()
+            .flat_map(|(account, rows)| rows.iter().map(move |c| (*account, c)))
+            .filter(|(_, c)| {
+                c.state == State::Waiting && c.deletion_time.is_some_and(|time| time < now)
+            })
+            .map(|(account, c)| ExpiredDeletion {
+                account,
+                world: c.world,
+                pcid: c.pcid,
+            })
+            .collect();
+        rows.sort_by_key(|row| row.pcid);
+        rows.truncate(max as usize);
+        Ok(rows)
+    }
+    /// State 4 to 6 when the time has passed (`usp_ExpireCharacterDeletionWaiting`).
+    /// The row leaves the list. The tombstone keeps the PCID out of the local ID source.
+    pub(super) fn expire_waiting(&mut self, pcid: u64) -> io::Result<()> {
+        self.character_failure("expire_delete")?;
+        let now = self.now();
+        let row = self.character_mut(pcid).map_err(|_| procedure_error(1))?;
+        if row.state != State::Waiting || !row.deletion_time.is_some_and(|time| time < now) {
+            return Err(procedure_error(1));
+        }
+        row.state = State::Deleted;
+        row.deletion_time = None;
+        self.character_states.insert(pcid, State::Deleted);
+        for rows in self.characters.values_mut() {
+            rows.retain(|c| c.pcid != pcid);
+        }
         Ok(())
     }
     pub(super) fn check_name(&mut self, name: &[u16]) -> io::Result<()> {
@@ -95,8 +144,8 @@ impl MemoryStore {
                 world: request.world,
                 name: request.name,
                 showcase: vec![],
-                deletion_time: 0,
-                state: 0,
+                deletion_time: None,
+                state: State::Creating,
                 jumping_state: 0,
                 last_play_end: 0,
             });
@@ -130,7 +179,10 @@ impl MemoryStore {
             State::Waiting
         };
         self.transition("finish_delete", pcid, State::Deleting, state)?;
-        self.character_mut(pcid)?.last_play_end = seconds;
+        let time = self.now() + Duration::from_secs(seconds.into());
+        let row = self.character_mut(pcid)?;
+        row.last_play_end = seconds;
+        row.deletion_time = (seconds > 0).then_some(time);
         if seconds == 0 {
             for rows in self.characters.values_mut() {
                 rows.retain(|c| c.pcid != pcid);

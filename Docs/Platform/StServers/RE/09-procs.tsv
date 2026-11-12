@@ -1,0 +1,58 @@
+service	database	proc	call_site	function	params	callers
+GradeSrv	GradeDb.<code>	AddUserGrade	0x1400eaa5c	0x1400ea990	A20:a1 + 8 A40:a4 + 72 A70:int *(a4 + 96 A40:v19 A40:v18 A70:int *(a4 + 108 A70:int *(56LL * v13 + v15 A40:v19 A40:v18 A40:v20 A70:_QWORD *(a4 + 440 A70:2	CreateSubscription
+GradeSrv	GradeDb.<code>	AddUserGradeScoreChangeCore	0x1400ea779	0x1400ea700	A20:a1 + 8 A40:a4 + 72 A70:int *(a4 + 108 A70:unsigned __int16 *(a4  A70:int *(a4 + 100 A70:unsigned __int16 *(a4  A40:a4 + 114 A70:int *(a4 + 252 A70:int *(a4 + 256	AddGradeScore,CancelGradeScore,DeleteSubscription
+GradeSrv	GradeDb.<code>	AddUserGradeScoreChangeCore	0x1400ea8b9	0x1400ea840	A20:a1 + 8 A40:a4 + 72 A70:int *(a4 + 108 A70:1 A70:int *(a4 + 100 A70:3 A40:v11 A70:0 A70:0	CreateSubscription
+GradeSrv	GradeDb.<code>	AddUserLevelCore	0x1400eac89	0x1400eac10	A20:a1 + 8 A40:a4 + 72 A70:a5 A70:int *(a4 + 520 A70:a6 A40:v13	ActivateGrade,AddGradeScore,CancelGradeScore,ChangeGradeScore,CreateSubscription,DeleteSubscription,GetCurrentGrade,GetLevel,ListGrades,PageValidUserGrades,PauseUserGrades,ResumeUserGrades
+GradeSrv	GradeDb.<code>	AddUserSubscriptionCore	0x1400eadb9	0x1400ead40	A20:a1 + 8 A40:a4 + 72 A70:int *(a4 + 96 A70:a5 A70:unsigned __int16 *(a4  A40:a4 + 114 A70:unsigned __int16 *(a4  A70:int *(a4 + 88 A70:int *(a4 + 252 A70:int *(a4 + 256	CreateSubscription
+GradeSrv	GradeDb.<code>	GetLastBatchJobCompleted	0x14010078b	0x140100680	A70:1	ActivateGrade,AddGradeScore,CancelGradeScore,ChangeGradeScore,CreateSubscription,DeleteSubscription,GetCurrentGrade,GetLevel,ListGrades,PageValidUserGrades,PauseUserGrades,ResumeUserGrades
+GradeSrv	GradeDb.<code>	GetLastUserLevelByUserIdAppGroupCodeLevelGroupId	0x1400eaf09	0x1400eae90	A20:a1 + 8 A40:a4 + 72 A70:a5	ActivateGrade,AddGradeScore,CancelGradeScore,ChangeGradeScore,CreateSubscription,DeleteSubscription,GetCurrentGrade,GetLevel,ListGrades,PageValidUserGrades,PauseUserGrades,ResumeUserGrades
+GradeSrv	GradeDb.<code>	GetLastUserLevelByUserIdAppGroupCodeLevelGroupId	0x1400ec673	0x1400ebba0	A20:a1 + 8 A40:v56 + 72 A70:v58	ActivateGrade,AddGradeScore,CancelGradeScore,ChangeGradeScore,CreateSubscription,DeleteSubscription,GetCurrentGrade,GetLevel,ListGrades,PageValidUserGrades,PauseUserGrades,ResumeUserGrades
+GradeSrv	GradeDb.<code>	GetUserGradeScoreChangeByRequestKeyRequestFromCode	0x14010092d	0x140100800	A70:a4 A40:a5	AddGradeScore,CancelGradeScore,DeleteSubscription
+GradeSrv	GradeDb.<code>	GetUserGradeScoreChangeCore	0x140100ae3	0x1401009c0	A70:_QWORD *(v5 + 240	CancelGradeScore
+GradeSrv	GradeDb.<code>	GetUserGradeSubscription	0x1400fe1db	0x1400fe180	A70:_QWORD *(a1 + 128	jobs
+GradeSrv	GradeDb.<code>	GetUserGradeSubscription	0x140100c7b	0x140100b60	A70:a3	GetUserGrade
+GradeSrv	GradeDb.<code>	GetUserGradeSubscription	0x1400eafe8	0x1400eaf70	A70:_QWORD *(a4 + 168	DeleteSubscription
+GradeSrv	GradeDb.<code>	GetUserSubscriptionByRequestKeyRequestFromCode	0x140100e02	0x140100ce0	A70:unsigned __int16 *(v5  A40:v5 + 114	CreateSubscription
+GradeSrv	GradeDb.<code>	GetUserSubscriptionCore	0x140100fb3	0x140100e90	A70:a3	PageValidUserGrades
+GradeSrv	GradeDb.<code>	ListGrades	0x1400fb605	0x1400fafa0		jobs
+GradeSrv	GradeDb.<code>	ListGrades	0x14010113a	0x140101030		ActivateGrade,AddGradeScore,CancelGradeScore,ChangeGradeScore,CreateSubscription,DeleteSubscription,FlushUnmatched?,GetCurrentGrade,GetLevel,GetUserGrade,ListGrades,ListVirtualCurrencyJobs,PageValidUserGrades,PauseUserGrades,ResumeUserGrades,RetryVirtualCurrencyJob
+GradeSrv	GradeDb.<code>	ListLevels	0x1401012aa	0x1401011a0		ActivateGrade,AddGradeScore,CancelGradeScore,ChangeGradeScore,CreateSubscription,DeleteSubscription,FlushUnmatched?,GetCurrentGrade,GetLevel,GetUserGrade,ListGrades,ListVirtualCurrencyJobs,PageValidUserGrades,PauseUserGrades,ResumeUserGrades,RetryVirtualCurrencyJob
+GradeSrv	GradeDb.<code>	ListUserGradeScoreChangesByUserIdAppGroupCodeIsUserLevelApplied	0x140101438	0x140101310	A20:v5 + 8 A40:v5 + 72 A70:0	ActivateGrade,AddGradeScore,CancelGradeScore,ChangeGradeScore,CreateSubscription,DeleteSubscription,GetCurrentGrade,GetLevel,ListGrades,PageValidUserGrades,PauseUserGrades,ResumeUserGrades
+GradeSrv	GradeDb.<code>	ListUserGradeScoreChangesByUserIdAppGroupCodeRegisteredAdmin	0x1401015f5	0x1401014d0	A20:v5 + 8 A40:v5 + 72 A40:v19	ListGradeScoreChanges
+GradeSrv	GradeDb.<code>	ListUserGradesByAddingProvidingVirtualCurrencyJob	0x1400fe29c	0x1400fe220	A40:v14 A70:v5 A70:unsigned int *(v10 + 1	jobs
+GradeSrv	GradeDb.<code>	ListUserGradesByEffectiveToExpirationNotified	0x1400fe39b	0x1400fe340	A40:a3 A40:v11 A70:a5	jobs
+GradeSrv	GradeDb.<code>	ListUserGradesByUserIdAppGroupCodeEffectiveTo	0x1400eb0cf	0x1400eb030	A20:a1 + 8 A40:a4 + 72 A40:v12	ActivateGrade,AddGradeScore,CancelGradeScore,ChangeGradeScore,CreateSubscription,DeleteSubscription,GetCurrentGrade,GetLevel,ListGrades,PageValidUserGrades,PauseUserGrades,ResumeUserGrades
+GradeSrv	GradeDb.<code>	ListUserLevelsByUserIdAppGroupCodeLevelGroupIdRegisteredAdmin	0x1401017c5	0x1401016a0	A20:v5 + 8 A40:v5 + 72 A70:int *(v5 + 108 A40:v19	ListLevelChanges
+GradeSrv	GradeDb.<code>	SplitUserGrades	0x1401019ef	0x140101880	A70:a3[2] A40:v23 A40:v22 A40:v21	PauseUserGrades
+GradeSrv	GradeDb.<code>	UpdateProvidingVirtualCurrencyJobsCore	0x1400fe49c	0x1400fe420	A70:a3 A70:v4	jobs
+GradeSrv	GradeDb.<code>	UpdateUserGrade	0x1400eb244	0x1400eb140	A70:_QWORD *(a5 + 16 A70:v14 A40:v18 A40:v17 A40:v19 A40:v18 A40:v17 A70:_QWORD *(a5 + 64 A70:a6	ActivateGrade,DeleteSubscription,PauseUserGrades,ResumeUserGrades
+GradeSrv	GradeDb.<code>	UpdateUserGradeScoreChangeCore	0x140101bc4	0x140101aa0	A70:a3 A70:1	ActivateGrade,AddGradeScore,CancelGradeScore,ChangeGradeScore,CreateSubscription,DeleteSubscription,GetCurrentGrade,GetLevel,ListGrades,PageValidUserGrades,PauseUserGrades,ResumeUserGrades
+GradeSrv	GradeDb.<code>	UpdateUserGradesByCheckingExpirationNotified	0x1400eb3d8	0x1400eb360	A70:_QWORD *(a4 + 480 A40:v11	DeleteSubscription
+GradeSrv	GradeDb.<code>	UpdateUserGradesByCheckingExpirationNotified	0x1400fe54b	0x1400fe4f0	A70:a3 A40:v10	jobs
+GradeSrv	GradeDb.<code>	UpdateUserGradesByUserIdAppGroupCodeLevelGroupIdEffectiveTo	0x1400eb4c9	0x1400eb450	A20:a1 + 8 A40:a4 + 72 A70:a5 A40:v12 A70:int *(a4 + 520 A40:v12	ActivateGrade,AddGradeScore,CancelGradeScore,ChangeGradeScore,CreateSubscription,DeleteSubscription,GetCurrentGrade,GetLevel,ListGrades,PageValidUserGrades,PauseUserGrades,ResumeUserGrades
+GradeSrv	GradeDb.<code>	UpdateUserLevelCore	0x140101d75	0x140101c50	A70:a4 A70:a5	ActivateGrade,AddGradeScore,CancelGradeScore,ChangeGradeScore,CreateSubscription,DeleteSubscription,GetCurrentGrade,GetLevel,ListGrades,PageValidUserGrades,PauseUserGrades,ResumeUserGrades
+GradeSrv	GradeDb.<code>	UpdateUserSubscriptionsStatusCore	0x140101f24	0x140101e00	A70:_QWORD *(a3 + 64 A70:__int16 *(a3 + 72	PauseUserGrades
+GradeMembersSrv	GradeMembersDb	UpdateMembershipCore	0x1400c516d	0x1400c4b00	OpCode(Activate/Suspend/Resume/Abandon/Exhaust)	Alert,Activate,Abandon,Suspend,Resume
+GradeMembersSrv	GradeMembersDb	ListConsecutiveRewardsEffectiveDays	0x1400ce076	0x1400cdf20	AppGroupCode,MembershipKeyList,PurchaseOnly	Get,List,Reward
+GradeMembersSrv	GradeMembersDb	ListMemberDailyRewardsAvailableDays	0x1400ce771	0x1400ce240	StartFrom,EndTo	Get,List,Reward
+GradeMembersSrv	GradeMembersDb	ListAvailableMemberships	0x1400ce97c	0x1400ce920	UserId,AppGroupCode	grid load (ids 2,3,5-13,15,17)
+GradeMembersSrv	GradeMembersDb	ListMemberDailyRewardsAvailableDays	0x1400d27d9	0x1400d21e0	StartFrom,EndTo	grid load reply 0x1400d33e0
+GradeMembersSrv	GradeMembersDb	AddMembership	0x1400e51e7	0x1400e4fa0	MembershipItemId,MembershipStatus,LeftDurationSec,Registered	Register (txn 0x1400e6c00)
+GradeMembersSrv	GradeMembersDb	ListMembershipsByAppGroupCodeMembershipKey	0x1400e76ea	0x1400e7620	AppGroupCode,MembershipKey	Page
+GradeMembersSrv	GradeMembersDb	ListMembershipsByAppGroupCode	0x1400e772a	0x1400e7620	AppGroupCode	Page
+GradeMembersSrv	GradeMembersDb	GetMembershipByRequestKeyRequestFromCode	0x1400e78d0	0x1400e7870	RequestKey,RequestFromCode	Register
+GradeMembersSrv	GradeMembersDb	ListEstimatingUsersByEndFromTo	0x1400e7d4b	0x1400e7ce0	EnedFrom,EnedTo	loader timer 0x1400e8920
+GradeMembersSrv	GradeMembersDb	ListEstimatingUsersByEndTo	0x1400e7d82	0x1400e7ce0	EnedTo	loader timer 0x1400e8920
+GradeMembersSrv	GradeMembersDb	GetDbTime	0x1400e8bad	0x1400e8b60	-	DB time timer
+GradeMembersSrv	GradeMembersDb	GetMembershipByRequestKeyRequestFromCode	0x1400f2cce	0x1400f2c40	RequestKey,RequestFromCode	GetItem
+GradeMembersSrv	GradeMembersDb	GetMembershipByMembershipItemId	0x1400f2d27	0x1400f2c40	MembershipItemId	GetItem
+GradeMembersSrv	GradeMembersDb	UpdateMemberRewardRequestsCore	0x1400f5472	0x1400f48e0	ScoreChangeId	Reward (Level.AddScore result)
+GradeMembersSrv	GradeMembersDb	UpdateMemberRewardRequestsCore	0x1400f61f7	0x1400f5660	DepositId	Reward (VC.Deposit result)
+GradeMembersSrv	GradeMembersDb	UpdateMemberRewardRequestsCore	0x1400f7023	0x1400f6470	ScoreChangeId,Retrieved	RetrieveReward
+GradeMembersSrv	GradeMembersDb	UpdateMemberRewardRequestsCore	0x1400fabda	0x1400faad0	ScoreChangeId	Reward (reply 0x1400fc2b0)
+GradeMembersSrv	GradeMembersDb	UpdateMemberRewardRequestsCore	0x1400fb3aa	0x1400fb280	ScoreChangeId,Retrieved	RetrieveReward (reply 0x1400fd6f0)
+GradeMembersSrv	GradeMembersDb	UpdateMemberRewardRequestsCore	0x1400fbb51	0x1400fba60	DepositId	Reward (reply 0x1400fccd0)
+GradeMembersSrv	GradeMembersDb	AddAndGetMemberRewardRequestsByRewardTypeMemberId	0x1400fede7	0x1400fe110	RewardType,TargetType,TargetKey,Rewards,RewardDescription,Registered	Reward
+GradeMembersSrv	GradeMembersDb	AddAndGetMemberRewardRequestsByRewardTypeLastRewarded	0x140100158	0x1400ff4d0	RewardType	Reward
+GradeMembersSrv	GradeMembersDb	UpdateMemberRewardRequestsCore ❓	0x1401009a2	0x1401008f0	Retrieved	RetrieveReward
+GradeMembersSrv	GradeMembersDb	GetMemberRewardRequestsByUserIdAppGroupCodeGameGradeKeyRewardTypeMemberId	0x1401009f8	0x1401008f0	UserId,AppGroupCode,GameGradeKey,RewardType,MemberId	RetrieveReward

@@ -9,6 +9,7 @@ pub mod jobs;
 pub mod mssql;
 pub mod np;
 pub mod protocol;
+pub mod scheduler;
 pub mod store;
 
 use jobs::{Jobs, LinkId, Output, Settings, State};
@@ -131,6 +132,19 @@ impl<S: Store, N: Np> Server<S, N> {
     pub fn with_game_daemon(mut self, gamed: Arc<dyn gamed::GameDaemon>) -> Self {
         self.gamed = gamed;
         self
+    }
+    /// Start the deletion scheduler: one `Interval` task for the whole daemon. It uses the
+    /// period and the row count of the settings and stops with `shutdown`.
+    pub fn spawn_deletion_scheduler(
+        &self,
+        shutdown: watch::Receiver<bool>,
+    ) -> tokio::task::JoinHandle<()> {
+        tokio::spawn(scheduler::run(
+            self.store.clone(),
+            self.settings.deletion_scheduler_period,
+            self.settings.deletion_scheduler_batch,
+            shutdown,
+        ))
     }
     /// Send a control message to the link task that owns `key`. `None`: no session.
     async fn control<T>(

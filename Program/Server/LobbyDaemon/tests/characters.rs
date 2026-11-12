@@ -10,7 +10,10 @@ use lobbydaemon::{
     store::{Account, MemoryStore, Shared, SyncStore},
 };
 use packet::fragments::FragmentReader;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{Arc, OnceLock},
+    time::{Duration, SystemTime},
+};
 type Rig = Jobs<Shared<MemoryStore>, StubNp>;
 const SLOT: [u8; 16] = [91; 16];
 fn game(
@@ -63,17 +66,38 @@ async fn send(j: &mut Rig, p: Vec<u8>) -> Vec<Vec<u8>> {
         .flat_map(|o| o.packets)
         .collect()
 }
+/// Wall clock that follows the paused tokio time. The anchor is shared by all tests.
+fn clock() -> SystemTime {
+    static ANCHOR: OnceLock<(tokio::time::Instant, SystemTime)> = OnceLock::new();
+    let (start, wall) = ANCHOR.get_or_init(|| (tokio::time::Instant::now(), SystemTime::now()));
+    // Another test can have started its runtime before the anchor. Go back in that case.
+    let now = tokio::time::Instant::now();
+    match now.checked_duration_since(*start) {
+        Some(ahead) => *wall + ahead,
+        None => *wall - start.duration_since(now),
+    }
+}
+fn settings() -> Settings {
+    Settings {
+        character_policy: Some(policy()),
+        clock,
+        ..Default::default()
+    }
+}
+fn memory() -> MemoryStore {
+    MemoryStore {
+        clock: Some(clock),
+        ..Default::default()
+    }
+}
 async fn rig() -> (Rig, u64) {
-    let (np, t, p, _) = StubNp::fixture(85);
-    let mut j = Jobs::new(
-        Shared::new(MemoryStore::default()),
-        np,
-        Settings {
-            character_policy: Some(policy()),
-            ..Default::default()
-        },
-    )
-    .unwrap();
+    let (j, key, _) = link(Shared::new(memory())).await;
+    (j, key)
+}
+/// One LobbyGate link on a given store. Every call logs in the same generated account.
+async fn link(store: Shared<MemoryStore>) -> (Rig, u64, [u8; 16]) {
+    let (np, t, p, identity) = StubNp::fixture(85);
+    let mut j = Jobs::new(store, np, settings()).unwrap();
     send(
         &mut j,
         packet(
@@ -107,7 +131,7 @@ async fn rig() -> (Rig, u64) {
         ),
     )
     .await;
-    (j, key)
+    (j, key, identity.account)
 }
 fn assert_failure(out: &[Vec<u8>], cmd: i16, reason: i16) {
     assert_eq!(out.len(), 1);
@@ -315,6 +339,170 @@ async fn restoration_failures_leave_recoverable_state_five() {
         55
     );
     assert_failure(&send(&mut j, request(54, key)).await, 56, 2);
+}
+const PCID: u64 = 500;
+fn account() -> [u8; 16] {
+    StubNp::fixture(85).3.account
+}
+/// A row as LobbyDB returns it from the list procedure, not created through a link.
+fn stored(
+    pcid: u64,
+    slot: [u8; 16],
+    state: InternalState,
+    time: Option<SystemTime>,
+) -> lobbydaemon::store::Character {
+    lobbydaemon::store::Character {
+        pcid,
+        slot,
+        world: 1,
+        name: format!("Stored{pcid}").encode_utf16().collect(),
+        showcase: vec![3; 512],
+        deletion_time: time,
+        state,
+        jumping_state: 0,
+        last_play_end: 0,
+    }
+}
+fn seeded(rows: Vec<lobbydaemon::store::Character>) -> Shared<MemoryStore> {
+    let store = Shared::new(memory());
+    store.lock().characters.insert(account(), rows);
+    store
+}
+#[tokio::test(start_paused = true)]
+async fn loaded_character_can_be_deleted() {
+    let store = seeded(vec![stored(PCID, SLOT, InternalState::Normal, None)]);
+    let (mut j, key, _) = link(store.clone()).await;
+    assert_eq!(list(&mut j, key).await[0][6], Value::I8(1));
+    let out = send(&mut j, request(47, key)).await;
+    assert_eq!(w::command(&out[0]).unwrap(), 48);
+    assert_eq!(
+        w::fields("hqoQi", &out[0]).unwrap()[3..],
+        [Value::I8(2), Value::U32(60)]
+    );
+    let row = store.lock().characters[&account()][0].clone();
+    assert_eq!(row.state, InternalState::Waiting);
+    assert!(row.deletion_time.is_some());
+}
+#[tokio::test(start_paused = true)]
+async fn deletion_wait_across_links() {
+    let store = Shared::new(memory());
+    let (mut a, key_a, _) = link(store.clone()).await;
+    assert_eq!(
+        w::command(&send(&mut a, create(key_a)).await[0]).unwrap(),
+        45
+    );
+    assert_eq!(
+        w::command(&send(&mut a, request(47, key_a)).await[0]).unwrap(),
+        48
+    );
+    drop(a);
+    tokio::time::advance(Duration::from_secs(7)).await;
+    let (mut b, key_b, _) = link(store.clone()).await;
+    let rows = list(&mut b, key_b).await;
+    assert_eq!(rows[0][6], Value::I8(2));
+    assert_eq!(rows[0][8], Value::U32(53));
+    assert_eq!(
+        w::command(&send(&mut b, request(51, key_b)).await[0]).unwrap(),
+        52
+    );
+    assert_eq!(list(&mut b, key_b).await[0][6], Value::I8(1));
+}
+#[tokio::test(start_paused = true)]
+async fn stale_link_cannot_delete_twice() {
+    // Both links loaded a normal row. Link A deletes. Link B has a stale cache.
+    let store = seeded(vec![stored(PCID, SLOT, InternalState::Normal, None)]);
+    let (mut a, key_a, _) = link(store.clone()).await;
+    let (mut b, key_b, _) = link(store.clone()).await;
+    assert_eq!(
+        w::command(&send(&mut a, request(47, key_a)).await[0]).unwrap(),
+        48
+    );
+    let first = store.lock().characters[&account()][0].deletion_time;
+    tokio::time::advance(Duration::from_secs(5)).await;
+    assert_failure(&send(&mut b, request(47, key_b)).await, 49, 2);
+    assert_eq!(store.lock().characters[&account()][0].deletion_time, first);
+}
+#[tokio::test(start_paused = true)]
+async fn deletion_time_from_store() {
+    let time = clock() + Duration::from_secs(100);
+    let store = seeded(vec![stored(PCID, SLOT, InternalState::Waiting, Some(time))]);
+    let (mut j, key, _) = link(store).await;
+    tokio::time::advance(Duration::from_secs(30)).await;
+    let rows = list(&mut j, key).await;
+    assert_eq!(rows[0][6], Value::I8(2));
+    assert_eq!(rows[0][8], Value::U32(70));
+}
+#[tokio::test(start_paused = true)]
+async fn scheduler_expires_wait() {
+    let past = clock() - Duration::from_secs(5);
+    let future = clock() + Duration::from_secs(500);
+    let store = seeded(vec![
+        stored(PCID, SLOT, InternalState::Waiting, Some(past)),
+        stored(PCID + 1, [92; 16], InternalState::Waiting, Some(future)),
+    ]);
+    let expired = lobbydaemon::scheduler::tick(&store, 16).await.unwrap();
+    assert_eq!(expired.len(), 1);
+    assert_eq!((expired[0].pcid, expired[0].account), (PCID, account()));
+    let rows = store.lock().characters[&account()].clone();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].pcid, PCID + 1);
+    let (mut j, key, _) = link(store.clone()).await;
+    let listed = list(&mut j, key).await;
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0][0], Value::U64(PCID + 1));
+    // Nothing is left to expire.
+    assert!(lobbydaemon::scheduler::tick(&store, 16)
+        .await
+        .unwrap()
+        .is_empty());
+    assert!(lobbydaemon::scheduler::tick(&store, 0).await.is_err());
+}
+#[tokio::test(start_paused = true)]
+async fn scheduler_run_ticks_each_period_and_stops() {
+    let store = seeded(vec![stored(
+        PCID,
+        SLOT,
+        InternalState::Waiting,
+        Some(clock() + Duration::from_secs(30)),
+    )]);
+    let (stop, shutdown) = tokio::sync::watch::channel(false);
+    let task = tokio::spawn(lobbydaemon::scheduler::run(
+        store.clone(),
+        Duration::from_secs(60),
+        16,
+        shutdown,
+    ));
+    tokio::task::yield_now().await;
+    assert_eq!(store.lock().characters[&account()].len(), 1);
+    tokio::time::advance(Duration::from_secs(61)).await;
+    for _ in 0..4 {
+        tokio::task::yield_now().await;
+    }
+    assert!(store.lock().characters[&account()].is_empty());
+    stop.send(true).unwrap();
+    task.await.unwrap();
+}
+#[test]
+fn sql_timestamp_reads_as_utc() {
+    let stamp = lobbydaemon::store::SqlTimestamp {
+        year: 2026,
+        month: 11,
+        day: 12,
+        hour: 8,
+        minute: 30,
+        second: 15,
+        fraction: 0,
+    };
+    let seconds = stamp
+        .to_system_time()
+        .unwrap()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    assert_eq!(seconds, 1_794_472_215);
+    let mut bad = stamp;
+    bad.month = 13;
+    assert!(bad.to_system_time().is_none());
 }
 #[tokio::test(start_paused = true)]
 async fn expired_wait_does_not_restore() {

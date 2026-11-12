@@ -1,5 +1,6 @@
-//! `lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--world-port <port>] [--world <id>,<cluster>,<name>,<ip>,<port>]...`
+//! `lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--world-port <port>] [--deletion-period <seconds>] [--world <id>,<cluster>,<name>,<ip>,<port>]...`
 //! Without `--gamegate` the empty stub rejects all tokens.
+//! `--deletion-period`: period of the deletion scheduler. ❓ Local default 60 s.
 //! `--world-port`: loopback listener of the GameDaemon link (07-gamed-link.md).
 use gamegate::np_client::GateNp;
 use lobbydaemon::{jobs::Settings, np::StubNp, protocol::WorldInfo, store::MemoryStore, Server};
@@ -11,7 +12,7 @@ use std::{
 };
 use tokio::{net::TcpListener, sync::watch};
 
-const USAGE: &str = "usage: lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--world-port <port>] [--world <id>,<cluster>,<name>,<ip>,<port>]...";
+const USAGE: &str = "usage: lobbyd [local-port] [--gamegate <addr:port> [--game-code <code>]] [--world-port <port>] [--deletion-period <seconds>] [--world <id>,<cluster>,<name>,<ip>,<port>]...";
 
 fn usage() -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, USAGE)
@@ -49,6 +50,10 @@ async fn main() -> io::Result<()> {
             "--gamegate" => gate = Some(value()?.parse().map_err(|_| usage())?),
             "--game-code" => game_code = value()?,
             "--world-port" => world_port = Some(value()?.parse().map_err(|_| usage())?),
+            "--deletion-period" => {
+                let seconds: u64 = value()?.parse().map_err(|_| usage())?;
+                settings.deletion_scheduler_period = std::time::Duration::from_secs(seconds);
+            }
             "--world" => {
                 settings.worlds.push(world(&value()?)?);
                 if settings.worlds.len() > 16 {
@@ -130,11 +135,22 @@ async fn serve<S: lobbydaemon::store::Store, N: Np>(
             deletion_wait_seconds: 7 * 24 * 3600,
         });
     }
+    // Each `--world` is one configured GameDaemon. The link listens on loopback only, so the
+    // peer address is loopback. ❓ A cluster network needs a peer address for each world.
+    let peers = settings
+        .worlds
+        .iter()
+        .map(|w| lobbydaemon::gamed_link::LinkPeer {
+            world: w.id,
+            cluster: w.cluster,
+            address: Ipv4Addr::LOCALHOST.into(),
+        })
+        .collect::<Vec<_>>();
     let mut server = Server::new(store, np, settings)?;
     // With `--world-port` the GameDaemon link makes characters and consumes world tokens.
     let gamed = link
         .as_ref()
-        .map(|_| Arc::new(lobbydaemon::gamed_link::LinkGameDaemon::default()));
+        .map(|_| Arc::new(lobbydaemon::gamed_link::LinkGameDaemon::new(peers)));
     if let Some(gamed) = &gamed {
         server = server.with_game_daemon(gamed.clone());
     }
@@ -146,18 +162,23 @@ async fn serve<S: lobbydaemon::store::Store, N: Np>(
             let target = target.clone();
             Box::pin(async move { target.consume_world(key, token, ipv4, world).await })
         });
+        // Hooks: return to lobby (8 → 9 or 10), LogoutNotify 12, closed world link.
+        gamed.attach(server.clone());
         tokio::spawn(async move {
             let result = gamed.serve(link, consume).await;
             eprintln!("lobbyd: gamed link listener stopped: {result:?}");
         });
     }
     let (stop, shutdown) = watch::channel(false);
+    // One timer task ends the deletion waits that have run out (20-handlers.md §9).
+    let scheduler = server.spawn_deletion_scheduler(shutdown.clone());
     let mut task = tokio::spawn(server.serve(listener, shutdown));
     tokio::select! {
         result = &mut task => result.map_err(io::Error::other)?,
         result = tokio::signal::ctrl_c() => {
             result?;
             let _ = stop.send(true);
+            let _ = scheduler.await;
             task.await.map_err(io::Error::other)?
         }
     }

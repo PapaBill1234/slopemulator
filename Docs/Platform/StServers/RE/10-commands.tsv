@@ -1,0 +1,56 @@
+service	command	id	handler	request	reply	errors
+GoodsSrv	AddCategory	1	0x1400FB7A0	full object body (parse 0x1400F9D40)	DB result	codes 48; lines 957; admin txn type 1
+GoodsSrv	AddItem	2	0x1400FBCF0	full object body	DB result	codes 48; lines 980; admin txn type 3
+GoodsSrv	AddGoods	3	0x1400FB920	full object body	DB result	codes 48; lines 1004; admin txn type 6
+GoodsSrv	ListCategories	4	0x1400FFD80	GameCode	DB rows	codes 48; lines 1026,1034; admin txn type 15
+GoodsSrv	ListCategoryDisplays	5	0x1400FFF00	CategoryId	DB rows	codes 10,48; lines 1051,1057,1063; admin txn type 16
+GoodsSrv	GetMaxCategoryId	6	0x1400FF0D0	CategoryIdFrom,CategoryIdTo	DB rows	codes 10; lines 1085; admin txn type 17
+GoodsSrv	PageItems	7	0x140101E90	ItemAppGroupCode,ItemIdFrom,ItemIdTo,ItemName,PageIndex,PageSize	DB rows	codes 10,48; lines 1110,1116; admin txn type 18
+GoodsSrv	GetItem	8	0x1400FEF20	ItemId	DB rows	codes 10,48; lines 1134,1140; admin txn type 19
+GoodsSrv	ListGoodsDisplays	9	0x140100A30	GoodsId	DB rows	codes 10,48; lines 1158,1164; admin txn type 21
+GoodsSrv	PageGoods	10	0x140101BD0	GoodsAppGroupCode,GoodsIdFrom,GoodsIdTo,GoodsName,IncludeDisplayName,PageIndex,PageSize,SaleStatus	DB rows	codes 10,48; lines 1190,1196; admin txn type 22
+GoodsSrv	GetGoods	11	0x1400FE140	GoodsId,LanguageCode,IsCacheMode	DB rows or cache	codes 10,48; lines 1217,1228,1240,1252; admin txn type 23
+GoodsSrv	GetGoodsName	12	0x1400FE890	GoodsId	DB rows	codes 10; lines 1273; admin txn type 24
+GoodsSrv	ListGoodsItems	13	0x140100E70	GoodsId	DB rows	codes 10; lines 1291; admin txn type 25
+GoodsSrv	ListGoods	14	0x140100710	ActionType,CategoryId,GameItemKey,GoodsAppGroupCode,GoodsIdFrom,GoodsIdTo,ItemId,LanguageCode	DB rows	codes 48; lines 1317,1323; txn type computed ❓
+GoodsSrv	GetMaxGoodsId	15	0x1400FF230	GoodsIdFrom,GoodsIdTo,IsBlankId	DB rows	codes 10; lines 1393; admin txn type 31
+GoodsSrv	GetMaxItemId	16	0x1400FF3B0	IsBlankId,ItemIdFrom,ItemIdTo	DB rows	codes 10; lines 1414; admin txn type 32
+GoodsSrv	ChangeCategory	17	0x1400FBE70	full object body	DB result	codes 48; lines 1432; admin txn type 33
+GoodsSrv	ChangeCategoryDisplayOrder	18	0x1400FC270	Categories	DB result	codes 10,48; lines 1455,1461,1482; admin txn type 33
+GoodsSrv	ChangeItem	19	0x1400FCFE0	full object body	DB result	codes 48; lines 1500; admin txn type 35
+GoodsSrv	ChangeGoods	20	0x1400FC4F0	full object body	DB result	codes 48; lines 1524; admin txn type 38
+GoodsSrv	ChangeGoodsSaleStatus	21	0x1400FCCA0	ChangerAdminAccount,GoodsId,SaleStatus	DB result	codes 10,48,5208; lines 1550,1555,1561,1566; admin txn type 46
+GoodsSrv	ChangeGoodsDisplayOrder	22	0x1400FC8E0	ChangerAdminAccount,GoodsCategories	DB result	codes 10,48; lines 1589,1595,1601,1627; admin txn type 40
+GoodsSrv	ListPurchaseGoods	23	0x140101720	CurrencyGroupId,Goods	cache or DB	codes 10,48; lines 2190,2196,2207,2215,2221,2233; CGoodsTxn
+GoodsSrv	ListDeliveryGoods	24	0x140101720	CurrencyGroupId,Goods	cache or DB	same handler as 23
+GoodsSrv	ListRefundGoods	25	0x140101720	CurrencyGroupId,Goods	cache or DB	same handler as 23
+GoodsSrv	GetGameCategories	26	0x1400FD760	GameCode,LanguageCode	cache (GoodsCache)	codes 10,48; lines 2343,2349
+GoodsSrv	GetGameGoodsByCategoryId	27	0x1400FDAB0	CategoryId,CurrencyGroupId,LanguageCode	cache (GoodsCache)	codes 10,48; lines 2399,2405
+GoodsSrv	GetRevision	28	0x1400FF530	CategoryId,IsCategoryRevision	Revision (%I64u)	codes 10,48,5222; lines 2297,2301,2307
+GoodsSrv	GetGameGoodsByGoodsId	29	0x1400FDE20	CurrencyGroupId,GoodsId,LanguageCode	cache or DB	codes 10,48; lines 2254,2264,2277
+GoodsSrv	ListGoodsInfos	30	0x140100BE0	GameCode,PageIndex,PageSize	DB rows	codes 10,48; lines 1958,1966
+GoodsSrv	GetGoodsInfo	31	0x1400FE670	GameCode,GoodsNumber,ItemNumber	DB rows	codes 10,48; lines 1992,1998
+GoodsSrv	RemoveCategory	32	0x140102410	CategoryId,ChangerAdminAccount	DB result	codes 10,48; lines 1683,1689,1695; admin txn type 70
+GoodsSrv	RemoveItem	33	0x140102BD0	ChangerAdminAccount,ItemId,ItemType	DB result	codes 10,48,5200; lines 1718,1723,1729,1734; admin txn type 73
+GoodsSrv	RemoveGoods	34	0x1401026C0	ChangerAdminAccount,GoodsId	DB result	codes 10,48; lines 1757,1763,1768; admin txn type 76
+GoodsSrv	ListItems	35	0x1401014C0	GameItemKey,ItemAppGroupCode,ItemIdFrom,ItemIdTo	DB rows	codes 10,48; lines 1367,1373; admin txn type 79
+GoodsSrv	GetGoodsPrice	36	0x1400FE9D0	CurrencyGroupId,GoodsId	DB rows	codes 10,48; lines 2148,2154
+GoodsSrv	GetGoodsCount	37	0x1400FE530	CategoryId	DB rows	codes 10; lines 1647; admin txn type 81
+GoodsSrv	GetCategory	38	0x1400FD620	CategoryId	DB rows	codes 10; lines 1665; admin txn type 82
+GoodsSrv	GetRootCategoryId	39	0x1400FF7C0	CategoryId	DB rows	codes 10; lines 2173
+GoodsSrv	CacheFlush	40	0x1400FFCC0	none	empty Reply	none
+GoodsSrv	ListCategoryIds	41	0x140100140	CategoryId,CategoryType,GameCode	cache or DB	codes 10; lines 2018
+GoodsSrv	ListIngameGoods	42	0x140100FB0	GameCode,PageIndex,PageSize	DB rows	codes 10,48; lines 2079,2085,2089
+GoodsSrv	ListIngameItems	43	0x140101230	GameCode,PageIndex,PageSize	DB rows	codes 10,48; lines 2112,2118,2122
+GoodsSrv	IngameGoodsChanged	44	0x1401038F0 (default)	-	-	52 ErrBadCommand (GoodsSocket.cpp line 209)
+GoodsSrv	IngameItemChanged	45	0x1401038F0 (default)	-	-	52 ErrBadCommand (GoodsSocket.cpp line 209)
+GoodsSrv	PageSearchGoods	46	0x140102120	AppGroupCode,CurrencyGroupId,GoodsName,LanguageCode,PageIndex,PageSize	DB rows (SearchDbName)	codes 10,48; lines 2468,2474
+GoodsSrv	ListGameGoods	47	0x140100490	CurrencyGroupId,GoodsId,LanguageCode	DB rows	codes 10,48; lines 2497,2507
+GoodsSrv	ChangeCategoryDisplay	48	0x1400FBFF0	CategoryDisplayDescription,CategoryDisplayName,CategoryId,ChangerAdminAccount,LanguageCode	DB result	codes 10,48; lines 1796,1802; admin txn type 34
+GoodsSrv	ChangeItemDisplay	49	0x1400FD160	ChangerAdminAccount,ItemDisplayDescription,ItemDisplayName,ItemId,LanguageCode	DB result	codes 10,48; lines 1830,1836; admin txn type 37
+GoodsSrv	ChangeGoodsDisplay	50	0x1400FC660	ChangerAdminAccount,GoodsDisplayDescription,GoodsDisplayName,GoodsId,LanguageCode	DB result	codes 10,48; lines 1864,1870; admin txn type 41
+GoodsSrv	AddGoodsCategory	51	0x1400FBA90	CategoryId,DisplayOrder,GoodsId,RegistrarAdminAccount	DB result	codes 10,48; lines 1897,1903; admin txn type 9
+GoodsSrv	RemoveGoodsCategory	52	0x140102970	CategoryId,ChangerAdminAccount,GoodsId	DB result	codes 10,48; lines 1928,1934; admin txn type 57
+GoodsSrv	CheckNewGoods	53	0x1400FD3E0	AppGroupCode,CurrentLoginTime	DB rows	codes 10; lines 2534,2542
+GoodsSrv	GetSaleGoods	54	0x1400FF900	AppGroupCode,IsRevisionOnly,LanguageCode	cache or DB (SearchDbName)	codes 10,48; lines 2569,2575
+GoodsSrv	GetGoodsRevision	55	0x1400FEBB0	AppGroupCode	DB rows (SearchDbName)	none found

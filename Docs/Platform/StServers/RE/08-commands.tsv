@@ -1,0 +1,105 @@
+service	command	id	handler	request	reply	errors
+FriendSrv	Accept	1	0x1400f91f0	ProposalId,FriendId	seq 6	10/2054,10/2058
+FriendSrv	AddFriend	2	0x1400f97e0	FriendId	seq 32	10/2082
+FriendSrv	AddFriendToGroup	3	0x1400f9c40	FriendId,GroupId	seq 2	10/2107,10/2111
+FriendSrv	Block	4	0x1400f9f10	FriendId	seq 8	10/2140,49/2145
+FriendSrv	CancelProposal	5	0x1400fa150	ProposalId,FriendId	seq 10	10/2168,10/2172
+FriendSrv	ChangeFriendAlias	6	0x1400fa740	FriendId,FriendAlias ❓	DB ChangeFriendAlias	10/2198
+FriendSrv	CreateGroup	7	0x1400fab20	GroupName ❓	DB CreateFriendGroup	10/2230
+FriendSrv	Defer	8	0x1400fad40	ProposalId ❓	DB UpdateProposal	10/2267
+FriendSrv	DeleteGroup	9	0x1400faec0	GroupId	seq 12	10/2297,3019/2302,49/2306
+FriendSrv	DenyProposal	10	0x1400fb140	ProposalId,FriendId	seq 13	10/2329,10/2333
+FriendSrv	GetRelations	11	0x1400fb910	UserId,GetCharFriends,GetGroups,GetAppDataSet,GetLocations,GetContacts,RetryCount	seq 16	4/2358,4/2372
+FriendSrv	GetUserInfo	12	0x1400fbc60	-	seq 17	-
+FriendSrv	GetUsersInfo	13	none (default)	-	-	52/2002
+FriendSrv	GetUserOptions	14	0x1400fbcc0	-	Reply/IsSuggestionAllowed,IsAutoAddAllowed	-
+FriendSrv	ListGroups	15	0x1400fc070	-	Reply array of groups	-
+FriendSrv	MoveGroup	16	0x1400fc4d0	FriendId,FromGroupId,ToGroupId ❓	DB MoveGroup	10/2445
+FriendSrv	PageFriends	17	0x1400fc810	PageIndex,PageSize,OrderBy,GetCharFriends,GetGroups,GetAppDataSet,GetLocations,GetContacts,RetryCount	seq 22	10/2500
+FriendSrv	PageMobileSuggestedFriends	18	0x1400fcdd0	PageIndex,PageSize,RetryCount	seq 38	10/2570
+FriendSrv	PageMutualFriends	19	0x1400fd000	PageIndex,PageSize,TargetId	seq 20	10/2598
+FriendSrv	PageRecvProposals	20	0x1400fd290	UserId,PageIndex,PageSize,OrderBy,DisplayStatus	seq 40	10/2627
+FriendSrv	PageSentProposals	21	0x1400fd590	UserId,PageIndex,PageSize,OrderBy,DisplayStatus	seq 39	10/2669
+FriendSrv	PageSuggestedFriends	22	0x1400fd890	PageIndex,PageSize	seq 28	10/2710
+FriendSrv	Propose	23	0x1400fdee0	ProposeInfo,UserAlias,AppGroupId,CharKey,FriendId,FriendAlias,FriendAppGroupId,FriendCharKey	seq 23	10/2734,10/2740
+FriendSrv	Remove	24	0x1400fe870	FriendId	seq 25	10/2801
+FriendSrv	RemoveFriendFromGroup	25	0x1400fed70	FriendId,GroupId	seq 27	10/2859,10/2863
+FriendSrv	RemoveUser	26	0x1400ff040	UserId,LoginName,UserName	seq 41	-
+FriendSrv	Reversed	27	0x1400ff540	protocol,command + inner body	inner command	?/2894,?/2899,?/2904
+FriendSrv	SendMessage	28	0x1400ff760	AppId,Scope,ScopeId,MessageName,Content	seq 31	10/3236,10/3241
+FriendSrv	SetFavorites	29	0x1400ffac0	FriendId,IsFavorite ❓	DB ChangeFriendFavorites	10/3292
+FriendSrv	SetUserOptions	30	0x1400ffc60	IsSuggestionAllowed,IsAutoAddAllowed	DB ChangeUserOptions	-
+FriendSrv	Unblock	31	0x1400ffd70	FriendId	seq 29	10/2924,49/2929
+FriendSrv	UpdateGroup	32	0x1401002a0	GroupId,GroupName	Reply/GroupId,GroupName	10/2952,10/2956
+FriendSrv	ContactUpdated	33	0x1400fffb0	State,FriendPhoneNumber,FriendContactName	in place	-
+FriendSrv	MobileAccountAssociated	34	0x1400fc1a0	UserId,PlayncUserId	seq 43	-
+FriendSrv	MobileAccountDissociated	35	0x1400fc340	UserId	seq 44	-
+FriendSrv	ChangeUserNameInfo	36	0x1400fa960	Object	seq 35	-
+FriendSrv	PresInfo	37	0x1400fdaa0	AppDataSet,Status,Locations	seq 21	-
+FriendSrv	PrivacyInfo	38	0x1400fdd10	TargetId,PrivacyType,Relation	seq 34	-
+FriendSrv	FriendPresInfo	39	0x1400fb730	Status,AppDataSet,Locations	in place	-
+FriendSrv	RemoveUserInfo	40	0x1400ff260	UserId,FriendId,LoginName,UserName	seq 42	10/3543
+FriendSrv	FriendInfo..Proposed	41-48	none (sent events)	-	-	52/2002
+FriendSrv	RemoveUserCache	49	0x1400ff210	-	OK	-
+FriendSrv	SetSmartUser	50	0x1400ca770 (filter)	-	OK or forward to Friend.smart	4 (not smart user)
+FriendSrv	PageGameFriends	51	0x1400fcb50	PageIndex,PageSize,AppId	seq 45	10/2539,10/2544
+PresenceSrv	AccountCreate	1	no case in 0x1400D7ED0 (default)	-	-	52 ErrBadCommand/3/3291
+PresenceSrv	GetUserInfo	2	0x1400ce4b0	From	user info (0x1400CB3F0)	10/3/4287 missing from
+PresenceSrv	Login	3	0x1400ceb20	Location, From, clientNetAddress, AppId, ExternalAccount, UserName/LoginName	Reply after async request (25000 ms)	10/3/line ❓ (invalid location, from, clientNetAddress, appid); 3005 ErrFlooding/3/3366 too many web session presences; 10/3/3373 external account invalid
+PresenceSrv	Logout	4	0x1400cf020	Location, Data (appData)	Reply	10/3/3721 missing location
+PresenceSrv	Message	5	0x1400cf2f0	protocol, command, AppId, body	wrapped Presence message to watchers	10/3/4461 incomplete message format
+PresenceSrv	Kick	6	0x1400ce630	GameCode, Location, ChannelIds, AppIds, more ❓	Reply with AppIds array	-
+PresenceSrv	SetAppData	7	0x1400cfb20	From, AppId, Data	Reply	10/3/4326 missing app data; 10/3/4328 missing from; 10/3/4330 invalid from appId; 10/3/4332 invalid appId; 0/3/4348 updater line %u
+PresenceSrv	SetUserData	8	no case (default)	-	-	52/3/3291
+PresenceSrv	SetStatus	9	0x1400d0090	From, status	Reply	10/3/4374 missing from
+PresenceSrv	SubscribeTrusted	10	no case (default)	-	-	52/3/3291
+PresenceSrv	Unsubscribe	11	no case (default)	-	-	52/3/3291
+PresenceSrv	Whisper	12	0x1400d0ad0	From header, target, body	Reply; message with new guid to target	10/3/4395 incomplete from header; 4 ErrBadData/3/4418 generating guid
+PresenceSrv	UserInfo	13	0x1400d07e0	user info	Message to watchers	-
+PresenceSrv	UserLogout	14	no case (default); sent by PresenceSrv (0x1400F2420)	-	-	52/3/3291
+PresenceSrv	SetWatch	15	0x1400d02b0	From, Location	Reply; adds watch (0x14013BC20, key Presence)	10/3/4671 bad or missing from; 10/3/4673 missing location
+PresenceSrv	Disconnect	16	0x1400cd440	Location	runs Logout handler 0x1400CF020	10/3/4262 missing location
+PresenceSrv	Event	17	0x1400cd610	Update/Object/State, UserName, LoginName	Presence/UserInfo (13) to watchers	log only
+PresenceSrv	Exec	18	0x1400cdba0 (fingerprint name DbProcBegin is wrong; no DB call)	ProcName, Params	always error	10/3/4812 exec %s, unknown procName
+PresenceSrv	Flush	19	0x1400cdcc0	-	Reply; log GridObjectDestory: %s	-
+PresenceSrv	Forward	20	0x1400cde40	refer-to (protocol, command, presence id)	forwards the request	10/3/4601 missing refer-to; 10/3/4605 missing protocol; 10/3/4607 missing command; 10/3/4616 invalid presence id
+PresenceSrv	Reversed	21	0x1400cf740	refer-to (protocol, command); protocol Channel only	reverse call 0x1400CCE00 ❓	{10?,3,?} for missing protocol/command and unknown command ❓; 10/3/4823 missing refer-to
+PresenceSrv	SendUserInfo	22	0x1400cf950	From, flags	user info message	10/3/4303 missing from; 10/3/4306 missing flags
+PresenceSrv	Talk	23	no case (default)	-	-	52/3/3291
+PresenceSrv	RemoveUser	24	0x1400d8bf0	-	kick request 0x1400D8340 (PresUser.cpp)	-
+PresenceSrv	UserIdChanged	25	0x1400d0700	new id (request +1056)	async request object 0x1400C6C00 (25000 ms)	-
+PresenceSrv	XferRequest	26	0x1400d1100	request +1040	async request object 0x1400C6AA0 (25000 ms); reply parse 0x1400D64F0	-
+PresenceSrv	XferPresences	27	0x1400d0ec0	presence list	Reply	-
+ProfileSrv	GetUserInfo	1	0x1400c9310	user id	proc GetUserProfileAndContact	-
+ProfileSrv	GetUserProfile	2	0x1400c9770	user id	proc GetUserProfile	-
+ProfileSrv	GetUserProfileImgUrl	3	0x1400c98e0	user id	Reply ProfileImgUrl (config)	-
+ProfileSrv	CreateUserProfile	4	0x1400c8e60	legalbirthday,genderCode	proc AddUserProfile	10/385,10/390
+ProfileSrv	ChangeUserProfile	5	0x1400c8960	profile fields	proc UpdateUserProfile	10/423,10/446
+ProfileSrv	RemoveUserProfile	6	0x1400ca360	user id	proc RemoveUserProfile	-
+ProfileSrv	GetUserContact	7	0x1400c91a0	user id	proc GetUserContact	-
+ProfileSrv	GetUserSendEmail	8	0x1400c9ad0	user id	? (config)	10/521,10/524
+ProfileSrv	CreateUserContact	9	0x1400c8b90	contact fields	proc AddUserContact	10/549,10/555
+ProfileSrv	ChangeUserContact	10	0x1400c8750	contact fields (email max 64)	via 0x1400d4230 (UpdateUserContact ?)	10/575
+ProfileSrv	RemoveUserContact	11	0x1400ca150	user id	via 0x1400c41f0 (RemoveUserContact ?)	10/594
+ProfileSrv	PageUserContacts	12	0x1400c9e00	customerKey,pageIndex,pageSize	proc PageUserContacts	10/613,10/618
+ProfileSrv	PageUserContactChanges	13	0x1400c9c20	pageIndex,pageSize	proc PageUserContactChanges	10/654,10/659
+ProfileSrv	DeactivateUser	14	0x1400c9080	user id	proc DeactivateUser	-
+ProfileSrv	ReactivateUser	15	0x1400ca030	user id	proc ReactivateUser	-
+ProfileSrv	UpdateUserSmsOptin	16	0x1400ca480	sms optin	via 0x1400d2230	10/740
+ProfileSrv	GetUserPreference	17	0x1400c9600	user id	proc GetUserPreference	-
+ProfileSrv	CreateUserPreference	18	0x1400c8d20	preference	proc AddUserPreference	-
+ProfileSrv	ChangeUserPreference	19	0x1400c8850	language (max 5)	proc UpdateUserPreference ?	10/817
+ProfileSrv	RemoveUserPreference	20	0x1400ca240	user id	proc RemoveUserPreference	-
+ProfileSrv	(default)	-	0x1400c85b0	-	-	52/2/250
+NameSrv	AddNames	1	0x1400c9c70	UserDatacenter,Names/Name{NameType,NameValue}	LocalNameDb.CreateSession or GlobalNameDb.AddNames	?/802,3030/807,10/818,4/824,10/848,10/853,10/863,10/869,3030/885,4/891,10/923,4/946
+NameSrv	AddBanWord	2	0x1400c98f0	NameType,BanWord	GlobalNameDb.AddBanWord (or forward to master)	3030/1164,10/1170,10/1176,10/1182,52/1194
+NameSrv	AddUser	3	0x1400c7cc0	names param	LocalNameDb.AddUser	10/956,10/962
+NameSrv	ChangeNames	4	0x1400c9c70	as AddNames	LocalNameDb.CreateSession or GlobalNameDb.ChangeNames	as AddNames
+NameSrv	ChangeStatus	5	0x1400c9c70	as AddNames	LocalNameDb.CreateSession or GlobalNameDb.ChangeStatus	as AddNames
+NameSrv	ChangeUser	6	0x1400c9c70	as AddNames	LocalNameDb.CreateSession or GlobalNameDb.ChangeUser	as AddNames
+NameSrv	CheckNames	7	0x1400c7ed0	Names/Name{NameType,NameValue,Administrator,Preemptive}	GlobalNameDb.CheckNames (or forward to master)	3030/988,10/995,10/1001,10/1006,10/1020
+NameSrv	GetNamesInfo	8	0x1400c8fd0	Names/Name{NameType,NameValue}	GlobalNameDb.GetNamesInfo (or forward to master)	3030/1082,10/1089,10/1095,10/1100,10/1112
+NameSrv	RemoveBanWord	9	0x1400c98f0	NameType,BanWord	GlobalNameDb.RemoveBanWord (or forward to master)	as AddBanWord
+NameSrv	RemoveNames	10	0x1400c9c70	as AddNames	LocalNameDb.CreateSession or GlobalNameDb.RemoveNames	as AddNames
+NameSrv	Exec	11	0x1400cc6e0	ProcName,Params,UserDatacenter	GetIdById/GetIdByName/GetNameById in Local or Global db (CExecTxn)	3030/2921,10/2927,10/2933,10/2939,4/2945,4/2980,3030/2990
+NameSrv	(default)	-	0x1400ccf30	-	-	52/2/2911

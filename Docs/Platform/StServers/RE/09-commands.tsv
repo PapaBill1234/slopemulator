@@ -1,0 +1,46 @@
+service	command	id	handler	request	reply	errors
+GradeSrv	CreateSubscription	1	0x1400f13e0	UserId,GradeId|AppGroupCode+GameGradeKey,RequestFromCode,RequestKey,EffectiveDurationUnitType,EffectiveDuration	UserSubscriptionId,Grade,RelatedGrades,LevelChanged,LevelId,AccumulateGradeScore	10/130/171-176,10/110/158,48/110/127,48/110/242,5602/110/97
+GradeSrv	ActivateGrade	2	0x1400ed3e0	UserId,GradeId|AppGroupCode	Grade(EffectiveFrom,EffectiveTo,Activation,Reason,Activated)	10/130/181,48/111/128
+GradeSrv	PauseUserGrades	3	0x1400f8960	UserId,AppId,AppGroupCode	Reply	5616/112/78,5617/112/88,48/112/163,48/112/199,48/112/213,48/112/253
+GradeSrv	ResumeUserGrades	4	0x1400f92b0	UserId,AppId,AppGroupCode	Reply	5616/113/79,5617/113/89,5615/113/167,48/113/190,48/113/208,48/113/230
+GradeSrv	GetGrade	5	none	UserId	no reply	quirk_grade_no_reply_ids
+GradeSrv	ListGrades	6	0x1400f6170	UserId,GradeId|AppGroupCode	UserId,AppGroupCode,Activation,GradeListCount,LevelId,AccumulateGradeScore,TotalEffectiveFrom,TotalEffectiveTo,GradeList	10/130/192,10/114/252
+GradeSrv	AddGradeScore	7	0x1400edde0	UserId,GradeId|LevelGroupId|AppGroupCode+GameGradeKey,GradeScore,RequestFromCode,RequestKey	UserGradeScoreId,UserLevelId,LevelId,AccumulateGradeScore,RelatedGrades,LevelChanged,MinimumLevelScore,MaximumLevelScore,MaximumGradeScore	10/130/198-202,5611/115/47,48/115/166,48/115/180
+GradeSrv	GetLevel	8	0x1400f5390	UserId,AppGroupCode,LevelGroupId	UserId,AppGroupCode,LevelId,AccumulateGradeScore,MinimumLevelScore,MaximumLevelScore,MaximumGradeScore	10/130/207,48/116/74,48/116/133
+GradeSrv	DeleteSubscription	9	0x1400f2e00	UserId,UserSubscriptionId,AppGroupCode	Reply	10/130/212-213,5650/117/311,48/117/177,48/117/368,48/117/388,48/117/520
+GradeSrv	CancelGradeScore	10	0x1400ef0e0	UserId,UserGradeScoreId|RequestFromCode+RequestKey	score change and level fields	10/130/218,10/118/62,5650/118/279,48/118/308,48/118/322
+GradeSrv	PageValidUserGrades	11	0x1400f7a60	UserId,AppGroupCode,PageIndex,PageSize,OrderBy,InverseOrder	Grades,TotalCount	10/130/223,10/119/224,48/119/334
+GradeSrv	GetUserGrade	12	0x1400f58c0	UserId,UserSubscriptionId,AppGroupCode	grade row (SubscriptionStatus,UserGradeStatus,...)	10/130/236-237,5650/120/100,5650/120/107,5650/120/147,48/120/152
+GradeSrv	ListGradeBaseData	13	none	AppGroupCode	no reply	quirk_grade_no_reply_ids
+GradeSrv	ListLevelBaseData	14	none	LevelGroupId	no reply	quirk_grade_no_reply_ids
+GradeSrv	ListPolicies	15	none	AppGroupCode	no reply	quirk_grade_no_reply_ids
+GradeSrv	GetCurrentGrade	16	0x1400f4cc0	UserId,AppGroupCode	GradeCount,Grades	10/130/250,48/123/195
+GradeSrv	ListLevelChanges	17	0x1400f7770	UserId,AppGroupCode,LevelGroupId	UserLevel rows	10/130/254-255,48/124/79
+GradeSrv	ListGradeScoreChanges	18	0x1400f7320	UserId,AppGroupCode,LevelGroupId	UserGradeScoreChange rows	10/130/259-260,48/125/85
+GradeSrv	AddGradeScoreByAdmin	19	0x1400ef0d0	UserId,AppGroupCode,LevelGroupId,GradeScoreChangeReasonCode,GradeScore,RequestKey	as AddGradeScore	10/130/264-268
+GradeSrv	ListVirtualCurrencyJobs	20	0x1400f79d0	ProvidingVirtualCurrencyJobId	error only	51/127/?,48/127/56
+GradeSrv	RetryVirtualCurrencyJob	21	0x1400f9a90	ProvidingVirtualCurrencyJobId	error only	51/128/?,48/128/?
+GradeSrv	NotifyGradeChanged	22	none	-	no reply	quirk_grade_no_reply_ids
+GradeSrv	NotifyScoreChanged	23	none	-	no reply	quirk_grade_no_reply_ids
+GradeSrv	ExpirationNotiPing	24	0x1400fa630	-	no reply (one-way)	-
+GradeSrv	ChangeGradeScore	25	0x1400f0640	UserId,GradeScore,LevelGroupId	level fields	10/130/278,10/130/280,5611/129/47,48/129/62,48/129/110,48/129/143
+GradeSrv	Reward	26	none	-	no reply	quirk_grade_no_reply_ids
+GradeSrv	Flush	27	0x1400ecc70	UserId	Result "flush complete(destroy grid)"	-
+GradeMembersSrv	StartBatch	1	0x1400e7ea0	-	Reply	51/7/337
+GradeMembersSrv	LoadUser	2	0x1400e2460	UserId,AppGroupCode	Reply	10/2/322
+GradeMembersSrv	Alert	3	0x1400dd7d0	UserId,AppGroupCode,MembershipKey	Reply	11003/9/726,11001/9/732,11001/9/738
+GradeMembersSrv	GetItem	4	0x1400f2c40	RequestFromCode+RequestKey|MembershipItemId	membership row	10/7/206,48/7/213
+GradeMembersSrv	Get	5	0x1400e0be0	UserId,AppGroupCode,MembershipKey	MembershipKey,RemainTimeSec,MembershipItems,Count,MembershipStatus,EffectiveFrom,EffectiveTo	10/2/322
+GradeMembersSrv	List	6	0x1400e1850	UserId,AppGroupCode	MembershipCount,Memberships/Membership	10/2/322
+GradeMembersSrv	Page	7	0x1400e7620	AppGroupCode[,MembershipKey]	Memberships	10/2/322
+GradeMembersSrv	Activate	8	0x1400dbcc0	UserId,AppGroupCode,MembershipKey	Reply	11002/9/585,11001/9/591,11001/9/597,11001/9/603
+GradeMembersSrv	Register	9	0x1400e7870	UserId,AppGroupCode,MembershipKey,RequestFromCode,RequestKey	MembershipItemId	48/9/280,4/9/213,51/9/227
+GradeMembersSrv	Abandon	10	0x1400dab70	UserId,AppGroupCode,MembershipItemId	Reply	11003/9/629,11001/9/641
+GradeMembersSrv	Suspend	11	0x1400e35a0	UserId,AppGroupCode	Reply	-
+GradeMembersSrv	Resume	12	0x1400e2ba0	UserId,AppGroupCode	Reply	-
+GradeMembersSrv	Reward	13	0x1400f3d10	UserId,AppGroupCode,RewardType,MembershipKey,MembershipItemId	RewardType,TargetType,TargetKey,Rewards,RewardDescription,Registered	51/8/1131,48/8/326
+GradeMembersSrv	GetPolicy	14	0x1400f07b0	AppGroupCode	DailyReward,Membership,Levels/Level,Rewards	51/9/1006 (grid path)
+GradeMembersSrv	RetrieveReward	15	0x1400f3d10	UserId,AppGroupCode,RewardType	Reply	51/8/1131
+GradeMembersSrv	Flush	16	0x1400eae0f (front) / 0x1400dfec0 (grid)	UserId	Reply	11004/9/916
+GradeMembersSrv	GetGridData	17	0x1400e1780	UserId,AppGroupCode	grid data	-
+GradeMembersSrv	SetVirtualTime	18	0x1400f1bb0	VirtualTime	Reply	-
