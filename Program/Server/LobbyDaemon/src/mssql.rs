@@ -6,7 +6,11 @@
 //! There are no automatic retries after ambiguous writes.
 use crate::store::*;
 use shared::pool::Pool;
-use std::{fmt, io, sync::Arc, time::Duration};
+use std::{
+    fmt, io,
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 use tiberius::{time::chrono::NaiveDateTime, Client, Config, FromSql, Query, Row, Uuid};
 use tokio::net::TcpStream;
 use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
@@ -179,21 +183,25 @@ fn byte(row: &Row, index: usize) -> io::Result<i8> {
     i8::try_from(required::<u8>(row, index)?)
         .map_err(|_| invalid("SQL tinyint exceeds signed byte"))
 }
-fn name(row: &Row, index: usize, capacity: usize) -> io::Result<Vec<u16>> {
-    let text: Option<&str> = optional(row, index)?;
+fn name_units(text: Option<&str>, capacity: usize) -> io::Result<Vec<u16>> {
     let units: Vec<u16> = text.unwrap_or_default().encode_utf16().collect();
     if units.len() > capacity {
         return Err(invalid("result name exceeds capacity"));
     }
     Ok(units)
 }
-fn blob(row: &Row, index: usize) -> io::Result<Vec<u8>> {
-    let value: Option<&[u8]> = optional(row, index)?;
+fn name(row: &Row, index: usize, capacity: usize) -> io::Result<Vec<u16>> {
+    name_units(optional(row, index)?, capacity)
+}
+fn blob_bytes(value: Option<&[u8]>) -> io::Result<Vec<u8>> {
     let value = value.unwrap_or_default();
     if value.len() > RESULT_BLOB_CAPACITY {
         return Err(invalid("result blob exceeds 512 bytes"));
     }
     Ok(value.to_vec())
+}
+fn blob(row: &Row, index: usize) -> io::Result<Vec<u8>> {
+    blob_bytes(optional(row, index)?)
 }
 fn one(rows: Vec<Row>) -> io::Result<Option<Row>> {
     if rows.len() > 1 {
@@ -216,15 +224,63 @@ fn character_name(name: &[u16]) -> io::Result<String> {
 fn ip_text(ipv4: u32) -> String {
     std::net::Ipv4Addr::from(ipv4.to_le_bytes()).to_string()
 }
-// Character timestamp units are not yet specified. Reject rather than invent them.
-fn null_character_time(row: &Row, index: usize) -> io::Result<()> {
-    if optional::<NaiveDateTime>(row, index)?.is_some() {
+/// SQL `datetime` to wall-clock time. ❓ The value is read as UTC. LobbyDB writes
+/// `GETDATE()` (server local time), so the SQL Server host must run in UTC.
+fn wall_time(value: NaiveDateTime) -> io::Result<SystemTime> {
+    let utc = value.and_utc();
+    let seconds = utc.timestamp();
+    let base = if seconds >= 0 {
+        UNIX_EPOCH.checked_add(Duration::from_secs(seconds.unsigned_abs()))
+    } else {
+        UNIX_EPOCH.checked_sub(Duration::from_secs(seconds.unsigned_abs()))
+    };
+    base.and_then(|t| t.checked_add(Duration::from_nanos(utc.timestamp_subsec_nanos().into())))
+        .ok_or_else(|| invalid("SQL datetime is outside the time range"))
+}
+/// Raw column values of one `usp_LoadCharacterList` row. The columns are in
+/// `08-db-binding.md`: 0 PCID, 2 SlotID, 3 WorldID, 6 CharacterName, 7 CharacterRight,
+/// 8 CharacterState, 9 DeletionDelayTime, 11 JumpingCharacterState, 12 ShowcaseData, 13 Blocked.
+struct CharacterValues<'a> {
+    pcid: i64,
+    slot: Option<Uuid>,
+    world: i16,
+    name: Option<&'a str>,
+    right: u8,
+    state: u8,
+    deletion_time: Option<NaiveDateTime>,
+    jumping_state: Option<u8>,
+    showcase: Option<&'a [u8]>,
+    blocked: bool,
+}
+/// Build the cached row. It has no SQL access, so a unit test can run it.
+fn character_from(v: CharacterValues<'_>) -> io::Result<Character> {
+    // CharacterRight/Blocked cannot be represented by the local cache.
+    // Refuse restricted rows instead of dropping their restrictions.
+    if v.right != 1 || v.blocked {
         return Err(io::Error::new(
             io::ErrorKind::Unsupported,
-            "non-NULL character timestamp conversion is not specified",
+            "restricted character is not supported by local cache",
         ));
     }
-    Ok(())
+    let state = crate::character::InternalState::from_db(v.state)
+        .ok_or_else(|| invalid("unknown character state"))?;
+    // Only a deletion wait has an end time.
+    let deletion_time = match (state, v.deletion_time) {
+        (crate::character::InternalState::Waiting, Some(time)) => Some(wall_time(time)?),
+        _ => None,
+    };
+    Ok(Character {
+        pcid: u64::try_from(v.pcid).map_err(|_| invalid("negative SQL identifier"))?,
+        slot: v.slot.map(|s| s.to_bytes_le()).unwrap_or_default(),
+        world: v.world,
+        name: name_units(v.name, 32)?,
+        showcase: blob_bytes(v.showcase)?,
+        deletion_time,
+        state,
+        jumping_state: i8::try_from(v.jumping_state.unwrap_or(0))
+            .map_err(|_| invalid("jumping state exceeds signed byte"))?,
+        last_play_end: 0,
+    })
 }
 fn timestamp(row: &Row, index: usize) -> io::Result<Option<SqlTimestamp>> {
     let Some(value) = optional::<NaiveDateTime>(row, index)? else {
@@ -344,6 +400,29 @@ impl Store for MssqlStore {
         q.bind(positive(pcid)?);
         no_rows(self.call(q).await?)
     }
+    async fn retrieve_expired_deletion_waiting_list(
+        &self,
+        max: u32,
+    ) -> io::Result<Vec<ExpiredDeletion>> {
+        let mut q = rpc!("usp_RetrieveExpiredDeletionWaitingList", "@P1");
+        q.bind(i32::try_from(max).map_err(|_| invalid("row count exceeds SQL int"))?);
+        self.call(q)
+            .await?
+            .iter()
+            .map(|row| {
+                Ok(ExpiredDeletion {
+                    account: id(row, 0)?,
+                    world: required(row, 1)?,
+                    pcid: unsigned(row, 2)?,
+                })
+            })
+            .collect()
+    }
+    async fn expire_character_deletion_waiting(&self, pcid: u64) -> io::Result<()> {
+        let mut q = rpc!("usp_ExpireCharacterDeletionWaiting", "@P1");
+        q.bind(positive(pcid)?);
+        no_rows(self.call(q).await?)
+    }
     async fn load_game_account(&self, account: AccountId) -> io::Result<Option<Account>> {
         let mut q = rpc!("usp_LoadGameAccount", "@P1");
         q.bind(guid(account));
@@ -399,29 +478,17 @@ impl Store for MssqlStore {
             .await?
             .iter()
             .map(|row| {
-                null_character_time(row, 9)?;
-                null_character_time(row, 10)?;
-                // CharacterRight/Blocked cannot be represented by the local cache.
-                // Refuse restricted rows instead of dropping their restrictions.
-                if required::<u8>(row, 7)? != 1 || required::<bool>(row, 13)? {
-                    return Err(io::Error::new(
-                        io::ErrorKind::Unsupported,
-                        "restricted character is not supported by local cache",
-                    ));
-                }
-                Ok(Character {
-                    pcid: unsigned(row, 0)?,
-                    slot: optional::<Uuid>(row, 2)?
-                        .map(|v| v.to_bytes_le())
-                        .unwrap_or_default(),
+                character_from(CharacterValues {
+                    pcid: required(row, 0)?,
+                    slot: optional(row, 2)?,
                     world: required(row, 3)?,
-                    name: name(row, 6, 32)?,
-                    showcase: blob(row, 12)?,
-                    deletion_time: 0,
-                    state: byte(row, 8)?,
-                    jumping_state: i8::try_from(optional::<u8>(row, 11)?.unwrap_or(0))
-                        .map_err(|_| invalid("jumping state exceeds signed byte"))?,
-                    last_play_end: 0,
+                    name: optional(row, 6)?,
+                    right: required(row, 7)?,
+                    state: required(row, 8)?,
+                    deletion_time: optional(row, 9)?,
+                    jumping_state: optional(row, 11)?,
+                    showcase: optional(row, 12)?,
+                    blocked: required(row, 13)?,
                 })
             })
             .collect()
@@ -567,6 +634,56 @@ mod tests {
         assert!(positive(0).is_err());
         assert!(positive(u64::MAX).is_err());
         assert_eq!(positive(i64::MAX as u64).unwrap(), i64::MAX);
+    }
+    fn values(state: u8, deletion_time: Option<NaiveDateTime>) -> CharacterValues<'static> {
+        CharacterValues {
+            pcid: 7,
+            slot: None,
+            world: 1,
+            name: Some("Test"),
+            right: 1,
+            state,
+            deletion_time,
+            jumping_state: None,
+            showcase: Some(&[1, 2]),
+            blocked: false,
+        }
+    }
+    fn datetime() -> NaiveDateTime {
+        tiberius::time::chrono::NaiveDate::from_ymd_opt(2026, 11, 12)
+            .and_then(|d| d.and_hms_milli_opt(8, 30, 15, 250))
+            .unwrap()
+    }
+    #[test]
+    fn mssql_reads_times() {
+        use crate::character::InternalState;
+        let row = character_from(values(4, Some(datetime()))).unwrap();
+        assert_eq!(row.state, InternalState::Waiting);
+        let expected = UNIX_EPOCH + Duration::from_millis(1_794_472_215_250);
+        assert_eq!(row.deletion_time, Some(expected));
+        // The time of a row that is not in a deletion wait is not kept.
+        let row = character_from(values(2, Some(datetime()))).unwrap();
+        assert_eq!(
+            (row.state, row.deletion_time),
+            (InternalState::Normal, None)
+        );
+        // A wait without a time stays a wait. The jobs refuse to cancel it.
+        let row = character_from(values(4, None)).unwrap();
+        assert_eq!(
+            (row.state, row.deletion_time),
+            (InternalState::Waiting, None)
+        );
+    }
+    #[test]
+    fn unknown_state_and_restricted_rows_are_refused() {
+        assert!(character_from(values(0, None)).is_err());
+        assert!(character_from(values(7, None)).is_err());
+        let mut blocked = values(2, None);
+        blocked.blocked = true;
+        assert!(character_from(blocked).is_err());
+        let mut right = values(2, None);
+        right.right = 2;
+        assert!(character_from(right).is_err());
     }
     #[test]
     fn missing_status_is_not_success() {

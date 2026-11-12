@@ -87,8 +87,8 @@ async fn rig(queued: bool, start: bool) -> Fixture {
         world: 1,
         name: vec![65],
         showcase: vec![],
-        deletion_time: 0,
-        state: 0,
+        deletion_time: None,
+        state: lobbydaemon::character::InternalState::Normal,
         jumping_state: 0,
         last_play_end: 0,
     };

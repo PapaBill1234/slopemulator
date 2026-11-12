@@ -1,10 +1,19 @@
 //! Local persistence boundary. No SQL connection or sample data is used.
-use std::{collections::HashMap, future::Future, io};
+use crate::character::InternalState;
+use std::{
+    collections::HashMap,
+    future::Future,
+    io,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 mod characters;
 
 pub use shared::np_channel::AccountId;
 pub const RESULT_BLOB_CAPACITY: usize = 512;
 
+/// One character row. The store owns the lifecycle (`state`, `deletion_time`). A job
+/// reads it with the character list and writes it back through the store procedures,
+/// so each LobbyGate link sees the same lifecycle (`11-character-select.md` §15).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Character {
     pub pcid: u64,
@@ -12,10 +21,19 @@ pub struct Character {
     pub world: i16,
     pub name: Vec<u16>,
     pub showcase: Vec<u8>,
-    pub deletion_time: u64,
-    pub state: i8,
+    /// End of the deletion wait (wall clock). `Some` only in `InternalState::Waiting`.
+    pub deletion_time: Option<SystemTime>,
+    pub state: InternalState,
     pub jumping_state: i8,
+    /// Wire field. In a deletion wait the jobs set it to the remaining seconds.
     pub last_play_end: u32,
+}
+/// One row of `usp_RetrieveExpiredDeletionWaitingList`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExpiredDeletion {
+    pub account: AccountId,
+    pub world: i16,
+    pub pcid: u64,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IncompleteService {
@@ -116,6 +134,41 @@ pub struct SqlTimestamp {
     pub second: u16,
     pub fraction: u32,
 }
+impl SqlTimestamp {
+    /// The wall-clock time of the components. ❓ The components are read as UTC. LobbyDB
+    /// writes `GETDATE()` (server local time), so the SQL Server host must run in UTC.
+    /// `None`: the components are not a valid date.
+    pub fn to_system_time(&self) -> Option<SystemTime> {
+        let (month, day) = (i64::from(self.month), i64::from(self.day));
+        if !(1..=12).contains(&month)
+            || !(1..=31).contains(&day)
+            || self.hour > 23
+            || self.minute > 59
+            || self.second > 59
+            || self.fraction >= 1_000_000_000
+        {
+            return None;
+        }
+        // Days from 1970-01-01 (civil calendar, proleptic Gregorian).
+        let year = i64::from(self.year) - i64::from(month <= 2);
+        let era = year.div_euclid(400);
+        let year_of_era = year.rem_euclid(400);
+        let shifted_month = (month + 9) % 12;
+        let day_of_year = (153 * shifted_month + 2) / 5 + day - 1;
+        let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+        let days = era * 146_097 + day_of_era - 719_468;
+        let seconds = days * 86_400
+            + i64::from(self.hour) * 3600
+            + i64::from(self.minute) * 60
+            + i64::from(self.second);
+        let time = if seconds >= 0 {
+            UNIX_EPOCH.checked_add(Duration::from_secs(seconds.unsigned_abs()))?
+        } else {
+            UNIX_EPOCH.checked_sub(Duration::from_secs(seconds.unsigned_abs()))?
+        };
+        time.checked_add(Duration::from_nanos(self.fraction.into()))
+    }
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TimeBasedPlayInfo {
     pub schedule: i32,
@@ -180,6 +233,16 @@ pub trait SyncStore: Send + 'static {
     fn try_character_restoration(&mut self, _pcid: u64) -> io::Result<()> {
         Err(unsupported())
     }
+    /// At most `max` characters in deletion wait whose time has passed.
+    fn retrieve_expired_deletion_waiting_list(
+        &mut self,
+        _max: u32,
+    ) -> io::Result<Vec<ExpiredDeletion>> {
+        Err(unsupported())
+    }
+    fn expire_character_deletion_waiting(&mut self, _pcid: u64) -> io::Result<()> {
+        Err(unsupported())
+    }
     fn load_service_detail(&mut self, _id: u64, _kind: ServiceKind) -> io::Result<ServiceDetail> {
         Err(unsupported())
     }
@@ -235,6 +298,16 @@ pub trait Store: Clone + Send + Sync + 'static {
     ) -> impl Future<Output = io::Result<Option<SqlTimestamp>>> + Send;
     fn cancel_character_deletion(&self, pcid: u64) -> impl Future<Output = io::Result<()>> + Send;
     fn try_character_restoration(&self, pcid: u64) -> impl Future<Output = io::Result<()>> + Send;
+    /// `usp_RetrieveExpiredDeletionWaitingList`: at most `max` rows, `max` above zero.
+    fn retrieve_expired_deletion_waiting_list(
+        &self,
+        max: u32,
+    ) -> impl Future<Output = io::Result<Vec<ExpiredDeletion>>> + Send;
+    /// `usp_ExpireCharacterDeletionWaiting`: state 4 to 6 when the time has passed.
+    fn expire_character_deletion_waiting(
+        &self,
+        pcid: u64,
+    ) -> impl Future<Output = io::Result<()>> + Send;
     fn load_service_detail(
         &self,
         id: u64,
@@ -342,6 +415,15 @@ impl<S: SyncStore> Store for Shared<S> {
     async fn try_character_restoration(&self, pcid: u64) -> io::Result<()> {
         self.lock().try_character_restoration(pcid)
     }
+    async fn retrieve_expired_deletion_waiting_list(
+        &self,
+        max: u32,
+    ) -> io::Result<Vec<ExpiredDeletion>> {
+        self.lock().retrieve_expired_deletion_waiting_list(max)
+    }
+    async fn expire_character_deletion_waiting(&self, pcid: u64) -> io::Result<()> {
+        self.lock().expire_character_deletion_waiting(pcid)
+    }
     async fn load_service_detail(&self, id: u64, kind: ServiceKind) -> io::Result<ServiceDetail> {
         self.lock().load_service_detail(id, kind)
     }
@@ -404,8 +486,19 @@ pub struct MemoryStore {
     pub jumping_creation_quota: HashMap<AccountId, Option<JumpingCreationQuota>>,
     pub login_updates: Vec<(AccountId, u32)>,
     pub logout_updates: Vec<(AccountId, i32)>,
+    /// Wall clock of this store. `None`: the system clock. Tests set a fixed clock.
+    pub clock: Option<fn() -> SystemTime>,
 }
 impl SyncStore for MemoryStore {
+    fn retrieve_expired_deletion_waiting_list(
+        &mut self,
+        max: u32,
+    ) -> io::Result<Vec<ExpiredDeletion>> {
+        self.expired_waiting(max)
+    }
+    fn expire_character_deletion_waiting(&mut self, pcid: u64) -> io::Result<()> {
+        self.expire_waiting(pcid)
+    }
     fn check_character_name(&mut self, name: &[u16]) -> io::Result<()> {
         self.check_name(name)
     }
@@ -524,7 +617,8 @@ impl SyncStore for MemoryStore {
             .flatten()
             .filter(|row| row.pcid == pcid)
         {
-            row.state = 2;
+            row.state = InternalState::Normal;
+            row.deletion_time = None;
         }
         self.restored.push(pcid);
         Ok(())

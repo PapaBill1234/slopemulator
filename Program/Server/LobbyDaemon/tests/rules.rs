@@ -53,7 +53,7 @@ async fn r14_character_info_reads_full_slot_from_cached_snapshot() {
             Value::String(row.name),
             Value::Bytes(row.showcase),
             Value::U64(0),
-            Value::I8(0),
+            Value::I8(1), // Normal row: wire state 1.
             Value::I8(0),
             Value::U32(0),
         ]
@@ -519,8 +519,8 @@ fn character() -> Character {
         world: 1,
         name: "generated-character".encode_utf16().collect(),
         showcase: vec![9; 512],
-        deletion_time: 0,
-        state: 0,
+        deletion_time: None,
+        state: lobbydaemon::character::InternalState::Normal,
         jumping_state: 0,
         last_play_end: 0,
     }
