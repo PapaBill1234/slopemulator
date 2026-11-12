@@ -6,11 +6,15 @@
 //! Restricted hooks: 381 0x1405DF767 and 0x14036DE10. No implementation.
 //! Restricted private-object boundary: 381 0x1406E3100. No implementation.
 
+pub mod conn;
 pub mod db;
+pub mod entry;
 pub mod handlers;
 pub mod ids;
 pub mod kick;
 pub mod link;
+pub mod play;
+pub mod shard;
 pub mod validation;
 
 /// Server object coordinates at +268/+270/+272, not request-owned positions.
