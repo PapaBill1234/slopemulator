@@ -26,6 +26,13 @@ pub fn fields(format: &str, packet: &[u8]) -> io::Result<Vec<Value>> {
     )
     .map_err(invalid)
 }
+/// The first `q` field of a LobbyGate packet (client key or gate id). 0 if absent.
+pub fn key(packet: &[u8]) -> u64 {
+    packet
+        .get(4..12)
+        .and_then(|v| v.first_chunk::<8>())
+        .map_or(0, |v| u64::from_le_bytes(*v))
+}
 pub fn command(packet: &[u8]) -> io::Result<i16> {
     if packet.len() < 4
         || packet.len() > 4000

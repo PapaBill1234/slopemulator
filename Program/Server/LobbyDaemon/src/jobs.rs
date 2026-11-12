@@ -91,7 +91,7 @@ pub struct Jobs<S, N> {
     pub store: S,
     pub np: N,
     gamed: Arc<dyn crate::gamed::GameDaemon>,
-    settings: Settings,
+    settings: Arc<Settings>,
     links: HashSet<LinkId>,
     sessions: HashMap<u64, Session>,
     next_key: Arc<AtomicU64>,
@@ -99,6 +99,76 @@ pub struct Jobs<S, N> {
     owners: Arc<std::sync::Mutex<HashMap<u64, LinkId>>>,
     character_states: HashMap<u64, crate::character::InternalState>,
     deletion_deadlines: HashMap<u64, Instant>,
+    /// Last-logout writes that wait for [`Jobs::flush`] or [`Jobs::take_logouts`].
+    logouts: Vec<(crate::store::AccountId, i32)>,
+}
+impl<S: Store, N: Np + Clone> Jobs<S, N> {
+    /// The session that a packet is for. Command 18 names the gate id and command 12 the
+    /// lobby token; all other commands name the client key.
+    pub fn target(&self, link: LinkId, packet: &[u8]) -> u64 {
+        let key = wire::key(packet);
+        let token = packet
+            .get(20..28)
+            .and_then(|v| v.first_chunk::<8>())
+            .map(|v| u64::from_le_bytes(*v));
+        let found = match packet.get(2..4) {
+            Some([18, 0]) => self
+                .sessions
+                .iter()
+                .find(|(_, s)| s.link == link && s.gate == key),
+            Some([12, 0]) => self
+                .sessions
+                .iter()
+                .find(|(_, s)| s.link == link && token.is_some() && s.lobby_token == token),
+            _ => None,
+        };
+        found.map_or(key, |(client, _)| *client)
+    }
+    /// A private copy of one session for a job task. The job runs [`Jobs::handle`] on the
+    /// copy with no access to other sessions. [`Jobs::merge`] takes the result back.
+    /// The caller must not change the session of `key` before the merge.
+    pub fn checkout(&self, link: LinkId, key: u64) -> Self {
+        let session = self.sessions.get(&key).cloned();
+        let pcids = || {
+            session
+                .iter()
+                .flat_map(|s| s.characters.iter().map(|c| c.pcid))
+        };
+        Self {
+            store: self.store.clone(),
+            np: self.np.clone(),
+            gamed: self.gamed.clone(),
+            settings: self.settings.clone(),
+            links: self.links.get(&link).copied().into_iter().collect(),
+            next_key: self.next_key.clone(),
+            capacity: self.capacity.clone(),
+            owners: self.owners.clone(),
+            character_states: pcids()
+                .filter_map(|id| Some((id, *self.character_states.get(&id)?)))
+                .collect(),
+            deletion_deadlines: pcids()
+                .filter_map(|id| Some((id, *self.deletion_deadlines.get(&id)?)))
+                .collect(),
+            sessions: session.map(|s| (key, s)).into_iter().collect(),
+            logouts: Vec::new(),
+        }
+    }
+    /// Take back the result of a job that ran on [`Jobs::checkout`].
+    pub fn merge(&mut self, key: u64, mut job: Self) {
+        if let Some(old) = self.sessions.get(&key) {
+            for character in &old.characters {
+                self.deletion_deadlines.remove(&character.pcid);
+            }
+        }
+        self.deletion_deadlines.extend(job.deletion_deadlines);
+        self.character_states.extend(job.character_states);
+        self.logouts.append(&mut job.logouts);
+        match job.sessions.remove(&key) {
+            Some(session) => self.sessions.insert(key, session),
+            // The job ended the session (its `finish` ran in the job).
+            None => self.sessions.remove(&key),
+        };
+    }
 }
 impl<S: Store, N: Np> Jobs<S, N> {
     pub fn new(store: S, np: N, settings: Settings) -> io::Result<Self> {
@@ -120,13 +190,14 @@ impl<S: Store, N: Np> Jobs<S, N> {
             np,
             gamed: Arc::new(crate::gamed::StubGameDaemon::default()),
             capacity: Arc::new(tokio::sync::Semaphore::new(settings.max_sessions)),
-            settings,
+            settings: Arc::new(settings),
             links: HashSet::new(),
             sessions: HashMap::new(),
             next_key: Arc::new(AtomicU64::new(1)),
             owners: Arc::default(),
             character_states: HashMap::new(),
             deletion_deadlines: HashMap::new(),
+            logouts: Vec::new(),
         })
     }
     pub(crate) fn set_resources(
@@ -143,12 +214,18 @@ impl<S: Store, N: Np> Jobs<S, N> {
         self.sessions.values().filter_map(|s| s.expires).min()
     }
     pub async fn expire(&mut self) -> io::Result<Vec<Output>> {
+        let outputs = self.expire_now(|_| false);
+        self.flush().await;
+        outputs
+    }
+    /// Expiry without a wait. `busy`: sessions that a job holds; their expiry runs later.
+    pub fn expire_now(&mut self, busy: impl Fn(u64) -> bool) -> io::Result<Vec<Output>> {
         self.np.expire();
         let now = Instant::now();
         let keys: Vec<_> = self
             .sessions
             .iter()
-            .filter(|(_, s)| s.expires.is_some_and(|deadline| deadline <= now))
+            .filter(|(key, s)| s.expires.is_some_and(|deadline| deadline <= now) && !busy(**key))
             .map(|(key, _)| *key)
             .collect();
         let mut outputs = vec![];
@@ -157,17 +234,17 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 self.state(key),
                 Some(State::Retained | State::WorldReady | State::WorldQueued)
             ) {
-                outputs.extend(self.kick(key, 8).await?);
+                outputs.extend(self.kick_now(key, 8)?);
             } else if self.state(key) == Some(State::RetainedInit) {
                 if let Some(session) = self.sessions.remove(&key) {
                     outputs.push(Output {
                         link: session.link,
                         packets: vec![wire::notice(20, session.gate)?],
                     });
-                    self.finish(key, session).await;
+                    self.finish(key, session);
                 }
             } else {
-                outputs.extend(self.close_anonymous(key).await?);
+                outputs.extend(self.close_anonymous_now(key)?);
             }
         }
         Ok(outputs)
@@ -183,17 +260,29 @@ impl<S: Store, N: Np> Jobs<S, N> {
     pub fn state(&self, key: u64) -> Option<State> {
         self.sessions.get(&key).map(|s| s.state)
     }
-    async fn finish(&mut self, key: u64, session: Session) {
+    /// End a session. No wait: the last-logout write goes to the logout list.
+    fn finish(&mut self, key: u64, session: Session) {
         self.owners.lock().unwrap().remove(&key);
         if let Some(account) = session.account {
             self.np.logout_presence(account.id, key);
-            let _ = self
-                .store
-                .update_last_logout(account.id, account.bot_score)
-                .await;
+            self.logouts.push((account.id, account.bot_score));
         }
     }
+    /// Write the last-logout rows of the sessions that ended.
+    pub async fn flush(&mut self) {
+        for (id, bot_score) in std::mem::take(&mut self.logouts) {
+            let _ = self.store.update_last_logout(id, bot_score).await;
+        }
+    }
+    /// The last-logout rows that wait. The caller writes them (`Store::update_last_logout`).
+    pub fn take_logouts(&mut self) -> Vec<(crate::store::AccountId, i32)> {
+        std::mem::take(&mut self.logouts)
+    }
     pub async fn disconnect(&mut self, link: LinkId) {
+        self.disconnect_now(link);
+        self.flush().await;
+    }
+    pub fn disconnect_now(&mut self, link: LinkId) {
         self.links.remove(&link);
         let keys: Vec<_> = self
             .sessions
@@ -203,13 +292,18 @@ impl<S: Store, N: Np> Jobs<S, N> {
             .collect();
         for key in keys {
             if let Some(s) = self.sessions.remove(&key) {
-                self.finish(key, s).await;
+                self.finish(key, s);
             }
         }
     }
     /// Close a pending anonymous session and notify its gate with D20.
     /// The caller supplies the trigger; no original expiry duration is assumed.
     pub async fn close_anonymous(&mut self, key: u64) -> io::Result<Vec<Output>> {
+        let outputs = self.close_anonymous_now(key);
+        self.flush().await;
+        outputs
+    }
+    pub fn close_anonymous_now(&mut self, key: u64) -> io::Result<Vec<Output>> {
         let Some(session) = self.sessions.get(&key) else {
             return Ok(vec![]);
         };
@@ -221,11 +315,16 @@ impl<S: Store, N: Np> Jobs<S, N> {
             packets: vec![wire::notice(20, session.gate)?],
         };
         let session = self.sessions.remove(&key).unwrap();
-        self.finish(key, session).await;
+        self.finish(key, session);
         Ok(vec![output])
     }
     /// Local control operation. No management listener is exposed.
     pub async fn kick(&mut self, key: u64, reason: i8) -> io::Result<Vec<Output>> {
+        let outputs = self.kick_now(key, reason);
+        self.flush().await;
+        outputs
+    }
+    pub fn kick_now(&mut self, key: u64, reason: i8) -> io::Result<Vec<Output>> {
         let Some(session) = self.sessions.remove(&key) else {
             return Ok(vec![]);
         };
@@ -246,10 +345,45 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 },
             ],
         };
-        self.finish(key, session).await;
+        self.finish(key, session);
         Ok(vec![output])
     }
+    /// Commands whose job waits for NP, GameDaemon or the database.
+    pub fn slow(cmd: i16) -> bool {
+        matches!(cmd, 9 | 24 | 44 | 47 | 51 | 54 | 103)
+    }
+    /// Run one LobbyGate packet to its end. Tests and job tasks use this.
+    /// The link task uses [`Jobs::handle_fast`] and a job task for each slow command.
     pub async fn handle(&mut self, link: LinkId, packet: &[u8]) -> io::Result<Vec<Output>> {
+        let outputs = if Self::slow(wire::command(packet)?) {
+            self.handle_slow(link, packet).await
+        } else {
+            self.handle_fast(link, packet)
+        };
+        self.flush().await;
+        outputs
+    }
+    async fn handle_slow(&mut self, link: LinkId, packet: &[u8]) -> io::Result<Vec<Output>> {
+        let cmd = wire::command(packet)?;
+        if !self.links.contains(&link) {
+            return Err(wire::invalid("Hello required"));
+        }
+        let key = wire::key(packet);
+        self.refresh_deletion_counts(key);
+        let packets = match cmd {
+            9 => self.start(link, packet, key).await?,
+            24 => self.enter_world(link, packet, key).await?,
+            103 => self.initial_user_name(link, packet, key).await?,
+            _ => self.character_mutation(link, packet, key, cmd).await?,
+        };
+        Ok(if packets.is_empty() {
+            vec![]
+        } else {
+            vec![Output { link, packets }]
+        })
+    }
+    /// A command that does not wait. Last-logout writes go to the logout list.
+    pub fn handle_fast(&mut self, link: LinkId, packet: &[u8]) -> io::Result<Vec<Output>> {
         let cmd = wire::command(packet)?;
         if cmd == 1 {
             let fields = wire::fields("hhhh", packet)?;
@@ -274,23 +408,16 @@ impl<S: Store, N: Np> Jobs<S, N> {
         if !self.links.contains(&link) {
             return Err(wire::invalid("Hello required"));
         }
-        let key = packet
-            .get(4..12)
-            .map(|v| u64::from_le_bytes(v.try_into().unwrap()))
-            .unwrap_or(0);
+        let key = wire::key(packet);
         self.refresh_deletion_counts(key);
         let packets = match cmd {
             6 => self.init(link, packet, key)?,
-            9 => self.start(link, packet, key).await?,
-            12 => self.init_retained(link, packet, key).await?,
+            12 => self.init_retained(link, packet, key)?,
             15 => self.start_retained(link, packet, key)?,
-            24 => self.enter_world(link, packet, key).await?,
             35 => self.characters(link, packet, key)?,
             38 => self.character_info(link, packet, key)?,
             // Build 307's D41 handler has no decode, session lookup or reply.
             41 => vec![],
-            44 | 47 | 51 | 54 => self.character_mutation(link, packet, key, cmd).await?,
-            103 => self.initial_user_name(link, packet, key).await?,
             64 | 67 | 70 | 73 | 76 => self.goods_unavailable(link, packet, key, cmd)?,
             // D79 GetServiceEntryListReq `hq` → D80 `hiqCqQqohq;` (02-links).
             // ❓ The 307 job is not ported. Local policy: an empty list, so the
@@ -335,7 +462,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
                         if cmd == 23 && session.state == State::Lobby {
                             reply.push(wire::notice(21, client)?);
                         }
-                        self.finish(client, session).await;
+                        self.finish(client, session);
                     }
                 }
                 reply
@@ -374,7 +501,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
         session.expires = Some(deadline);
         Ok(token)
     }
-    async fn init_retained(
+    fn init_retained(
         &mut self,
         link: LinkId,
         packet: &[u8],
@@ -400,7 +527,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
         };
         if session.expires.is_some_and(|v| v <= Instant::now()) {
             let session = self.sessions.remove(&owner).unwrap();
-            self.finish(owner, session).await;
+            self.finish(owner, session);
             return Ok(vec![wire::failure(14, gate, 19)?]);
         }
         if owner != key || (self.settings.check_retained_ipv4 && session.ipv4 != ipv4) {
@@ -418,7 +545,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
             .any(|(other, s)| *other != key && s.link == link && s.gate == gate)
         {
             let session = self.sessions.remove(&key).unwrap();
-            self.finish(key, session).await;
+            self.finish(key, session);
             return Ok(vec![wire::failure(14, gate, 2)?]);
         }
         let session = self.sessions.get_mut(&key).unwrap();
@@ -541,7 +668,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
             Err(reason) => {
                 eprintln!("lobbyd: start failed, reason {reason}");
                 self.sessions.remove(&key);
-                self.finish(key, session).await;
+                self.finish(key, session);
                 Ok(vec![wire::failure(11, key, reason)?])
             }
         }
