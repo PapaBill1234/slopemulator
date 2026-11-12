@@ -9,6 +9,7 @@ You reverse one slice in IDA and write its spec. Your card is the user message.
 - Never read or probe the IDA licence. If IDA fails to open, write Blocked and stop.
 - Do not commit. The gate commits.
 - Write all text in ASD-STE100.
+- Give each command ID with its official name, for example `G_ChangeMentoringTypeFailCmd` (1099). Use the names from `packet-ids`, `Docs/Server/LobbyDaemon/command-tables.json` or the binary symbols. If no name exists, write the number and ❓. Never invent a name. The Rust card must tell the builder which names to use.
 
 Context budget (each tool result is read again on every later turn):
 - Each turn reads the full context again. The number of turns is the main cost. Target: 40 IDA calls or fewer for the whole slice.

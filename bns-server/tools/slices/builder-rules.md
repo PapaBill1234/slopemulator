@@ -11,6 +11,11 @@ You are the builder for one slice. Your card is the user message. It has all the
 - If the spec is not clear, do not guess. Write the question under "❓" in the handoff and continue with the other parts.
 - Write all text in ASD-STE100.
 
+Packet names:
+- Use only official names for command IDs. Never write a bare command number in a `match` arm, a `const`, a reply call or a test.
+- Client protocols: `packet-ids` (`GameCmd`, `LobbyCmd`, `StsCmd`, `InfoGateCmd`). GameDaemon: the `ids::` constants. LobbyDaemon link commands: the `packet-ids` LobbyDaemon enums. Our own protocols (`packet::gamed_link`): their Rust enum names.
+- If no official name exists for an ID, keep the number, add `// ❓ no verified name`, and list it in the handoff under "❓". Never invent a name.
+
 Original bugs (quirks):
 - The spec marks original bugs as "Quirk" (out-of-bounds reads, uninitialized reads, wrong indexes, overflow). Copy the behaviour. Do not fix it. Game data and scripts can depend on it.
 - Put each quirk in a named function or branch `quirk_<name>`, with a comment that cites the spec section.
