@@ -76,10 +76,14 @@ pub fn world_token(key: u64, token: u64) -> io::Result<Vec<u8>> {
     )
 }
 pub fn world_wait(key: u64, wait: &crate::gamed::WaitInfo) -> io::Result<Vec<u8>> {
+    wait_packet(27, key, wait)
+}
+/// Wait data in the shared `hqiiCch;` format: D27 StartWaitNotify and D29 GetWaitInfoOk.
+pub fn wait_packet(cmd: i16, key: u64, wait: &crate::gamed::WaitInfo) -> io::Result<Vec<u8>> {
     packet(
         "hqiiCch;",
         &[
-            Value::I16(27),
+            Value::I16(cmd),
             Value::U64(key),
             Value::U32(wait.first),
             Value::U32(wait.second),

@@ -109,6 +109,40 @@ impl<S: Store, N: Np> Jobs<S, N> {
         session.expires = Some(deadline);
         Ok(packets)
     }
+    /// D28 GetWaitInfoReq (`20-handlers.md` §4.1). No session → Fail 30 code 4.
+    /// ❓ `GetGameWorldWaitInfo` error outside 3.2: the code is not read; local code 5.
+    pub(super) fn wait_info(&self, link: LinkId, key: u64) -> io::Result<Vec<Vec<u8>>> {
+        let Some(session) = self.sessions.get(&key).filter(|s| s.link == link) else {
+            return Ok(vec![wire::failure(30, key, 4)?]);
+        };
+        let wait = match (&session.state, &session.admission) {
+            (State::WorldQueued, Some(admission)) => admission.wait.as_ref(),
+            _ => None,
+        };
+        let Some(wait) = wait else {
+            return Ok(vec![wire::failure(30, key, 5)?]);
+        };
+        Ok(vec![wire::wait_packet(29, key, wait)?])
+    }
+    /// D31 GiveupWaitReq and GiveupWaitGameWorldJob (`13-jobs-a.md` §3.4).
+    /// No session → Fail 33 code 4. Not 3.2 → 5. No world location → 2.
+    /// `leave`: the drop of the admission releases the place in the queue.
+    pub(super) fn giveup_wait(&mut self, link: LinkId, key: u64) -> io::Result<Vec<Vec<u8>>> {
+        let Some(session) = self.sessions.get_mut(&key).filter(|s| s.link == link) else {
+            return Ok(vec![wire::failure(33, key, 4)?]);
+        };
+        if session.state != State::WorldQueued {
+            return Ok(vec![wire::failure(33, key, 5)?]);
+        }
+        if session.world_token.is_none() {
+            return Ok(vec![wire::failure(33, key, 2)?]);
+        }
+        session.admission = None;
+        session.world_token = None;
+        session.expires = None;
+        session.state = State::Lobby;
+        Ok(vec![wire::notice(32, key)?])
+    }
     /// Local queue fixture control. No automatic or real GameDaemon promotion.
     pub fn promote_world(&mut self, key: u64) -> io::Result<Vec<Output>> {
         let session = self

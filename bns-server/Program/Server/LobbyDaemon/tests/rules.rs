@@ -218,7 +218,8 @@ async fn r9_link_limit_and_malformed_frame_rejection() {
     j.disconnect(1).await;
     assert_eq!(w::command(&send(&mut j, 2, hello(58)).await[0]).unwrap(), 2);
     assert!(j.handle(2, &[0, 0, 1, 0]).await.is_err());
-    assert!(j.handle(2, &request(0, 0)).await.is_err());
+    // An unknown command gets no reply and the link stays.
+    assert!(j.handle(2, &request(0, 0)).await.unwrap().is_empty());
 }
 
 #[tokio::test(start_paused = true)]
@@ -350,10 +351,8 @@ async fn r13_retained_rebind_single_use_cache_and_link_checks() {
         20,
     );
     assert!(send(&mut j, 1, request(19, key)).await.is_empty());
-    assert_eq!(
-        send(&mut j, 1, request(23, key)).await,
-        vec![w::notice(21, key).unwrap()]
-    );
+    // 13-jobs-a.md §3.3: 5.1 is "invalid state" for LogoutJob. No notify, no change.
+    assert!(send(&mut j, 1, request(23, key)).await.is_empty());
     assert_eq!(j.state(key), Some(State::Retained));
     assert_eq!(
         send(&mut j, 1, retained_init(200, key, token, 7)).await,
