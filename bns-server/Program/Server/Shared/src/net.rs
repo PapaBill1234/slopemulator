@@ -91,6 +91,56 @@ impl<R: AsyncRead + Unpin> FrameReader<R> {
     }
 }
 
+/// Largest client frame: 2 header bytes and 4,004 payload bytes (LobbyGate spec 03).
+pub const MAX_CLIENT_FRAME: usize = 4008;
+
+/// Reads encrypted client frames (game client to LobbyGate or GameDaemon).
+///
+/// Header `u16`: bits 14.. are the frame type (0 = plain, refused), bits 0..12 are the
+/// payload size in units of 4 bytes.
+pub struct ClientFrameReader<R> {
+    reader: R,
+    buffer: BytesMut,
+}
+
+impl<R: AsyncRead + Unpin> ClientFrameReader<R> {
+    pub fn new(reader: R) -> Self {
+        Self {
+            reader,
+            buffer: BytesMut::with_capacity(8 * 1024),
+        }
+    }
+
+    /// The next full frame, header included. `None`: the peer closed between frames.
+    ///
+    /// Safe to cancel: bytes that were read stay in the buffer.
+    pub async fn next(&mut self) -> io::Result<Option<Bytes>> {
+        loop {
+            if let Some(&[low, high]) = self.buffer.first_chunk::<2>() {
+                let header = u16::from_le_bytes([low, high]);
+                let size = usize::from(header & 0x0fff) * 4 + 2;
+                if header >> 14 == 0 || size > MAX_CLIENT_FRAME {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "client frame header",
+                    ));
+                }
+                if self.buffer.len() >= size {
+                    return Ok(Some(self.buffer.split_to(size).freeze()));
+                }
+                self.buffer.reserve(size - self.buffer.len());
+            }
+            if self.reader.read_buf(&mut self.buffer).await? == 0 {
+                return if self.buffer.is_empty() {
+                    Ok(None)
+                } else {
+                    Err(io::ErrorKind::UnexpectedEof.into())
+                };
+            }
+        }
+    }
+}
+
 /// Why a frame did not go into an [`Outbox`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SendError {
@@ -168,6 +218,21 @@ where
 mod tests {
     use super::*;
     use tokio::io::duplex;
+
+    #[tokio::test]
+    async fn client_frames_split_and_limit() {
+        let (mut peer, local) = duplex(64);
+        let mut reader = ClientFrameReader::new(local);
+        // Type 1, payload 2 units (8 bytes), sent in 2 parts with the start of a second frame.
+        let mut one = 0x4002u16.to_le_bytes().to_vec();
+        one.extend([7; 8]);
+        peer.write_all(&one[..5]).await.unwrap();
+        peer.write_all(&one[5..]).await.unwrap();
+        assert_eq!(reader.next().await.unwrap().unwrap(), one);
+        // A plain frame (type 0) is an error.
+        peer.write_all(&[4, 0, 0, 0, 0, 0]).await.unwrap();
+        assert!(reader.next().await.is_err());
+    }
 
     fn frame(size: u16, fill: u8) -> Vec<u8> {
         let mut bytes = vec![fill; usize::from(size)];

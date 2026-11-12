@@ -7,14 +7,16 @@
 //! The connection string comes from the environment variable `GAMED_MSSQL_URL` only.
 use shared::fsd::{MakePc, APPEARANCE_BYTES};
 use shared::pool::Pool;
-use std::{fmt::Write, io, time::Duration};
+use std::{fmt::Write, future::Future, io, pin::Pin, sync::Arc, time::Duration};
 use tiberius::{Client, Config, Row};
-use tokio::net::TcpStream;
+use tokio::{net::TcpStream, sync::mpsc};
 use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 
 const TIMEOUT: Duration = Duration::from_secs(5);
 /// Default count of connections to the game database (`scale-rules.md` rule D1).
 const POOL_SIZE: usize = 8;
+/// Jobs that can wait in one lane of [`Ordered`].
+const LANE_QUEUE: usize = 1024;
 
 /// A PC as the world-entry packets need it.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -55,6 +57,7 @@ pub struct Db {
     config: Config,
     /// Connections to `BlGame` (rule D1). Size: `GAMED_DB_POOL`, default 8.
     pool: Pool<Connection>,
+    size: usize,
     /// Parameter names and SQL types of `usp_CreateCharacter`, in order.
     parameters: Vec<(String, String)>,
 }
@@ -139,16 +142,21 @@ impl Db {
             return Ok(None);
         };
         let config = Config::from_ado_string(&url).map_err(driver)?;
+        let size = std::env::var("GAMED_DB_POOL")
+            .ok()
+            .and_then(|size| size.parse().ok())
+            .unwrap_or(POOL_SIZE);
         Ok(Some(Self {
             config,
-            pool: Pool::new(
-                std::env::var("GAMED_DB_POOL")
-                    .ok()
-                    .and_then(|size| size.parse().ok())
-                    .unwrap_or(POOL_SIZE),
-            ),
+            pool: Pool::new(size),
+            size,
             parameters: Vec::new(),
         }))
+    }
+
+    /// Count of connections in the pool.
+    pub fn pool_size(&self) -> usize {
+        self.size
     }
 
     async fn open(&self) -> io::Result<Connection> {
@@ -321,5 +329,46 @@ mod tests {
         assert_eq!(value("@QuestList_counts", "varbinary"), "0x");
         assert_eq!(value("@skill_page_name1", "nvarchar"), "N''");
         assert_eq!(value("@money", "bigint"), "0");
+    }
+}
+
+type Job = Box<dyn FnOnce(Arc<Db>) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
+
+/// Ordered database queue (`scale-rules.md` rule D4).
+///
+/// Jobs with the same key (PC id or account id) run in the order of [`Ordered::submit`].
+/// Jobs with different keys run in parallel on different lanes.
+#[derive(Clone)]
+pub struct Ordered {
+    lanes: Arc<[mpsc::Sender<Job>]>,
+}
+
+impl Ordered {
+    /// `lanes`: count of jobs that can run at the same time. Use the pool size.
+    pub fn new(db: Arc<Db>, lanes: usize) -> Self {
+        let lanes = (0..lanes.max(1))
+            .map(|_| {
+                let (sender, mut receiver) = mpsc::channel::<Job>(LANE_QUEUE);
+                let db = db.clone();
+                tokio::spawn(async move {
+                    while let Some(job) = receiver.recv().await {
+                        job(db.clone()).await;
+                    }
+                });
+                sender
+            })
+            .collect();
+        Self { lanes }
+    }
+
+    /// Queue a job. The job sends its result as a message to its caller.
+    /// `false`: the lane is full and the job did not start (the caller fails the request).
+    pub fn submit<F, R>(&self, key: u64, job: F) -> bool
+    where
+        F: FnOnce(Arc<Db>) -> R + Send + 'static,
+        R: Future<Output = ()> + Send + 'static,
+    {
+        let lane = &self.lanes[(key % self.lanes.len() as u64) as usize];
+        lane.try_send(Box::new(move |db| Box::pin(job(db)))).is_ok()
     }
 }

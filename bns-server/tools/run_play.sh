@@ -54,7 +54,7 @@ SERVICES=(
 )
 # DbSrv is not on the play path yet (AuthSrv reads a file). It starts only with tools/play/Db.ini.
 [ -f "$CFG/Db.ini" ] && SERVICES=("DbSrv|10901|$BIN/DbSrv --config $CFG/Db.ini --db AcctDb --listen 127.0.0.1:10901" "${SERVICES[@]}")
-[ -x "$BIN/gamedaemon" ] && SERVICES+=("GameDaemon|$GAME_PORT|env $GAMED_DB $BIN/gamedaemon --listen 0.0.0.0:$GAME_PORT --handshake-key $HANDSHAKE_KEY --lobby 127.0.0.1:$WORLD_PORT --contents-rule $CONTENTS_RULE")
+[ -x "$BIN/gamedaemon" ] && SERVICES+=("GameDaemon|$GAME_PORT|env GAMED_PACKET_LOG=1 $GAMED_DB $BIN/gamedaemon --listen 0.0.0.0:$GAME_PORT --handshake-key $HANDSHAKE_KEY --lobby 127.0.0.1:$WORLD_PORT --contents-rule $CONTENTS_RULE")
 
 port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
 
