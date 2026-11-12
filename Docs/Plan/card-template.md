@@ -7,6 +7,7 @@
 
 ## Context
 <Only the facts the worker needs. No history.>
+<Write command IDs with their official names, for example `G_ChangeMentoringTypeFailCmd` (1099). Name the source: `packet-ids` enum, GameDaemon `ids::`, or the LobbyDaemon enums. Mark an ID with no official name with ❓.>
 
 ## Inputs
 | What | Path | Lines or section |
