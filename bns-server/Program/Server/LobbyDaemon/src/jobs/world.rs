@@ -51,6 +51,75 @@ impl<S: Store, N: Np> Jobs<S, N> {
             2
         })
     }
+    /// LogoutInGameWorldJob (`13-jobs-a.md` §3.7). `world` is the world of the GameDaemon link.
+    /// The session must be in state 4.0 with the same playing character and world, else there
+    /// is no change. Then the session ends (state 6.0): the NP presence is released and the
+    /// last-logout write goes to the logout list. `true`: the session ended.
+    pub fn logout_in_world(&mut self, key: u64, pcid: u64, world: i16) -> bool {
+        // Step 1: "world id (not 0)". A zero PC id never matches a playing character.
+        let same = world != 0
+            && pcid != 0
+            && self.sessions.get(&key).is_some_and(|s| {
+                s.state == State::World
+                    && s.playing
+                        .is_some_and(|p| p.pcid == pcid && p.world == world)
+            });
+        if !same {
+            return false;
+        }
+        // Step 2: `EndGameWorldPlay` and `OnLeave` have no local state. `finalize` is `finish`.
+        if let Some(session) = self.sessions.remove(&key) {
+            self.finish(key, session);
+        }
+        true
+    }
+    /// Client keys and PC ids of the sessions in state 4.0 that play in `world`.
+    pub fn world_players(&self, world: i16) -> Vec<(u64, u64)> {
+        self.sessions
+            .iter()
+            .filter(|(_, s)| s.state == State::World)
+            .filter_map(|(key, s)| {
+                let playing = s.playing.filter(|p| p.world == world)?;
+                Some((*key, playing.pcid))
+            })
+            .collect()
+    }
+    /// KickJob (`18-jobs-f.md` §5) for a session in state 4.0: world kick through the GameDaemon
+    /// link, then `finalize` and the kick packet (D22) for the client. Result 1 = kicked (reply
+    /// ok, or fail reason 24), 2 = world kick failed (other fail reason, or no reply in time).
+    /// Both results end the session, so the result has no other effect here.
+    /// No outputs: the session is not in state 4.0 (the caller uses the other kick paths).
+    /// The wait runs in a job task (rule 3 of step 6).
+    pub async fn kick_world(&mut self, key: u64, reason: i8) -> io::Result<Vec<Output>> {
+        let Some(session) = self.sessions.get(&key) else {
+            return Ok(vec![]);
+        };
+        if session.state != State::World {
+            return Ok(vec![]);
+        }
+        // A 4.0 session without a playing character has no GameWorld presence: result 2.
+        let result = match session.playing {
+            Some(playing) => self
+                .gamed
+                .kick(playing.world, key, playing.pcid, kick_reason(reason))
+                .await
+                .map(|()| 1u8)
+                .or_else(|reason| if reason == 24 { Ok(1) } else { Err(reason) }),
+            None => Err(2),
+        };
+        if let Err(reason) = result {
+            eprintln!("lobbyd: world kick of {key} failed, reason {reason}");
+        }
+        let Some(session) = self.sessions.remove(&key) else {
+            return Ok(vec![]);
+        };
+        let output = Output {
+            link: session.link,
+            packets: vec![wire::kick(key, kick_reason(reason))?],
+        };
+        self.finish(key, session);
+        Ok(vec![output])
+    }
     pub fn with_game_daemon(mut self, gamed: Arc<dyn crate::gamed::GameDaemon>) -> Self {
         self.gamed = gamed;
         self

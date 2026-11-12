@@ -14,7 +14,9 @@ use shared::{
 };
 use std::{
     collections::HashMap,
+    future::Future,
     io,
+    pin::Pin,
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc, Mutex,
@@ -36,7 +38,17 @@ const LEAVE_LIMIT_MS: u64 = 10_000;
 /// Reason for a link failure or timeout of the leave request (GameDaemon only).
 pub const LEAVE_LINK_FAIL: i16 = 1952;
 
+/// Reason of KickFail (16): no PC with this key and PC id is in this world. LobbyDaemon maps it
+/// to kick result 1 (`18-jobs-f.md` §5).
+pub const KICK_NOT_FOUND: i16 = 24;
+/// Reason of KickFail for a failure of GameDaemon (LobbyDaemon result 2). ❓ Local value.
+pub const KICK_FAIL: i16 = 2;
+
 type Pending = oneshot::Sender<Result<u64, i16>>;
+
+/// Disconnects the PC with this client key and PC id. `Err` is the KickFail reason.
+pub type KickHook =
+    Arc<dyn Fn(u64, u64) -> Pin<Box<dyn Future<Output = Result<(), i16>> + Send>> + Send + Sync>;
 
 pub struct Link {
     cluster: i16,
@@ -49,6 +61,7 @@ pub struct Link {
     leaves: Mutex<HashMap<u64, Pending>>,
     leave_limit_ms: AtomicU64,
     next: AtomicU64,
+    kick: Mutex<Option<KickHook>>,
 }
 
 impl Link {
@@ -63,6 +76,7 @@ impl Link {
             leaves: Mutex::new(HashMap::new()),
             leave_limit_ms: AtomicU64::new(LEAVE_LIMIT_MS),
             next: AtomicU64::new(0),
+            kick: Mutex::new(None),
         })
     }
 
@@ -137,6 +151,12 @@ impl Link {
                     transaction,
                     reason,
                 }) => self.finish_leave(transaction, Err(reason)),
+                Some(Message::Kick {
+                    transaction,
+                    client,
+                    pcid,
+                    ..
+                }) => self.start_kick(transaction, client, pcid),
                 Some(create @ Message::Create { .. }) => {
                     let link = self.clone();
                     tokio::spawn(async move {
@@ -282,12 +302,51 @@ impl Link {
         result
     }
 
-    /// Command 12: tell LobbyDaemon that the client left the world (socket closed).
-    pub async fn logout_notify(&self, pc_db_id: u64, cli_key: u64) -> io::Result<()> {
-        if self.send(Message::LogoutNotify { pc_db_id, cli_key }) {
-            Ok(())
-        } else {
-            Err(io::ErrorKind::NotConnected.into())
+    /// Command 12: tell LobbyDaemon that the client left the world (socket closed or logout).
+    /// Does not wait. A full link queue does not lose the message: a task waits for room.
+    /// No link gives `NotConnected` (LobbyDaemon then ends the session at the link close).
+    pub fn logout_notify(&self, pc_db_id: u64, cli_key: u64) -> io::Result<()> {
+        let frame = Message::LogoutNotify { pc_db_id, cli_key }
+            .encode()
+            .map_err(io::Error::other)?;
+        let Some(sender) = self.sender.lock().unwrap().clone() else {
+            return Err(io::ErrorKind::NotConnected.into());
+        };
+        match sender.try_send(frame.clone()) {
+            Ok(()) => Ok(()),
+            Err(net::SendError::Closed) => Err(io::ErrorKind::NotConnected.into()),
+            Err(net::SendError::Full) => {
+                tokio::spawn(async move {
+                    let _ = sender.send_wait(frame).await;
+                });
+                Ok(())
+            }
         }
+    }
+
+    /// Set the function that disconnects a PC for command 14. `None` removes it.
+    pub fn set_kick(&self, hook: Option<KickHook>) {
+        *self.kick.lock().unwrap() = hook;
+    }
+
+    /// Command 14: disconnect the PC, then reply 15 or 16. A task runs it: the link reader
+    /// does not wait.
+    fn start_kick(self: &Arc<Self>, transaction: u64, client: u64, pcid: u64) {
+        let link = self.clone();
+        tokio::spawn(async move {
+            let hook = link.kick.lock().unwrap().clone();
+            let result = match hook {
+                Some(hook) => hook(client, pcid).await,
+                None => Err(KICK_FAIL),
+            };
+            eprintln!("gamed: kick of PC {pcid}, key {client}: {result:?}");
+            link.send(match result {
+                Ok(()) => Message::KickOk { transaction },
+                Err(reason) => Message::KickFail {
+                    transaction,
+                    reason,
+                },
+            });
+        });
     }
 }

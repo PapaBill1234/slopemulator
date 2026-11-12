@@ -12,7 +12,7 @@ pub mod protocol;
 pub mod scheduler;
 pub mod store;
 
-use jobs::{Jobs, LinkId, Output, Settings};
+use jobs::{Jobs, LinkId, Output, Settings, State};
 use np::Np;
 use std::{
     collections::{HashMap, VecDeque},
@@ -72,6 +72,11 @@ enum Control {
         world: i16,
         reply: oneshot::Sender<Result<u64, i16>>,
     },
+    /// LogoutNotify of the GameDaemon link (LogoutInGameWorldJob). No reply.
+    LogoutInWorld { key: u64, pcid: u64, world: i16 },
+    /// The GameDaemon link of `world` closed. Each link task ends its sessions of the world.
+    /// It has no key: `LinkTask::run` expands it into one `LogoutInWorld` for each session.
+    WorldClosed { world: i16 },
 }
 impl Control {
     fn key(&self) -> u64 {
@@ -81,7 +86,9 @@ impl Control {
             | Self::CloseAnonymous { key, .. }
             | Self::Kick { key, .. }
             | Self::Retain { key, .. }
-            | Self::LeaveWorld { key, .. } => *key,
+            | Self::LeaveWorld { key, .. }
+            | Self::LogoutInWorld { key, .. } => *key,
+            Self::WorldClosed { .. } => 0,
         }
     }
 }
@@ -178,6 +185,10 @@ impl<S: Store, N: Np> Server<S, N> {
             .await
             .unwrap_or(Ok(()))
     }
+    /// Kick a session. A session in the world (state 4.0) gets the world kick: KickReq to its
+    /// GameDaemon, wait for the reply or the time limit, then the session ends (`18-jobs-f.md`
+    /// §5). The wait runs in a job task: the link task keeps serving its other sessions.
+    /// The result is `Ok` when the session ended, also when the world kick failed (result 2).
     pub async fn kick(&self, key: u64, reason: i8) -> io::Result<()> {
         self.control(key, |reply| Control::Kick { key, reason, reply })
             .await
@@ -217,6 +228,29 @@ impl<S: Store, N: Np> Server<S, N> {
         // Both are "job cannot start": LeaveWorldFail (not EnterWorldFail), `quirk_leave_fail_as_enter_fail`.
         link.send(control).await.map_err(|_| 2i16)?;
         answer.await.unwrap_or(Err(2))
+    }
+    /// LogoutNotify of the GameDaemon link (LogoutInGameWorldJob, `13-jobs-a.md` §3.7). The
+    /// session of `key` must be in state 4.0 with the playing character `pcid` in `world`,
+    /// else nothing changes. The call ends when the job is queued for the link task of the
+    /// session. It does not wait for the job: the GameDaemon reader must stay free for the
+    /// reply of a kick that waits for the same session.
+    pub async fn logout_in_world(&self, key: u64, pcid: u64, world: i16) {
+        let Some(owner) = self.owners.lock().unwrap().get(&key).copied() else {
+            return;
+        };
+        let link = self.links.lock().unwrap().get(&owner).cloned();
+        if let Some(link) = link {
+            let _ = link.send(Control::LogoutInWorld { key, pcid, world }).await;
+        }
+    }
+    /// The GameDaemon link of `world` closed: end all sessions in state 4.0 of that world
+    /// (`07-gamed-link.md` step 11: link close starts the logout jobs). Each link task ends
+    /// its own sessions. The call ends when all link tasks have the message.
+    pub async fn world_closed(&self, world: i16) {
+        let links: Vec<_> = self.links.lock().unwrap().values().cloned().collect();
+        for link in links {
+            let _ = link.send(Control::WorldClosed { world }).await;
+        }
     }
     pub async fn session_count(&self) -> usize {
         self.owners.lock().unwrap().len()
@@ -338,7 +372,11 @@ impl<S: Store, N: Np> LinkTask<S, N> {
                     self.submit(key, Item::Packet(packet), &mut out)?;
                 }
                 Some(control) = controls.recv() => {
-                    self.submit(control.key(), Item::Control(control), &mut out)?;
+                    if let Control::WorldClosed { world } = control {
+                        self.world_closed(world, &mut out)?;
+                    } else {
+                        self.submit(control.key(), Item::Control(control), &mut out)?;
+                    }
                 }
                 Some(done) = self.running.join_next(), if !self.running.is_empty() => {
                     let (key, job, result, after) = done.map_err(io::Error::other)?;
@@ -349,6 +387,15 @@ impl<S: Store, N: Np> LinkTask<S, N> {
             self.write(out).await?;
             self.send_logouts().await;
         }
+    }
+    /// A GameDaemon link closed: one logout job for each session of this link in the world.
+    /// A session that a job holds gets its logout in its queue (rule 2).
+    fn world_closed(&mut self, world: i16, out: &mut Vec<Output>) -> io::Result<()> {
+        for (key, pcid) in self.jobs.world_players(world) {
+            let logout = Control::LogoutInWorld { key, pcid, world };
+            self.submit(key, Item::Control(logout), out)?;
+        }
+        Ok(())
     }
     fn expire(&mut self, out: &mut Vec<Output>) -> io::Result<()> {
         let busy = &self.busy;
@@ -413,6 +460,34 @@ impl<S: Store, N: Np> LinkTask<S, N> {
                     (key, job, Ok(vec![]), Some(after))
                 });
             }
+            Item::Control(Control::Kick { key, reason, reply })
+                if self.jobs.state(key) == Some(State::World) =>
+            {
+                // KickJob state 2 (world kick): the wait for KickOk or KickFail runs on a
+                // private copy in a job task, so this task keeps serving the other sessions
+                // of the link (rule 3). The reply goes out after the merge.
+                self.busy.insert(key, VecDeque::new());
+                let mut job = self.jobs.checkout(link, key);
+                let mut stop = self.stop.clone();
+                self.running.spawn(async move {
+                    let shutdown = async {
+                        if stop.wait_for(|stop| *stop).await.is_err() {
+                            std::future::pending::<()>().await;
+                        }
+                    };
+                    // A shutdown stops the wait. The session stays in the copy; `close` then
+                    // ends it with the other sessions of the link.
+                    let mut outputs = Ok(vec![]);
+                    tokio::select! {
+                        done = job.kick_world(key, reason) => outputs = done,
+                        _ = shutdown => (),
+                    }
+                    let after: After = Box::new(move || {
+                        let _ = reply.send(Ok(()));
+                    });
+                    (key, job, outputs, Some(after))
+                });
+            }
             Item::Control(control) => self.control(control, out),
         }
         Ok(())
@@ -452,6 +527,11 @@ impl<S: Store, N: Np> LinkTask<S, N> {
             Control::LeaveWorld { reply, .. } => {
                 let _ = reply.send(Err(2));
             }
+            Control::LogoutInWorld { key, pcid, world } => {
+                jobs.logout_in_world(key, pcid, world);
+            }
+            // `run` expands this control message. Not reached here.
+            Control::WorldClosed { .. } => (),
         }
     }
     /// Rule 4: merge, write, then run the queue of the key until a new job starts.

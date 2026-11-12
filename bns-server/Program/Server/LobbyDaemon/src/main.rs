@@ -162,13 +162,8 @@ async fn serve<S: lobbydaemon::store::Store, N: Np>(
             let target = target.clone();
             Box::pin(async move { target.consume_world(key, token, ipv4, world).await })
         });
-        // Return to lobby (8 → 9 or 10). Without this hook every leave fails with reason 2.
-        let target = server.clone();
-        let leave: lobbydaemon::gamed_link::Leave = Arc::new(move |pcid, key, world| {
-            let target = target.clone();
-            Box::pin(async move { target.leave_world(key, pcid, world).await })
-        });
-        gamed.set_leave(leave);
+        // Hooks: return to lobby (8 → 9 or 10), LogoutNotify 12, closed world link.
+        gamed.attach(server.clone());
         tokio::spawn(async move {
             let result = gamed.serve(link, consume).await;
             eprintln!("lobbyd: gamed link listener stopped: {result:?}");

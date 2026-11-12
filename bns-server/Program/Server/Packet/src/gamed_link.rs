@@ -23,10 +23,17 @@ const CREATE_OK: &str = "hqhhb";
 const LEAVE: &str = "hqqq";
 const LEAVE_OK: &str = "hqq";
 const LOGOUT_NOTIFY: &str = "hqq";
+/// 14 KickReq `hqqqqQ` (LobbyDaemon → GameDaemon), 15 KickOk `hq`, 16 KickFail `hqE`
+/// (`07-gamed-link.md` lines 560, 561, 622).
+const KICK: &str = "hqqqqQ";
+const KICK_OK: &str = "hq";
 const LEAVE_COMMAND: i16 = 8;
 const LEAVE_OK_COMMAND: i16 = 9;
 const LEAVE_FAIL_COMMAND: i16 = 10;
 const LOGOUT_NOTIFY_COMMAND: i16 = 12;
+const KICK_COMMAND: i16 = 14;
+const KICK_OK_COMMAND: i16 = 15;
+const KICK_FAIL_COMMAND: i16 = 16;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Message {
@@ -70,6 +77,19 @@ pub enum Message {
     LeaveFail { transaction: u64, reason: i16 },
     /// 12 LogoutNotify (GameDaemon → LobbyDaemon). No reply.
     LogoutNotify { pc_db_id: u64, cli_key: u64 },
+    /// 14 KickReq (LobbyDaemon → GameDaemon): disconnect the PC. Reply 15 or 16.
+    /// ❓ The wire format `hqqqqQ` has one more `q` after the three named ones. Its meaning is
+    /// not verified: it is sent as 0 and ignored on decode. `reason` is the `Q` (one signed byte).
+    Kick {
+        transaction: u64,
+        client: u64,
+        pcid: u64,
+        reason: i8,
+    },
+    /// 15 KickOk.
+    KickOk { transaction: u64 },
+    /// 16 KickFail. Reason 24 means that the kick is done already (LobbyDaemon result 1).
+    KickFail { transaction: u64, reason: i16 },
     /// 20. ❓ `external` is the external account data blob. ❓ `address` is the client IPv4.
     Create {
         transaction: u64,
@@ -227,6 +247,33 @@ impl Message {
                 LOGOUT_NOTIFY,
                 &[I16(LOGOUT_NOTIFY_COMMAND), U64(*pc_db_id), U64(*cli_key)],
             ),
+            Self::Kick {
+                transaction,
+                client,
+                pcid,
+                reason,
+            } => compose(
+                KICK,
+                &[
+                    I16(KICK_COMMAND),
+                    U64(*transaction),
+                    U64(*client),
+                    U64(*pcid),
+                    // ❓ The fourth `q` is not verified.
+                    U64(0),
+                    I8(*reason),
+                ],
+            ),
+            Self::KickOk { transaction } => {
+                compose(KICK_OK, &[I16(KICK_OK_COMMAND), U64(*transaction)])
+            }
+            Self::KickFail {
+                transaction,
+                reason,
+            } => compose(
+                FAILURE,
+                &[I16(KICK_FAIL_COMMAND), U64(*transaction), I16(*reason)],
+            ),
             Self::Create {
                 transaction,
                 pcid,
@@ -288,7 +335,9 @@ impl Message {
             4 => WORLD,
             5 => ENTER,
             6 => ENTER_OK,
-            7 | 22 | LEAVE_FAIL_COMMAND => FAILURE,
+            7 | 22 | LEAVE_FAIL_COMMAND | KICK_FAIL_COMMAND => FAILURE,
+            KICK_COMMAND => KICK,
+            KICK_OK_COMMAND => KICK_OK,
             LEAVE_COMMAND => LEAVE,
             LEAVE_OK_COMMAND => LEAVE_OK,
             LOGOUT_NOTIFY_COMMAND => LOGOUT_NOTIFY,
@@ -351,6 +400,21 @@ impl Message {
             (LOGOUT_NOTIFY_COMMAND, [U64(pc_db_id), U64(cli_key)]) => Self::LogoutNotify {
                 pc_db_id: *pc_db_id,
                 cli_key: *cli_key,
+            },
+            (KICK_COMMAND, [U64(transaction), U64(client), U64(pcid), U64(_), I8(reason)]) => {
+                Self::Kick {
+                    transaction: *transaction,
+                    client: *client,
+                    pcid: *pcid,
+                    reason: *reason,
+                }
+            }
+            (KICK_OK_COMMAND, [U64(transaction)]) => Self::KickOk {
+                transaction: *transaction,
+            },
+            (KICK_FAIL_COMMAND, [U64(transaction), I16(reason)]) => Self::KickFail {
+                transaction: *transaction,
+                reason: *reason,
             },
             (
                 20,
@@ -444,6 +508,47 @@ mod tests {
             2 + 2 + 2 + 2 * 31 + 28
         );
         assert_eq!(Message::decode(&[4, 0, 99, 0]).unwrap(), None);
+    }
+
+    #[test]
+    fn message_round_trip() {
+        let messages = [
+            Message::LogoutNotify {
+                pc_db_id: 60005,
+                cli_key: 77,
+            },
+            Message::Kick {
+                transaction: 4,
+                client: 77,
+                pcid: 60005,
+                reason: 8,
+            },
+            Message::KickOk { transaction: 4 },
+            Message::KickFail {
+                transaction: 5,
+                reason: 24,
+            },
+        ];
+        for message in messages {
+            let packet = message.encode().unwrap();
+            assert_eq!(Message::decode(&packet).unwrap(), Some(message));
+        }
+        // Frame sizes: `hqqqqQ` = 2 + 2 + 4 * 8 + 1, `hq` = 2 + 2 + 8, `hqE` = 2 + 2 + 8 + 2.
+        let size = |m: Message| m.encode().unwrap().len();
+        assert_eq!(
+            size(Message::Kick {
+                transaction: 1,
+                client: 2,
+                pcid: 3,
+                reason: 4
+            }),
+            37
+        );
+        assert_eq!(size(Message::KickOk { transaction: 1 }), 12);
+        // A short body is an error, not a panic.
+        let mut short = Message::KickOk { transaction: 1 }.encode().unwrap();
+        short.truncate(short.len() - 3);
+        assert!(Message::decode(&short).is_err());
     }
 
     #[test]

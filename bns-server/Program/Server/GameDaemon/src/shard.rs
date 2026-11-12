@@ -12,7 +12,7 @@
 //! message of another shard → the session ends. A connection task waits for the inbox.
 use crate::{
     db::{Ordered, Pc},
-    link::Link,
+    link::{Link, KICK_FAIL, KICK_NOT_FOUND},
     play::{self, Effect, Play},
 };
 use bytes::Bytes;
@@ -21,12 +21,12 @@ use std::{
     io,
     sync::{
         atomic::{AtomicU64, Ordering},
-        Arc, Mutex,
+        Arc, Mutex, Weak,
     },
     time::Duration,
 };
 use tokio::{
-    sync::mpsc,
+    sync::{mpsc, oneshot},
     time::{interval, MissedTickBehavior},
 };
 
@@ -38,6 +38,8 @@ const PASS: usize = 1024;
 const INBOX: usize = 8192;
 /// Packets of one session that can wait for a result or a handover.
 const SESSION_QUEUE: usize = 64;
+/// Time for the search of a PC to kick. LobbyDaemon waits 10 s for the reply. ❓ Local value.
+const KICK_LIMIT: Duration = Duration::from_secs(5);
 
 pub type Inbox = mpsc::Sender<Event>;
 
@@ -72,6 +74,15 @@ pub enum Event {
     Switched { conn: u32 },
     /// The old shard gives the packets that came after the move.
     HandoverDone { conn: u32, late: Vec<Bytes> },
+    /// Link command 14: end the session of this PC. `reply` gets `true` if a shard found and
+    /// dropped it. The connection task then closes the socket. No LogoutNotify goes out:
+    /// LobbyDaemon ends its session itself after the reply. A shard whose session moved away
+    /// forwards the event to the new shard.
+    Kick {
+        client: u64,
+        pcid: u64,
+        reply: oneshot::Sender<bool>,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -93,6 +104,9 @@ pub struct Session {
 struct Moved {
     to: Inbox,
     late: Vec<Bytes>,
+    /// For a kick that comes while the session is on its way.
+    pcid: Option<u64>,
+    client_key: Option<u64>,
 }
 
 /// Read-only data and the shard directory. Shared by all shards.
@@ -109,13 +123,60 @@ pub struct World {
 
 impl World {
     pub fn new(rules: Vec<Bytes>, link: Option<Arc<Link>>, db: Option<Ordered>) -> Arc<Self> {
-        Arc::new(Self {
-            rules,
-            link,
-            db,
-            transactions: AtomicU64::new(0),
-            shards: Mutex::new(HashMap::new()),
+        Arc::new_cyclic(|weak: &Weak<World>| {
+            if let Some(link) = &link {
+                // The link holds a weak reference: no cycle.
+                let weak = weak.clone();
+                link.set_kick(Some(Arc::new(move |client, pcid| {
+                    let weak = weak.clone();
+                    Box::pin(async move {
+                        match weak.upgrade() {
+                            Some(world) => world.kick(client, pcid).await,
+                            None => Err(KICK_FAIL),
+                        }
+                    })
+                })));
+            }
+            Self {
+                rules,
+                link,
+                db,
+                transactions: AtomicU64::new(0),
+                shards: Mutex::new(HashMap::new()),
+            }
         })
+    }
+
+    /// Link command 14: end the session of the PC with this client key and PC id.
+    /// `Err(24)`: no such PC in this world. `Err(2)`: a shard did not answer in time.
+    /// The PC can be in transit between two shards, so the search has two passes.
+    pub async fn kick(&self, client: u64, pcid: u64) -> Result<(), i16> {
+        let ask = async {
+            for _ in 0..2 {
+                let inboxes: Vec<Inbox> = self
+                    .shards
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .values()
+                    .cloned()
+                    .collect();
+                for inbox in inboxes {
+                    let (reply, found) = oneshot::channel();
+                    let event = Event::Kick {
+                        client,
+                        pcid,
+                        reply,
+                    };
+                    if inbox.send(event).await.is_ok() && found.await == Ok(true) {
+                        return Ok(());
+                    }
+                }
+            }
+            Err(KICK_NOT_FOUND)
+        };
+        tokio::time::timeout(KICK_LIMIT, ask)
+            .await
+            .unwrap_or(Err(KICK_FAIL))
     }
 
     /// The inbox of the shard of `zone`. The first call for a zone starts its task.
@@ -208,7 +269,7 @@ impl Shard {
                     session.queue.push_back(packet);
                 } else {
                     eprintln!("gamed: client {conn}: too many packets wait, closed");
-                    self.sessions.remove(&conn);
+                    self.end(conn);
                 }
             }
             Event::Closed { conn } => {
@@ -217,8 +278,13 @@ impl Shard {
                     let _ = moved.to.try_send(Event::HandoverDone { conn, late });
                     let _ = moved.to.try_send(Event::Closed { conn });
                 }
-                self.sessions.remove(&conn);
+                self.end(conn);
             }
+            Event::Kick {
+                client,
+                pcid,
+                reply,
+            } => self.kick(client, pcid, reply),
             Event::Entered { conn, result } => {
                 self.result(conn, |play, _, out| play::entered(play, result, out));
             }
@@ -253,6 +319,61 @@ impl Shard {
                 }
                 session.wait = Wait::None;
                 self.drain(conn);
+            }
+        }
+    }
+
+    /// Drop the session of `conn`. The connection task then closes the socket. A PC that is in
+    /// the world and did not leave by the return to lobby gets a LogoutNotify (link command 12).
+    /// TODO ❓ The PC save is not in the port yet (`play.rs` step 3): LogoutNotify then goes
+    /// out without a save.
+    fn end(&mut self, conn: u32) {
+        let Some(session) = self.sessions.remove(&conn) else {
+            return;
+        };
+        let play = &session.play;
+        let (Some(pcid), Some(client_key), false) = (play.pcid, play.client_key, play.logged_out)
+        else {
+            return;
+        };
+        if let Some(link) = &self.world.link {
+            if let Err(error) = link.logout_notify(pcid, client_key) {
+                eprintln!("gamed: client {conn}: LogoutNotify not sent: {error}");
+            }
+        }
+    }
+
+    /// Event 14 of the link: find the session, drop it, tell the caller.
+    fn kick(&mut self, client: u64, pcid: u64, reply: oneshot::Sender<bool>) {
+        let found = self
+            .sessions
+            .iter()
+            .find(|(_, s)| s.play.pcid == Some(pcid) && s.play.client_key == Some(client))
+            .map(|(conn, _)| *conn);
+        if let Some(conn) = found {
+            // LobbyDaemon ends its session after the reply: no LogoutNotify.
+            if let Some(session) = self.sessions.get_mut(&conn) {
+                session.play.logged_out = true;
+            }
+            self.end(conn);
+            let _ = reply.send(true);
+            return;
+        }
+        let moved = self
+            .moved
+            .values()
+            .find(|m| m.pcid == Some(pcid) && m.client_key == Some(client));
+        match moved {
+            // A full inbox drops the event. The caller then sees "not found".
+            Some(moved) => {
+                let _ = moved.to.try_send(Event::Kick {
+                    client,
+                    pcid,
+                    reply,
+                });
+            }
+            None => {
+                let _ = reply.send(false);
             }
         }
     }
@@ -380,7 +501,7 @@ impl Shard {
         self.effects = effects;
         if let Err(error) = result {
             eprintln!("gamed: client {conn}: {error}, closed");
-            self.sessions.remove(&conn);
+            self.end(conn);
         } else if let Some(zone) = zone {
             self.leave(conn, zone);
         }
@@ -394,16 +515,37 @@ impl Shard {
         let to = self.world.shard(zone);
         let late = session.queue.drain(..).collect();
         let out = session.out.clone();
+        let (pcid, client_key) = (session.play.pcid, session.play.client_key);
         let session = Box::new(session);
-        if to.try_send(Event::Join { conn, session }).is_err()
-            || out.try_send(ToConn::Route(to.clone())).is_err()
-        {
-            // The session is dropped. The connection task then closes the socket.
+        match to.try_send(Event::Join { conn, session }) {
+            Ok(()) => {}
+            Err(
+                mpsc::error::TrySendError::Full(Event::Join { session, .. })
+                | mpsc::error::TrySendError::Closed(Event::Join { session, .. }),
+            ) => {
+                // The session ends here. The connection task then closes the socket.
+                eprintln!("gamed: client {conn}: move to zone {zone} failed, closed");
+                self.sessions.insert(conn, *session);
+                self.end(conn);
+                return;
+            }
+            Err(_) => return,
+        }
+        if out.try_send(ToConn::Route(to.clone())).is_err() {
+            // The new shard has the session: its `Closed` event ends it there. The `moved`
+            // entry stays, so the `Closed` of the connection task goes on to the new shard.
             eprintln!("gamed: client {conn}: move to zone {zone} failed, closed");
             let _ = to.try_send(Event::Closed { conn });
-            return;
         }
-        self.moved.insert(conn, Moved { to, late });
+        self.moved.insert(
+            conn,
+            Moved {
+                to,
+                late,
+                pcid,
+                client_key,
+            },
+        );
     }
 }
 

@@ -26,6 +26,15 @@ mod world;
 use world::{Playing, WorldToken};
 
 pub type LinkId = u64;
+/// Kick reason that goes to the client or to the GameDaemon.
+/// ❓ `GetGameWorldKickReason` (`18-jobs-f.md` §5) is not verified: the gate mapping is used.
+pub(crate) fn kick_reason(reason: i8) -> i8 {
+    match reason {
+        1..=8 => reason,
+        10..=12 => reason - 1,
+        _ => 0,
+    }
+}
 #[derive(Clone, Debug)]
 pub struct Output {
     pub link: LinkId,
@@ -359,14 +368,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 if matches!(session.state, State::Init | State::RetainedInit) {
                     wire::notice(20, session.gate)?
                 } else {
-                    wire::kick(
-                        key,
-                        match reason {
-                            1..=8 => reason,
-                            10..=12 => reason - 1,
-                            _ => 0,
-                        },
-                    )?
+                    wire::kick(key, kick_reason(reason))?
                 },
             ],
         };

@@ -47,17 +47,17 @@ ids-3-rust	rust	sonnet	packet-ids,lobbydaemon,lobbygate,gamedaemon	Program/Serve
 lp2-2-rust	rust	sonnet	lobbydaemon	Program/Server/LobbyDaemon/	lp2-1-rust	120	done	LobbyDaemon replies for charge, grade and account-inventory item requests
 lp2-3	spec	opus	-	Docs/Server/GameDaemon/10-session-handlers.md,Docs/Server/LobbyDaemon/23-return-to-lobby.md,Docs/Server/LobbyDaemon/13-jobs-a.md,Docs/Server/LobbyDaemon/07-gamed-link.md,Docs/Plan/cards/lp2-3-rust.md	-	150	done	spec of return to lobby (GameDaemon 381, LobbyDaemon 307)
 lp2-3-rust	rust	sonnet	lobbydaemon,gamedaemon,packet	Program/Server/LobbyDaemon/,Program/Server/GameDaemon/,Program/Server/Packet/,Docs/Server/LobbyDaemon/23-return-to-lobby.md,Cargo.lock	lp2-3,ids-3-rust	120	done	return to lobby on both ends
-lp2-4-rust	rust	sonnet	lobbydaemon,gamedaemon,packet	Program/Server/LobbyDaemon/,Program/Server/GameDaemon/,Program/Server/Packet/,Cargo.lock	lp2-3-rust	120	blocked	logout in world and kick over the GameDaemon link
+lp2-4-rust	rust	sonnet	lobbydaemon,gamedaemon,packet	Program/Server/LobbyDaemon/,Program/Server/GameDaemon/,Program/Server/Packet/,Cargo.lock	lp2-3-rust	120	done	logout in world and kick over the GameDaemon link
 lp2-5-rust	rust	sonnet	lobbydaemon	Program/Server/LobbyDaemon/,Docs/Server/LobbyDaemon/11-character-select.md	lp2-2-rust,ids-3-rust	120	done	character lifecycle state from the database
 st-06	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	done	StServers RE: AccessSrv, BanSrv, RoleSrv, PrivacySrv
 st-07	spec	opus	-	Docs/Platform/StServers/RE/	st-09	150	done	StServers RE: ExAuthSrv, ExAuthnSrv, IpCheckSrv
 st-08	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	done	StServers RE: FriendSrv, PresenceSrv, ProfileSrv, NameSrv
 st-09	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	done	StServers RE: member library, GradeSrv, GradeMembersSrv, LevelSrv
 st-10	spec	opus	-	Docs/Platform/StServers/RE/	st-09	150	done	StServers RE: GoodsSrv, ShowcaseSrv, PromotionStampSrv
-ld381-1	spec	opus	-	Docs/Server/LobbyDaemon/24-compare-381.md,Docs/Server/LobbyDaemon/command-tables-381.json,Docs/Server/LobbyDaemon/fn-map-381.json,Docs/Plan/cards/ld381-1-rust.md	-	150	ready	LobbyDaemon 381 packets and logic changes against the 2019 + PDB specs (IDA)
+ld381-1	spec	opus	-	Docs/Server/LobbyDaemon/24-compare-381.md,Docs/Server/LobbyDaemon/command-tables-381.json,Docs/Server/LobbyDaemon/fn-map-381.json,Docs/Plan/cards/ld381-1-rust.md	-	150	running	LobbyDaemon 381 packets and logic changes against the 2019 + PDB specs (IDA)
 ld381-1-rust	rust	sonnet	lobbydaemon,packet-ids	Program/Server/LobbyDaemon/,Program/Server/PacketIds/,Cargo.lock	ld381-1	120	ready	LobbyDaemon: apply the 381 packet and logic changes
 ld381-2	spec	opus	-	Docs/Server/LobbyDaemon/25-rust-coverage.md,Docs/Plan/cards/ld381-r1.md,Docs/Plan/cards/ld381-r2.md,Docs/Plan/cards/ld381-r3.md,Docs/Plan/cards/ld381-r4.md,Docs/Plan/cards/ld381-r5.md	ld381-1-rust	120	ready	LobbyDaemon Rust coverage audit; writes the last 5 Rust cards
-ld381-r1	rust	sonnet	lobbydaemon,gamedaemon,packet	Program/Server/LobbyDaemon/,Program/Server/GameDaemon/,Program/Server/Packet/,Cargo.lock	ld381-2	150	ready	LobbyDaemon gamed link: world entry, leave, logout notify, kick (replaces lp2-4-rust)
+ld381-r1	rust	sonnet	lobbydaemon,gamedaemon,packet	Program/Server/LobbyDaemon/,Program/Server/GameDaemon/,Program/Server/Packet/,Cargo.lock	ld381-2	150	ready	LobbyDaemon gamed link: world entry, leave, logout notify, kick (lp2-4-rust is merged; finish the gaps)
 ld381-r2	rust	sonnet	lobbydaemon,packet	Program/Server/LobbyDaemon/,Program/Server/Packet/,Cargo.lock	ld381-r1	150	ready	LobbyDaemon account inventory link and its jobs
 ld381-r3	rust	sonnet	lobbydaemon	Program/Server/LobbyDaemon/,Cargo.lock	ld381-r2	150	ready	LobbyDaemon manage port, InfoGate, timers
 ld381-r4	rust	sonnet	lobbydaemon	Program/Server/LobbyDaemon/,Cargo.lock	ld381-r3	150	ready	LobbyDaemon NP requests and notifies, charge, goods, grade
