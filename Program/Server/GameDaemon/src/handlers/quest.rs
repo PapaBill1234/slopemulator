@@ -230,7 +230,7 @@ pub fn handle_answer_extra_survey(_ctx: &mut Context<'_>, req: &[u8]) -> Outcome
 
 /// parity: 1017 20-quest-handlers.md#1017--g_refreshsimplequestpackreqcmd--partial partial
 pub fn handle_refresh_simple_quest_pack(ctx: &mut Context<'_>, _req: &[u8]) -> Outcome {
-    const F: u16 = 1019;
+    const F: u16 = ids::G_RefreshSimpleQuestPackFailCmd;
     if ctx.world.arena || session::arena_blocked(ctx.pc()) {
         return Outcome::reason(F, 5);
     }
@@ -265,7 +265,7 @@ pub fn handle_refresh_simple_quest_pack(ctx: &mut Context<'_>, _req: &[u8]) -> O
 
 /// parity: 1205 20-quest-handlers.md#1205--g_r_skipquestteleportreqcmd--partial partial
 pub fn handle_r_skip_quest_teleport(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1207;
+    const F: u16 = ids::G_R_SkipQuestTeleportFailCmd;
     let rules = match ctx.services.quest_config() {
         QuestConfig::Known(rules) => rules,
         QuestConfig::Unknown => return Outcome::unsupported("❓ skip quest configuration"),

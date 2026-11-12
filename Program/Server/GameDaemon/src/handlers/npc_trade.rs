@@ -165,7 +165,7 @@ fn shorts(r: &mut Reader<'_>) -> Option<(u16, u16)> {
 
 /// parity: 1341 29-npc-trade-handlers.md#1341--g_buyreqcmd--partial partial
 pub fn handle_buy(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1342;
+    const F: u16 = ids::G_BuyFailCmd;
     if !user_ready(ctx.pc()) {
         return Outcome::reason(F, 314);
     }
@@ -192,7 +192,7 @@ pub fn handle_buy(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1343 29-npc-trade-handlers.md#1343--g_buy2reqcmd--partial partial
 pub fn handle_buy2(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1344;
+    const F: u16 = ids::G_Buy2FailCmd;
     if !user_ready(ctx.pc()) {
         return Outcome::reason(F, 350);
     }
@@ -230,7 +230,7 @@ pub fn handle_buy2(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1348 29-npc-trade-handlers.md#1348--g_sellreqcmd--partial partial
 pub fn handle_sell(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1349;
+    const F: u16 = ids::G_SellFailCmd;
     if !user_ready(ctx.pc()) {
         return Outcome::reason(F, 322);
     }
@@ -257,7 +257,7 @@ pub fn handle_sell(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1350 29-npc-trade-handlers.md#1350--g_rebuyreqcmd--partial partial
 pub fn handle_rebuy(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1351;
+    const F: u16 = ids::G_RebuyFailCmd;
     if !user_ready(ctx.pc()) {
         return Outcome::reason(F, 332);
     }
@@ -285,7 +285,7 @@ pub fn handle_rebuy(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1352 29-npc-trade-handlers.md#1352--g_tradewithnpcreqcmd--partial partial
 pub fn handle_trade_with_npc(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1353;
+    const F: u16 = ids::G_TradeWithNpcFailCmd;
     if !user_ready(ctx.pc()) {
         return Outcome::reason(F, 347);
     }
@@ -328,7 +328,11 @@ fn check(ctx: &mut Context<'_>, check: NpcTradeCheck) -> Result<bool, Outcome> {
 /// Preserve enable, record, payment-mode order for both draw entries.
 #[allow(clippy::result_large_err)]
 fn gacha_prefix(ctx: &mut Context<'_>, instant: bool) -> Result<(), Outcome> {
-    let fail = if instant { 1181 } else { 1178 };
+    let fail = if instant {
+        ids::G_BoardGachaDrawByInstantPaymentFailCmd
+    } else {
+        ids::G_BoardGachaDrawByItemFailCmd
+    };
     if !check(ctx, NpcTradeCheck::BoardGachaEnabled)? {
         return Err(Outcome::reason(fail, 2));
     }
@@ -346,7 +350,7 @@ fn gacha_prefix(ctx: &mut Context<'_>, instant: bool) -> Result<(), Outcome> {
 
 /// parity: 1176 29-npc-trade-handlers.md#1176--g_boardgachadrawbyitemreqcmd--partial partial
 pub fn handle_board_gacha_draw_by_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1178;
+    const F: u16 = ids::G_BoardGachaDrawByItemFailCmd;
     if let Err(out) = gacha_prefix(ctx, false) {
         return out;
     }
@@ -377,7 +381,7 @@ pub fn handle_board_gacha_draw_by_item(ctx: &mut Context<'_>, req: &[u8]) -> Out
 
 /// parity: 1179 29-npc-trade-handlers.md#1179--g_boardgachadrawbyinstantpaymentreqcmd--partial partial
 pub fn handle_board_gacha_draw_by_instant_payment(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1181;
+    const F: u16 = ids::G_BoardGachaDrawByInstantPaymentFailCmd;
     if let Err(out) = gacha_prefix(ctx, true) {
         return out;
     }
@@ -404,7 +408,7 @@ pub fn handle_board_gacha_draw_by_instant_payment(ctx: &mut Context<'_>, req: &[
 
 /// parity: 1456 29-npc-trade-handlers.md#1456--g_dungeonprogresstostepreqcmd--partial partial
 pub fn handle_dungeon_progress_to_step(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1457;
+    const F: u16 = ids::G_DungeonProgressToStepFailCmd;
     let mut r = Reader(req);
     let (Some(dungeon), Some(step), Some(selector), Some(npc)) =
         (r.short(), r.short(), r.byte(), r.quad())

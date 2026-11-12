@@ -276,7 +276,7 @@ pub fn handle_retrieve_bid_list(ctx: &mut Context<'_>, _req: &[u8]) -> Outcome {
 
 /// parity: 384 24-market-handlers.md#384--g_retrievebidrankstatusreqcmd--partial partial
 pub fn handle_retrieve_bid_rank_status(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 386;
+    const F: u16 = ids::G_RetrieveBidRankStatusFailCmd;
     if arena_b(ctx) {
         return Outcome::reason(F, 5);
     }
@@ -299,7 +299,7 @@ pub fn handle_retrieve_bid_rank_status(ctx: &mut Context<'_>, req: &[u8]) -> Out
 
 /// parity: 1013 24-market-handlers.md#1013--g_npauctionbidreqcmd--partial partial
 pub fn handle_np_auction_bid(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1015;
+    const F: u16 = ids::G_NPAuctionBidFailCmd;
     if arena_b(ctx) {
         return Outcome::reason(F, 5);
     }
@@ -343,7 +343,7 @@ pub fn handle_np_auction_bid(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1530 24-market-handlers.md#1530--g_registersalereqcmd--partial partial
 pub fn handle_register_sale(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1532;
+    const F: u16 = ids::G_RegisterSaleFailCmd;
     if let Some(out) = check(
         ctx,
         MarketCheck::RegisterSaleEnabled,
@@ -402,7 +402,7 @@ pub fn handle_abandon_sale(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1536 24-market-handlers.md#1536--g_updatesalepricereqcmd--partial partial
 pub fn handle_update_sale_price(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1538;
+    const F: u16 = ids::G_UpdateSalePriceFailCmd;
     if let Some(out) = gates(ctx, F) {
         return out;
     }
@@ -446,7 +446,7 @@ fn zero_quads<const N: usize>(req: &[u8]) -> [u64; N] {
 
 /// parity: 1539 24-market-handlers.md#1539--g_registerbidreqcmd--partial partial
 pub fn handle_register_bid(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1541;
+    const F: u16 = ids::G_RegisterBidFailCmd;
     if let Some(out) = gates(ctx, F) {
         return out;
     }
@@ -489,7 +489,7 @@ pub fn handle_abandon_bid(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1545 24-market-handlers.md#1545--g_updatebidpricereqcmd--partial partial
 pub fn handle_update_bid_price(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1547;
+    const F: u16 = ids::G_UpdateBidPriceFailCmd;
     if let Some(out) = gates(ctx, F) {
         return out;
     }
@@ -514,7 +514,7 @@ pub fn handle_update_bid_price(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1548 24-market-handlers.md#1548--g_registerpurchasereqcmd--partial partial
 pub fn handle_register_purchase(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1550;
+    const F: u16 = ids::G_RegisterPurchaseFailCmd;
     if let Some(out) = gates(ctx, F) {
         return out;
     }
@@ -542,7 +542,7 @@ pub fn handle_register_purchase(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1551 24-market-handlers.md#1551--g_marketsearchitemreqcmd--partial partial
 pub fn handle_market_search_item(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1553;
+    const F: u16 = ids::G_MarketSearchItemFailCmd;
     if ctx.world.arena {
         return Outcome::reason(F, 5);
     }

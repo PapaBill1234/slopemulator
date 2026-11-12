@@ -1,5 +1,6 @@
 //! BoardGachaDraw failure only. Rejected movement/skills do not use this path.
 //! TODO ❓ Kick identity/reason, +252 provenance and final close are not mapped.
+use crate::ids;
 
 /// Numeric conversion, not client enum names or a claim of backend reachability.
 /// Spec: Step 5 part 4, Backend reason conversion; 381 0x140018AE0.
@@ -79,7 +80,7 @@ pub fn board_gacha_failure(
     let mut actions = Vec::new();
     if has_session {
         actions.push(SendReply {
-            command: 1178,
+            command: ids::G_BoardGachaDrawByItemFailCmd as i16,
             client_reason: reason.client_reason(),
         });
         actions.push(ReleaseSessionReference);

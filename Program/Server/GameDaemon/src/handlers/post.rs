@@ -319,7 +319,7 @@ fn duplicate_position(items: &[(u16, u16)]) -> bool {
 
 /// parity: 1509 23-post-handlers.md#1509--g_deliverpostreqcmd--partial partial
 pub fn handle_deliver_post(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1511;
+    const F: u16 = ids::G_DeliverPostFailCmd;
     if arena_b(ctx) {
         return Outcome::reason(F, 5);
     }

@@ -1,6 +1,7 @@
 //! Local R15 fixture lifecycle. The production NP checks are not implemented.
 use super::*;
 use crate::character::{CreateCharacter, InternalState as CState};
+use crate::ids::gate::*;
 
 fn reply(cmd: i16, key: u64, slot: [u8; 16], state: i8, reason: i16) -> io::Result<Vec<u8>> {
     let mut v = vec![Value::I16(cmd), Value::U64(key), Value::Id(slot)];
@@ -53,16 +54,22 @@ impl<S: Store, N: Np> Jobs<S, N> {
         key: u64,
         cmd: i16,
     ) -> io::Result<Vec<Vec<u8>>> {
-        let Ok(v) = wire::fields(if cmd == 44 { "hqohsbQ" } else { "hqo" }, packet) else {
+        let format = if cmd == CreateCharacterReq {
+            "hqohsbQ"
+        } else {
+            "hqo"
+        };
+        let Ok(v) = wire::fields(format, packet) else {
             return Ok(vec![]);
         };
         let Value::Id(slot) = v[2] else {
             unreachable!()
         };
+        // The fail IDs (46, 49, 53, 56) are not in the 307 handler tables.
         let fail = match cmd {
-            44 => 46,
-            47 => 49,
-            51 => 53,
+            CreateCharacterReq => 46,
+            DeleteCharacterReq => 49,
+            CancelWaitCharacterDeletionReq => 53,
             _ => 56,
         };
         let Some(s) = self.sessions.get(&key).filter(|s| s.link == link) else {
@@ -90,7 +97,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
         if !s.services.is_empty() {
             return failure(2);
         }
-        if cmd == 44 {
+        if cmd == CreateCharacterReq {
             let (
                 Value::I16(world),
                 Value::String(name),
@@ -199,7 +206,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
             return failure(2);
         }
         let internal = self.character_states.get(&c.pcid).copied();
-        if cmd == 47 {
+        if cmd == DeleteCharacterReq {
             if internal != Some(CState::Normal)
                 || self.store.try_character_deletion(c.pcid).await.is_err()
             {
@@ -268,7 +275,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 ],
             )?]);
         }
-        if cmd == 51 {
+        if cmd == CancelWaitCharacterDeletionReq {
             if internal != Some(CState::Waiting)
                 || self
                     .deletion_deadlines
@@ -296,10 +303,12 @@ impl<S: Store, N: Np> Jobs<S, N> {
             self.gamed.restore_character(c.world, c.pcid),
         )
         .await;
-        if !matches!(result, Ok(Ok(()))) && !(cmd == 54 && matches!(result, Ok(Err(35)))) {
+        if !matches!(result, Ok(Ok(())))
+            && !(cmd == RecoverCharacterReq && matches!(result, Ok(Err(35))))
+        {
             return Ok(vec![reply(fail, key, slot, 3, 2)?]);
         }
-        let done = if cmd == 54 && internal == Some(CState::Deleting) {
+        let done = if cmd == RecoverCharacterReq && internal == Some(CState::Deleting) {
             self.store.cancel_character_deletion(c.pcid).await
         } else {
             self.store.finish_character_restoration(c.pcid).await
@@ -308,7 +317,15 @@ impl<S: Store, N: Np> Jobs<S, N> {
             return Ok(vec![reply(fail, key, slot, 3, 2)?]);
         }
         self.set_character_state(key, c.pcid, CState::Normal);
-        Ok(vec![success(if cmd == 51 { 52 } else { 55 }, key, slot)?])
+        Ok(vec![success(
+            if cmd == CancelWaitCharacterDeletionReq {
+                52
+            } else {
+                55
+            },
+            key,
+            slot,
+        )?])
     }
     pub(super) async fn initial_user_name(
         &mut self,

@@ -180,7 +180,7 @@ fn logged(mut out: Outcome, text: &'static str) -> Outcome {
 
 /// parity: 1098 17-mentoring-handlers.md#1098--g_changementoringtypereqcmd--partial partial
 pub fn handle_change_mentoring_type(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1099;
+    const F: u16 = ids::G_ChangeMentoringTypeFailCmd;
     if !ctx.world.mentoring.enabled {
         return Outcome::reason(F, 2436);
     }
@@ -210,7 +210,7 @@ pub fn handle_change_mentoring_type(ctx: &mut Context<'_>, req: &[u8]) -> Outcom
 
 /// parity: 1100 17-mentoring-handlers.md#1100--g_invitementoringreqcmd--partial partial
 pub fn handle_invite_mentoring(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1102;
+    const F: u16 = ids::G_InviteMentoringFailCmd;
     if !ctx.world.mentoring.enabled {
         return Outcome::reason(F, 2446);
     }
@@ -261,7 +261,7 @@ pub fn handle_invite_mentoring(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1103 17-mentoring-handlers.md#1103--g_confirminvitationmentoringreqcmd--partial partial
 pub fn handle_confirm_invitation_mentoring(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1104;
+    const F: u16 = ids::G_ConfirmInvitationMentoringFailCmd;
     let Some(max_mentees) = ctx.world.mentoring.max_mentees else {
         return Outcome::reason(F, 2454);
     };
@@ -360,7 +360,7 @@ pub fn handle_reject_invitation_mentoring(ctx: &mut Context<'_>, req: &[u8]) -> 
 
 /// parity: 1107 17-mentoring-handlers.md#1107--g_leavementoringreqcmd--partial partial
 pub fn handle_leave_mentoring(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1109;
+    const F: u16 = ids::G_LeaveMentoringFailCmd;
     if !ctx.world.mentoring.enabled {
         return Outcome::reason(F, 2455);
     }

@@ -2,7 +2,7 @@
 use crate::{daemon::LobbyDaemon, wire::invalid};
 use bloodlib::packet::{compose, decode_fields, decompose, DecodeLimits, Value};
 use packet::fragments::compose_fragments;
-use packet_ids::LobbyCmd;
+use packet_ids::{LobbyCmd, LobbyGateLobbydCmd};
 use std::{
     collections::HashMap,
     io,
@@ -222,10 +222,21 @@ impl LoginHub {
                 let request = if cmd == 7 {
                     compose(
                         "hqoo",
-                        &[Value::I16(9), v[2].clone(), v[3].clone(), v[4].clone()],
+                        &[
+                            Value::I16(LobbyGateLobbydCmd::StartSessionWithNPTokenReq.id()),
+                            v[2].clone(),
+                            v[3].clone(),
+                            v[4].clone(),
+                        ],
                     )
                 } else {
-                    compose("hq", &[Value::I16(15), v[2].clone()])
+                    compose(
+                        "hq",
+                        &[
+                            Value::I16(LobbyGateLobbydCmd::StartSessionWithLobbyTokenReq.id()),
+                            v[2].clone(),
+                        ],
+                    )
                 }
                 .map_err(p)?;
                 if !added || daemon.send_packet(request).await.is_err() {

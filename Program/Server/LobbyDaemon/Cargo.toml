@@ -7,6 +7,7 @@ publish = false
 [dependencies]
 bloodlib = { path = "../BloodLib" }
 packet = { path = "../Packet" }
+packet-ids = { path = "../PacketIds" }
 shared = { path = "../Shared" }
 gamegate = { path = "../../Platform/StServers/GameGate" }
 sts = { path = "../../Platform/Sts", features = ["listener", "np-adapter"], optional = true }

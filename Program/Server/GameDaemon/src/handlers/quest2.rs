@@ -267,7 +267,7 @@ pub fn handle_acquire_quest(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
 
 /// parity: 1450 21-quest-progress-handlers.md#1450--g_progressmissionreqcmd--partial partial
 pub fn handle_progress_mission(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1451;
+    const F: u16 = ids::G_ProgressMissionFailCmd;
     let mut r = Reader(req);
     let (Some(mission), Some(value)) = (mission(&mut r), r.short()) else {
         return Outcome::reason(F, 1001);
@@ -494,7 +494,7 @@ pub fn handle_mission_step_time_expired(ctx: &mut Context<'_>, req: &[u8]) -> Ou
 
 /// parity: 1469 21-quest-progress-handlers.md#1469--g_resetquestcompletiontimereqcmd--partial partial
 pub fn handle_reset_quest_completion_time(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
-    const F: u16 = 1471;
+    const F: u16 = ids::G_ResetQuestCompletionTimeFailCmd;
     let mut r = Reader(req);
     let Some(quest) = r.short() else {
         return Outcome::reason(F, 1091);

@@ -1,4 +1,8 @@
 //! Typed local login states. See spec/lobbyd/04-login.md and 05-rust-milestone.md.
+#![expect(
+    non_upper_case_globals,
+    reason = "match arms use the official command names from `crate::ids` (CamelCase constants)"
+)]
 use crate::{
     np::{Np, NpError},
     protocol as wire,
@@ -372,7 +376,17 @@ impl<S: Store, N: Np> Jobs<S, N> {
     }
     /// Commands whose job waits for NP, GameDaemon or the database.
     pub fn slow(cmd: i16) -> bool {
-        matches!(cmd, 9 | 24 | 44 | 47 | 51 | 54 | 103)
+        use crate::ids::gate::*;
+        matches!(
+            cmd,
+            StartSessionWithNPTokenReq
+                | GetEnterWorldTokenReq
+                | CreateCharacterReq
+                | DeleteCharacterReq
+                | CancelWaitCharacterDeletionReq
+                | RecoverCharacterReq
+                | CreateInitialUserNameReq
+        )
     }
     /// Run one LobbyGate packet to its end. Tests and job tasks use this.
     /// The link task uses [`Jobs::handle_fast`] and a job task for each slow command.
@@ -392,10 +406,11 @@ impl<S: Store, N: Np> Jobs<S, N> {
         }
         let key = wire::key(packet);
         self.refresh_deletion_counts(key);
+        use crate::ids::gate::*;
         let packets = match cmd {
-            9 => self.start(link, packet, key).await?,
-            24 => self.enter_world(link, packet, key).await?,
-            103 => self.initial_user_name(link, packet, key).await?,
+            StartSessionWithNPTokenReq => self.start(link, packet, key).await?,
+            GetEnterWorldTokenReq => self.enter_world(link, packet, key).await?,
+            CreateInitialUserNameReq => self.initial_user_name(link, packet, key).await?,
             _ => self.character_mutation(link, packet, key, cmd).await?,
         };
         Ok(if packets.is_empty() {
@@ -406,8 +421,9 @@ impl<S: Store, N: Np> Jobs<S, N> {
     }
     /// A command that does not wait. Last-logout writes go to the logout list.
     pub fn handle_fast(&mut self, link: LinkId, packet: &[u8]) -> io::Result<Vec<Output>> {
+        use crate::ids::gate::*;
         let cmd = wire::command(packet)?;
-        if cmd == 1 {
+        if cmd == HelloReq {
             let fields = wire::fields("hhhh", packet)?;
             let Value::I16(version) = fields[2] else {
                 unreachable!()
@@ -433,35 +449,45 @@ impl<S: Store, N: Np> Jobs<S, N> {
         let key = wire::key(packet);
         self.refresh_deletion_counts(key);
         let packets = match cmd {
-            6 => self.init(link, packet, key)?,
-            12 => self.init_retained(link, packet, key)?,
-            15 => self.start_retained(link, packet, key)?,
-            35 => self.characters(link, packet, key)?,
-            38 => self.character_info(link, packet, key)?,
+            InitSessionWithNPTokenReq => self.init(link, packet, key)?,
+            InitSessionWithLobbyTokenReq => self.init_retained(link, packet, key)?,
+            StartSessionWithLobbyTokenReq => self.start_retained(link, packet, key)?,
+            GetCharacterInfoListReq => self.characters(link, packet, key)?,
+            GetCharacterInfoReq => self.character_info(link, packet, key)?,
             // Build 307's D41 handler has no decode, session lookup or reply.
-            41 => vec![],
-            64 | 67 | 70 | 73 | 76 => self.goods_unavailable(link, packet, key, cmd)?,
-            60 => self.charge_info(link, packet, key)?,
-            106 => self.activate_grade(link, packet, key)?,
-            82 | 85 | 88 | 91 | 94 | 97 | 100 => {
+            CheckCharacterNameReq => vec![],
+            GetGoodsCountReq
+            | ListGoodsReq
+            | TakeGoodsReq
+            | ListLobbyServiceItemInfoReq
+            | GetLobbyServiceItemInfoReq => self.goods_unavailable(link, packet, key, cmd)?,
+            GetChargeInfoReq => self.charge_info(link, packet, key)?,
+            ActivateGradeReq => self.activate_grade(link, packet, key)?,
+            ChangeCharacterAppearanceWithAccountInventoryItemReq
+            | ChangeCharacterSexWithAccountInventoryItemReq
+            | ChangeCharacterRaceWithAccountInventoryItemReq
+            | RenameCharacterWithAccountInventoryItemReq
+            | AddSlotWithAccountInventoryItemReq
+            | ChangeUserNameWithAccountInventoryItemReq
+            | ExtendJumpingCharacterCreationQuotaWithAccountInventoryItemReq => {
                 self.account_item_service(link, packet, key, cmd)?
             }
             // D79 GetServiceEntryListReq `hq` → D80 `hiqCqQqohq;` (02-links).
             // ❓ The 307 job is not ported. Local policy: an empty list, so the
             // client gets C72 and leaves its wait state.
-            79 => {
+            GetServiceEntryListReq => {
                 if wire::fields("hq", packet).is_err() {
                     vec![]
                 } else {
                     wire::service_entries(key)?
                 }
             }
-            18 | 19 | 23 => {
+            LostAnonymousConnectionNotify | LostConnectionNotify | LogoutNotify => {
                 if wire::fields("hq", packet).is_err() {
                     return Ok(vec![]);
                 }
                 // 18 names the session by gate key, 19 and 23 by client key.
-                let client = if cmd == 18 {
+                let client = if cmd == LostAnonymousConnectionNotify {
                     self.sessions
                         .iter()
                         .find(|(_, s)| s.link == link && s.gate == key)
@@ -473,19 +499,19 @@ impl<S: Store, N: Np> Jobs<S, N> {
                     // ❓ The gate channel and `close` of each command are not read from the
                     // original. Local choice: `close` is true for all three; only 23 (the
                     // client logs out, the gate stays) has a gate channel for the notify.
-                    Some(client) => self.logout(link, client, true, cmd == 23)?,
+                    Some(client) => self.logout(link, client, true, cmd == LogoutNotify)?,
                     None => vec![],
                 }
             }
             // D28 GetWaitInfoReq `hq` → D29 `hqiiCch;` / D30 `hqE` (20-handlers §4.1).
-            28 => {
+            GetWaitInfoReq => {
                 if wire::fields("hq", packet).is_err() {
                     return Ok(vec![]);
                 }
                 self.wait_info(link, key)?
             }
             // D31 GiveupWaitReq `hq` → D32 `hq` / D33 `hqE` (20-handlers §4.1).
-            31 => {
+            GiveupWaitReq => {
                 if wire::fields("hq", packet).is_err() {
                     return Ok(vec![]);
                 }
@@ -860,11 +886,13 @@ impl<S: Store, N: Np> Jobs<S, N> {
         key: u64,
         cmd: i16,
     ) -> io::Result<Vec<Vec<u8>>> {
+        use crate::ids::gate::*;
+        // The reply IDs (66, 69, 72, 75, 78) are not in the 307 handler tables.
         let (format, fail) = match cmd {
-            64 => ("hq", 66),
-            67 => ("hqc", 69),
-            70 => ("hqq", 72),
-            73 => ("hqQq", 75),
+            GetGoodsCountReq => ("hq", 66),
+            ListGoodsReq => ("hqc", 69),
+            TakeGoodsReq => ("hqq", 72),
+            ListLobbyServiceItemInfoReq => ("hqQq", 75),
             _ => ("hqq", 78),
         };
         let Ok(values) = wire::fields(format, packet) else {
@@ -878,7 +906,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
         };
         Ok(vec![match cmd {
             // D75 hqQE echoes the search type; D78 hqqE echoes the request key.
-            73 => wire::packet(
+            ListLobbyServiceItemInfoReq => wire::packet(
                 "hqQE",
                 &[
                     Value::I16(fail),
@@ -887,7 +915,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
                     Value::I16(reason),
                 ],
             )?,
-            76 => wire::packet(
+            GetLobbyServiceItemInfoReq => wire::packet(
                 "hqqE",
                 &[
                     Value::I16(fail),

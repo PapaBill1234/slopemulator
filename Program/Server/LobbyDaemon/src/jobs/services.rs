@@ -2,6 +2,7 @@
 //! feature off. Each request gets a Fail packet, never silence and never a closed link.
 //! The on-paths are not ported: they need NP charge, NP grade and the account-inventory link.
 use super::*;
+use crate::ids::gate::*;
 
 /// One request shape of the account-inventory item services (`20-handlers.md` §4.1).
 struct ItemService {
@@ -21,7 +22,7 @@ struct ItemService {
 const fn service(cmd: i16) -> ItemService {
     match cmd {
         // 82 appearance `hqobqqi`.
-        82 => ItemService {
+        ChangeCharacterAppearanceWithAccountInventoryItemReq => ItemService {
             format: "hqobqqi",
             fail: 84,
             slot: Some(2),
@@ -30,7 +31,7 @@ const fn service(cmd: i16) -> ItemService {
             item: 5,
         },
         // 85 sex `hqocbqqi`.
-        85 => ItemService {
+        ChangeCharacterSexWithAccountInventoryItemReq => ItemService {
             format: "hqocbqqi",
             fail: 87,
             slot: Some(2),
@@ -39,7 +40,7 @@ const fn service(cmd: i16) -> ItemService {
             item: 6,
         },
         // 88 race `hqoccbqqi`.
-        88 => ItemService {
+        ChangeCharacterRaceWithAccountInventoryItemReq => ItemService {
             format: "hqoccbqqi",
             fail: 90,
             slot: Some(2),
@@ -49,7 +50,7 @@ const fn service(cmd: i16) -> ItemService {
         },
         // 91 rename `hqosqqi`. Bug, not ported (`20-handlers.md` §4.1): the original sends
         // its failure with command 84. The port sends 93.
-        91 => ItemService {
+        RenameCharacterWithAccountInventoryItemReq => ItemService {
             format: "hqosqqi",
             fail: 93,
             slot: Some(2),
@@ -58,7 +59,7 @@ const fn service(cmd: i16) -> ItemService {
             item: 5,
         },
         // 94 add slot `hqqqi`.
-        94 => ItemService {
+        AddSlotWithAccountInventoryItemReq => ItemService {
             format: "hqqqi",
             fail: 96,
             slot: None,
@@ -67,7 +68,7 @@ const fn service(cmd: i16) -> ItemService {
             item: 3,
         },
         // 97 user name `hqsqqi`.
-        97 => ItemService {
+        ChangeUserNameWithAccountInventoryItemReq => ItemService {
             format: "hqsqqi",
             fail: 99,
             slot: None,
@@ -211,10 +212,26 @@ impl<S: Store, N: Np> Jobs<S, N> {
             || shape.name.is_some_and(|i| is_zero(values.get(i)));
         match cmd {
             // Zero input: the job does not start and the client gets no reply.
-            82 | 85 | 88 | 91 if zero => Ok(vec![]),
-            94 if zero => fail(1),
-            94 if !matches!(session.state, State::Lobby | State::InitialName) => fail(5),
-            97 | 100 if zero => fail(1),
+            ChangeCharacterAppearanceWithAccountInventoryItemReq
+            | ChangeCharacterSexWithAccountInventoryItemReq
+            | ChangeCharacterRaceWithAccountInventoryItemReq
+            | RenameCharacterWithAccountInventoryItemReq
+                if zero =>
+            {
+                Ok(vec![])
+            }
+            AddSlotWithAccountInventoryItemReq if zero => fail(1),
+            AddSlotWithAccountInventoryItemReq
+                if !matches!(session.state, State::Lobby | State::InitialName) =>
+            {
+                fail(5)
+            }
+            ChangeUserNameWithAccountInventoryItemReq
+            | ExtendJumpingCharacterCreationQuotaWithAccountInventoryItemReq
+                if zero =>
+            {
+                fail(1)
+            }
             // Account-inventory channel absent (feature off).
             _ => fail(7),
         }
