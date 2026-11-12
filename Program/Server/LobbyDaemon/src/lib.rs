@@ -1,4 +1,5 @@
-//! Offline LobbyDaemon. Each link has an ordered job lane.
+//! Offline LobbyDaemon. One task for each LobbyGate link owns the job state of that link.
+//! Slow commands run in job tasks on a private copy of one session (scale rules §10 step 6).
 pub mod character;
 pub mod gamed;
 pub mod gamed_link;
@@ -12,7 +13,7 @@ pub mod store;
 use jobs::{Jobs, LinkId, Output, Settings};
 use np::Np;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     io,
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -20,22 +21,73 @@ use std::{
     },
     time::Duration,
 };
-use store::Store;
+use store::{AccountId, Store};
 use tokio::{
     io::AsyncWriteExt,
-    net::{TcpListener, TcpStream},
-    sync::{mpsc, watch, Mutex, Semaphore},
+    net::{tcp::OwnedWriteHalf, TcpListener, TcpStream},
+    sync::{mpsc, oneshot, watch, Semaphore},
     task::JoinSet,
 };
 
-type Lane<S, N> = Arc<Mutex<Jobs<S, Arc<N>>>>;
-type Link<S, N> = (mpsc::Sender<Vec<Vec<u8>>>, Lane<S, N>);
+/// Items that can wait for one busy session of a link (rule 2 of step 6).
+const MAX_QUEUED: usize = 64;
+/// Control messages that can wait for one link task.
+const CONTROL_QUEUE: usize = 64;
+/// Last-logout batches that can wait for the writer of one link.
+const LOGOUT_QUEUE: usize = 64;
+
+/// A Server API call for one session. The link task that owns the session runs it.
+enum Control {
+    ConsumeWorld {
+        key: u64,
+        token: u64,
+        ipv4: u32,
+        world: i16,
+        reply: oneshot::Sender<Result<u64, i16>>,
+    },
+    PromoteWorld {
+        key: u64,
+        reply: oneshot::Sender<io::Result<()>>,
+    },
+    CloseAnonymous {
+        key: u64,
+        reply: oneshot::Sender<io::Result<()>>,
+    },
+    Kick {
+        key: u64,
+        reason: i8,
+        reply: oneshot::Sender<io::Result<()>>,
+    },
+    Retain {
+        key: u64,
+        lifetime: Duration,
+        reply: oneshot::Sender<io::Result<u64>>,
+    },
+}
+impl Control {
+    fn key(&self) -> u64 {
+        match self {
+            Self::ConsumeWorld { key, .. }
+            | Self::PromoteWorld { key, .. }
+            | Self::CloseAnonymous { key, .. }
+            | Self::Kick { key, .. }
+            | Self::Retain { key, .. } => *key,
+        }
+    }
+}
+enum Item {
+    Packet(Vec<u8>),
+    Control(Control),
+}
+type Directory = SyncMutex<HashMap<LinkId, mpsc::Sender<Control>>>;
+type Job<S, N> = (u64, Jobs<S, Arc<N>>, io::Result<Vec<Output>>);
+
 pub struct Server<S, N> {
     store: S,
     np: Arc<N>,
     gamed: Arc<dyn gamed::GameDaemon>,
     settings: Settings,
-    links: Mutex<HashMap<LinkId, Link<S, N>>>,
+    links: Directory,
     owners: Arc<SyncMutex<HashMap<u64, LinkId>>>,
     next_link: AtomicU64,
     next_key: Arc<AtomicU64>,
@@ -52,7 +104,7 @@ impl<S: Store, N: Np> Server<S, N> {
             gamed: Arc::new(gamed::StubGameDaemon::default()),
             capacity: Arc::new(Semaphore::new(settings.max_sessions)),
             settings,
-            links: Mutex::new(HashMap::new()),
+            links: SyncMutex::new(HashMap::new()),
             owners: Arc::default(),
             next_link: AtomicU64::new(1),
             next_key: Arc::new(AtomicU64::new(1)),
@@ -62,6 +114,18 @@ impl<S: Store, N: Np> Server<S, N> {
         self.gamed = gamed;
         self
     }
+    /// Send a control message to the link task that owns `key`. `None`: no session.
+    async fn control<T>(
+        &self,
+        key: u64,
+        make: impl FnOnce(oneshot::Sender<T>) -> Control,
+    ) -> Option<T> {
+        let owner = self.owners.lock().unwrap().get(&key).copied()?;
+        let link = self.links.lock().unwrap().get(&owner).cloned()?;
+        let (reply, answer) = oneshot::channel();
+        link.send(make(reply)).await.ok()?;
+        answer.await.ok()
+    }
     pub async fn consume_world(
         &self,
         key: u64,
@@ -69,58 +133,40 @@ impl<S: Store, N: Np> Server<S, N> {
         ipv4: u32,
         world: i16,
     ) -> Result<u64, i16> {
-        let lane = self.lane(key).await.ok_or(16i16)?;
-        let result = lane.lock().await.consume_world(key, token, ipv4, world);
-        result
+        self.control(key, |reply| Control::ConsumeWorld {
+            key,
+            token,
+            ipv4,
+            world,
+            reply,
+        })
+        .await
+        .unwrap_or(Err(16))
     }
     pub async fn promote_world(&self, key: u64) -> io::Result<()> {
-        let lane = self
-            .lane(key)
+        self.control(key, |reply| Control::PromoteWorld { key, reply })
             .await
-            .ok_or_else(|| io::Error::other("session absent"))?;
-        let output = lane.lock().await.promote_world(key)?;
-        self.deliver(output).await
-    }
-    async fn deliver(&self, outputs: Vec<Output>) -> io::Result<()> {
-        let links = self.links.lock().await;
-        for output in outputs {
-            if let Some((tx, _)) = links.get(&output.link) {
-                tx.try_send(output.packets)
-                    .map_err(|_| io::Error::other("link output queue unavailable"))?;
-            }
-        }
-        Ok(())
-    }
-    async fn lane(&self, key: u64) -> Option<Lane<S, N>> {
-        let owner = self.owners.lock().unwrap().get(&key).copied()?;
-        self.links
-            .lock()
-            .await
-            .get(&owner)
-            .map(|(_, lane)| lane.clone())
+            .unwrap_or_else(|| Err(io::Error::other("session absent")))
     }
     pub async fn close_anonymous(&self, key: u64) -> io::Result<()> {
-        if let Some(lane) = self.lane(key).await {
-            let mut jobs = lane.lock().await;
-            self.deliver(jobs.close_anonymous(key).await?).await?;
-        }
-        Ok(())
+        self.control(key, |reply| Control::CloseAnonymous { key, reply })
+            .await
+            .unwrap_or(Ok(()))
     }
     pub async fn kick(&self, key: u64, reason: i8) -> io::Result<()> {
-        if let Some(lane) = self.lane(key).await {
-            let mut jobs = lane.lock().await;
-            self.deliver(jobs.kick(key, reason).await?).await?;
-        }
-        Ok(())
+        self.control(key, |reply| Control::Kick { key, reason, reply })
+            .await
+            .unwrap_or(Ok(()))
     }
     /// Deterministic world-return control. No GameDaemon listener is exposed.
     pub async fn retain(&self, key: u64, lifetime: Duration) -> io::Result<u64> {
-        let lane = self
-            .lane(key)
-            .await
-            .ok_or_else(|| io::Error::other("session absent"))?;
-        let result = lane.lock().await.retain(key, lifetime);
-        result
+        self.control(key, |reply| Control::Retain {
+            key,
+            lifetime,
+            reply,
+        })
+        .await
+        .unwrap_or_else(|| Err(io::Error::other("session absent")))
     }
     pub async fn session_count(&self) -> usize {
         self.owners.lock().unwrap().len()
@@ -144,19 +190,10 @@ impl<S: Store, N: Np> Server<S, N> {
                     let Ok(permit) = permits.clone().try_acquire_owned() else { drop(stream); continue; };
                     let link = self.next_link.fetch_add(1, Ordering::Relaxed);
                     let server = self.clone();
-                    let mut stop = shutdown.clone();
+                    let stop = shutdown.clone();
                     tasks.spawn(async move {
                         let _permit = permit;
-                        let mut jobs = Jobs::new(server.store.clone(), server.np.clone(), server.settings.clone())?.with_game_daemon(server.gamed.clone());
-                        jobs.set_resources(server.next_key.clone(), server.capacity.clone(), server.owners.clone());
-                        let lane = Arc::new(Mutex::new(jobs));
-                        let result = tokio::select! {
-                            _ = stop.changed() => Ok(()),
-                            result = server.connection(link, stream, lane.clone()) => result,
-                        };
-                        server.links.lock().await.remove(&link);
-                        lane.lock().await.disconnect(link).await;
-                        result
+                        server.link(link, stream, stop).await
                     });
                 }
                 Some(_) = tasks.join_next(), if !tasks.is_empty() => (),
@@ -165,50 +202,234 @@ impl<S: Store, N: Np> Server<S, N> {
         while tasks.join_next().await.is_some() {}
         Ok(())
     }
-    async fn connection(
+    /// The task of one LobbyGate link (rules 1, 8, 9 and 10 of step 6).
+    async fn link(
         &self,
         link: LinkId,
         stream: TcpStream,
-        lane: Lane<S, N>,
+        stop: watch::Receiver<bool>,
     ) -> io::Result<()> {
+        let mut jobs = Jobs::new(self.store.clone(), self.np.clone(), self.settings.clone())?
+            .with_game_daemon(self.gamed.clone());
+        jobs.set_resources(
+            self.next_key.clone(),
+            self.capacity.clone(),
+            self.owners.clone(),
+        );
         shared::net::tune(&stream)?;
-        let (reader, mut writer) = stream.into_split();
+        let (reader, writer) = stream.into_split();
+        let (control, controls) = mpsc::channel(CONTROL_QUEUE);
+        self.links.lock().unwrap().insert(link, control);
+        let (logouts, pending) = mpsc::channel(LOGOUT_QUEUE);
+        let logout_writer = tokio::spawn(write_logouts(self.store.clone(), pending));
+        let mut task = LinkTask {
+            link,
+            jobs,
+            busy: HashMap::new(),
+            running: JoinSet::new(),
+            writer,
+            logouts,
+            stop: stop.clone(),
+        };
+        let result = task.run(reader, controls, stop).await;
+        // No new control message can reach this link from here.
+        self.links.lock().unwrap().remove(&link);
+        task.close().await;
+        drop(task);
+        let _ = logout_writer.await;
+        result
+    }
+}
+
+/// Write the last-logout rows of one link in order (rule 8).
+/// Known limit: a last-logout write and a new login of the same account at the same moment
+/// can change order. ❓ Not seen as a problem.
+async fn write_logouts<S: Store>(store: S, mut pending: mpsc::Receiver<Vec<(AccountId, i32)>>) {
+    while let Some(batch) = pending.recv().await {
+        for (id, bot_score) in batch {
+            let _ = store.update_last_logout(id, bot_score).await;
+        }
+    }
+}
+
+struct LinkTask<S, N> {
+    link: LinkId,
+    jobs: Jobs<S, Arc<N>>,
+    /// Sessions that a job task holds, with the items that wait for them.
+    busy: HashMap<u64, VecDeque<Item>>,
+    running: JoinSet<Job<S, N>>,
+    writer: OwnedWriteHalf,
+    logouts: mpsc::Sender<Vec<(AccountId, i32)>>,
+    stop: watch::Receiver<bool>,
+}
+impl<S: Store, N: Np> LinkTask<S, N> {
+    /// One `select!` over the socket, control messages, job results and a tick (rule 5).
+    async fn run(
+        &mut self,
+        reader: tokio::net::tcp::OwnedReadHalf,
+        mut controls: mpsc::Receiver<Control>,
+        mut stop: watch::Receiver<bool>,
+    ) -> io::Result<()> {
         let mut reader = shared::net::FrameReader::new(reader, shared::net::MAX_TRUSTED_FRAME);
-        let (tx, mut rx) = mpsc::channel::<Vec<Vec<u8>>>(32);
-        self.links.lock().await.insert(link, (tx, lane.clone()));
-        let receive = async {
-            while let Some(packet) = reader.next().await? {
-                let mut jobs = lane.lock().await;
-                // Expire before dispatch too, so traffic cannot extend a deadline.
-                self.deliver(jobs.expire().await?).await?;
-                let output = jobs.handle(link, &packet).await?;
-                self.deliver(output).await?;
+        // Local scheduler resolution, not an original lifetime.
+        let mut tick = tokio::time::interval(Duration::from_millis(10));
+        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            let mut out = Vec::new();
+            // The frame reader keeps a partial frame when another branch wins.
+            tokio::select! {
+                _ = stop.changed() => return Ok(()),
+                frame = reader.next() => {
+                    let Some(packet) = frame? else { return Ok(()) };
+                    // Expire before dispatch too, so traffic cannot extend a deadline.
+                    self.expire(&mut out)?;
+                    let packet = packet.to_vec();
+                    let key = self.jobs.target(self.link, &packet);
+                    self.submit(key, Item::Packet(packet), &mut out)?;
+                }
+                Some(control) = controls.recv() => {
+                    self.submit(control.key(), Item::Control(control), &mut out)?;
+                }
+                Some(done) = self.running.join_next(), if !self.running.is_empty() => {
+                    let (key, job, result) = done.map_err(io::Error::other)?;
+                    self.done(key, job, result, &mut out)?;
+                }
+                _ = tick.tick() => self.expire(&mut out)?,
             }
-            Ok(())
-        };
-        let expire = async {
-            // Local scheduler resolution, not an original lifetime.
-            let mut tick = tokio::time::interval(Duration::from_millis(10));
-            tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-            loop {
-                tick.tick().await;
-                let mut jobs = lane.lock().await;
-                self.deliver(jobs.expire().await?).await?;
+            self.write(out).await?;
+            self.send_logouts().await;
+        }
+    }
+    fn expire(&mut self, out: &mut Vec<Output>) -> io::Result<()> {
+        let busy = &self.busy;
+        out.extend(self.jobs.expire_now(|key| busy.contains_key(&key))?);
+        Ok(())
+    }
+    /// Run an item now, or queue it when its session is busy (rule 2).
+    fn submit(&mut self, key: u64, item: Item, out: &mut Vec<Output>) -> io::Result<()> {
+        if let Some(queue) = self.busy.get_mut(&key) {
+            if queue.len() >= MAX_QUEUED {
+                return Err(io::Error::other("session queue full"));
             }
-            #[allow(unreachable_code)]
-            Ok::<(), io::Error>(())
-        };
-        let send = async {
-            while let Some(packets) = rx.recv().await {
-                // One write for all packets of one job step. The order stays the same.
-                match packets.as_slice() {
-                    [packet] => writer.write_all(packet).await?,
-                    _ => writer.write_all(&packets.concat()).await?,
+            queue.push_back(item);
+            return Ok(());
+        }
+        self.start(key, item, out)
+    }
+    fn start(&mut self, key: u64, item: Item, out: &mut Vec<Output>) -> io::Result<()> {
+        let link = self.link;
+        match item {
+            Item::Packet(packet) => {
+                if Jobs::<S, Arc<N>>::slow(protocol::command(&packet)?) {
+                    // Rule 3: the job runs on a private copy of the session.
+                    self.busy.insert(key, VecDeque::new());
+                    let mut job = self.jobs.checkout(link, key);
+                    let mut stop = self.stop.clone();
+                    self.running.spawn(async move {
+                        // Rule 10: a shutdown stops the job at its next wait. The NP calls
+                        // are safe to cancel. The stored session holds a taken presence,
+                        // so `close` releases it after the merge.
+                        let shutdown = async {
+                            if stop.wait_for(|stop| *stop).await.is_err() {
+                                std::future::pending::<()>().await;
+                            }
+                        };
+                        let result = tokio::select! {
+                            result = job.handle(link, &packet) => result,
+                            _ = shutdown => Err(io::Error::other("shutdown")),
+                        };
+                        (key, job, result)
+                    });
+                } else {
+                    out.extend(self.jobs.handle_fast(link, &packet)?);
                 }
             }
-            Ok(())
-        };
-        // Neither expiry nor output cancels a partial input read.
-        tokio::select! { result = receive => result, result = send => result, result = expire => result }
+            Item::Control(control) => self.control(control, out),
+        }
+        Ok(())
+    }
+    /// The result of a control message goes to the caller, not to the link.
+    fn control(&mut self, control: Control, out: &mut Vec<Output>) {
+        let jobs = &mut self.jobs;
+        let mut deliver =
+            |result: io::Result<Vec<Output>>| result.map(|outputs| out.extend(outputs));
+        match control {
+            Control::ConsumeWorld {
+                key,
+                token,
+                ipv4,
+                world,
+                reply,
+            } => {
+                let _ = reply.send(jobs.consume_world(key, token, ipv4, world));
+            }
+            Control::PromoteWorld { key, reply } => {
+                let _ = reply.send(deliver(jobs.promote_world(key)));
+            }
+            Control::CloseAnonymous { key, reply } => {
+                let _ = reply.send(deliver(jobs.close_anonymous_now(key)));
+            }
+            Control::Kick { key, reason, reply } => {
+                let _ = reply.send(deliver(jobs.kick_now(key, reason)));
+            }
+            Control::Retain {
+                key,
+                lifetime,
+                reply,
+            } => {
+                let _ = reply.send(jobs.retain(key, lifetime));
+            }
+        }
+    }
+    /// Rule 4: merge, write, then run the queue of the key until a new job starts.
+    fn done(
+        &mut self,
+        key: u64,
+        job: Jobs<S, Arc<N>>,
+        result: io::Result<Vec<Output>>,
+        out: &mut Vec<Output>,
+    ) -> io::Result<()> {
+        self.jobs.merge(key, job);
+        let mut queue = self.busy.remove(&key).unwrap_or_default();
+        out.extend(result?);
+        while let Some(item) = queue.pop_front() {
+            self.start(key, item, out)?;
+            if let Some(next) = self.busy.get_mut(&key) {
+                next.append(&mut queue);
+                break;
+            }
+        }
+        Ok(())
+    }
+    /// Rule 6: one write for all packets of one event. The order stays the same.
+    async fn write(&mut self, out: Vec<Output>) -> io::Result<()> {
+        let packets: Vec<u8> = out
+            .into_iter()
+            .inspect(|output| debug_assert_eq!(output.link, self.link))
+            .flat_map(|output| output.packets)
+            .flatten()
+            .collect();
+        if !packets.is_empty() {
+            self.writer.write_all(&packets).await?;
+        }
+        Ok(())
+    }
+    async fn send_logouts(&mut self) {
+        let batch = self.jobs.take_logouts();
+        if !batch.is_empty() {
+            let _ = self.logouts.send(batch).await;
+        }
+    }
+    /// Rule 9: wait for all jobs and merge them. Never abort a job: a `start` job can hold
+    /// an NP presence that only its own end releases.
+    async fn close(&mut self) {
+        while let Some(done) = self.running.join_next().await {
+            if let Ok((key, job, _)) = done {
+                self.jobs.merge(key, job);
+            }
+        }
+        self.busy.clear();
+        self.jobs.disconnect_now(self.link);
+        self.send_logouts().await;
     }
 }
