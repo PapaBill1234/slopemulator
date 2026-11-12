@@ -697,6 +697,11 @@ impl<S: Store, N: Np> Jobs<S, N> {
             representative_world: 0,
             bot_score: 0,
         });
+        // The stored Init entry holds the presence too. If a shutdown cancels this job at a
+        // later wait, `disconnect_now` on the merged copy releases the presence.
+        if let Some(stored) = self.sessions.get_mut(&key) {
+            stored.account = session.account.clone();
+        }
         let account = match self
             .store
             .load_game_account(identity.account)

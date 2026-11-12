@@ -145,6 +145,101 @@ async fn r9_lanes_keep_order_without_blocking_other_links_and_share_capacity() {
         .unwrap();
     assert_eq!(server.session_count().await, 0);
 }
+/// One server with a blocking NP for the first fixture token and a free second fixture.
+async fn blocked_server() -> (
+    Arc<Server<Shared<MemoryStore>, Arc<BlockNp>>>,
+    Arc<BlockNp>,
+    std::net::SocketAddr,
+    watch::Sender<bool>,
+    tokio::task::JoinHandle<std::io::Result<()>>,
+    [[u8; 16]; 4],
+) {
+    let (mut np, t, p, _) = StubNp::fixture(50);
+    let (_, t2, p2, id2) = StubNp::fixture(60);
+    np.identities.insert((t2, p2), Ok(id2));
+    let np = Arc::new(BlockNp {
+        inner: np,
+        token: t,
+        entered: Notify::new(),
+        release: Notify::new(),
+    });
+    let server = Arc::new(
+        Server::new(
+            Shared::new(MemoryStore::default()),
+            np.clone(),
+            Settings::default(),
+        )
+        .unwrap(),
+    );
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let (stop, shutdown) = watch::channel(false);
+    let task = tokio::spawn(server.clone().serve(listener, shutdown));
+    (server, np, address, stop, task, [t, p, t2, p2])
+}
+#[tokio::test]
+async fn step6_slow_np_of_one_session_does_not_delay_another_session_on_the_link() {
+    let (server, np, address, stop, task, [t, p, t2, p2]) = blocked_server().await;
+    let mut gate = connect(address).await;
+    let a = initialize(&mut gate, 1, t, p).await;
+    let b = initialize(&mut gate, 2, t2, p2).await;
+    gate.write_all(&start(a, t, p)).await.unwrap();
+    timeout(Duration::from_secs(2), np.entered.notified())
+        .await
+        .unwrap();
+    // A waits in NP. B on the same link must log in and list characters now.
+    gate.write_all(&start(b, t2, p2)).await.unwrap();
+    assert_eq!(w::command(&read(&mut gate).await).unwrap(), 10);
+    gate.write_all(&w::notice(35, b).unwrap()).await.unwrap();
+    assert_eq!(w::command(&read(&mut gate).await).unwrap(), 36);
+    np.release.notify_one();
+    assert_eq!(w::command(&read(&mut gate).await).unwrap(), 10);
+    stop.send(true).unwrap();
+    timeout(Duration::from_secs(2), task)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert_eq!(server.session_count().await, 0);
+}
+#[tokio::test]
+async fn step6_packets_of_one_session_keep_order_when_the_first_is_slow() {
+    let (server, np, address, stop, task, [t, p, ..]) = blocked_server().await;
+    let mut gate = connect(address).await;
+    let a = initialize(&mut gate, 1, t, p).await;
+    // The fast character list waits behind the slow start of the same session.
+    gate.write_all(&[start(a, t, p), w::notice(35, a).unwrap()].concat())
+        .await
+        .unwrap();
+    timeout(Duration::from_secs(2), np.entered.notified())
+        .await
+        .unwrap();
+    assert!(timeout(Duration::from_millis(100), w::read(&mut gate))
+        .await
+        .is_err());
+    // A control message for the busy session waits in the same queue.
+    let retain = {
+        let server = server.clone();
+        tokio::spawn(async move { server.retain(a, Duration::from_secs(5)).await })
+    };
+    tokio::task::yield_now().await;
+    assert!(!retain.is_finished());
+    np.release.notify_one();
+    assert_eq!(w::command(&read(&mut gate).await).unwrap(), 10);
+    assert_eq!(w::command(&read(&mut gate).await).unwrap(), 36);
+    timeout(Duration::from_secs(2), retain)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    stop.send(true).unwrap();
+    timeout(Duration::from_secs(2), task)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert_eq!(server.session_count().await, 0);
+}
 #[tokio::test]
 async fn r10_scheduled_expiry_preserves_partial_frame_and_releases_capacity() {
     let (np, t, p, _) = StubNp::fixture(40);
