@@ -18,6 +18,12 @@ pub struct Play {
     pub address: u32,
     pub pcid: Option<u64>,
     pub pc: Option<Pc>,
+    /// Client key of the token request. It becomes `client_key` when LobbyDaemon accepts it.
+    pub pending_key: Option<u64>,
+    /// Client key that LobbyDaemon accepted (`cliKey`, user +248).
+    pub client_key: Option<u64>,
+    /// The user left the user manager (return to lobby, step 4). A second request gives 28/1954.
+    pub logged_out: bool,
 }
 
 /// What the shard must do for a session.
@@ -31,7 +37,15 @@ pub enum Effect {
     LoadPc(u64),
     /// Move the session to the shard of this zone. Result: [`joined`] in that shard.
     EnterZone(u32),
+    /// Return to lobby, step 7: ask LobbyDaemon to take the PC out of the world and issue a
+    /// lobby token (link command 8). Result: [`left`].
+    LeaveWorld { pcid: u64, client_key: u64 },
 }
+
+/// Client reason of 28 for a leave result that LobbyDaemon refused with 21, 22 or 23.
+const RTL_REASON_PLAY: i16 = 1954;
+/// Client reason of 28 for a refusal of the other kinds.
+const RTL_REASON_OTHER: i16 = 1;
 
 fn u64_at(packet: &[u8], offset: usize) -> Option<u64> {
     let bytes = packet.get(offset..offset + 8)?;
@@ -77,9 +91,16 @@ pub fn packet(
         // `hQiQih` (10-session-handlers.md §23).
         // ❓ Failure form of the reply: the reason is in the last field. Not verified.
         ids::G_LobbyTokenAuthReqCmd => match (u64_at(packet, 6), u64_at(packet, 14)) {
-            (Some(client_key), Some(token)) => out.push(Effect::ConsumeToken { client_key, token }),
+            (Some(client_key), Some(token)) => {
+                play.pending_key = Some(client_key);
+                out.push(Effect::ConsumeToken { client_key, token });
+            }
             _ => token_reply(2, out)?,
         },
+        // G_ReturnToLobbyReqCmd (no body) → G_ReturnToLobbyOkCmd `hq` or
+        // G_ReturnToLobbyFailCmd `hh` (10-session-handlers.md §26.1, §26.3).
+        // The arena check (28/5) is in `handlers::session::handle_return_to_lobby`.
+        ids::G_ReturnToLobbyReqCmd => return_to_lobby(play, out)?,
         // G_EnterWorldReqCmd `hic` client version, character → G_EnterWorldOkCmd fragments,
         // then G_PrepareEnterZoneCmd.
         ids::G_EnterWorldReqCmd => match (&play.pc, play.pcid) {
@@ -112,11 +133,64 @@ pub fn entered(play: &mut Play, result: Result<u64, i16>, out: &mut Vec<Effect>)
     let reason = match result {
         Ok(id) => {
             play.pcid = Some(id);
+            play.client_key = play.pending_key;
             0
         }
         Err(reason) => reason,
     };
+    play.pending_key = None;
     token_reply(reason, out)
+}
+
+fn rtl_fail(reason: i16, out: &mut Vec<Effect>) -> io::Result<()> {
+    let fields = [
+        Value::I16(ids::G_ReturnToLobbyFailCmd as i16),
+        Value::I16(reason),
+    ];
+    out.push(Effect::Send(compose("hh", &fields).map_err(bad)?.into()));
+    Ok(())
+}
+
+/// Steps 1–7 of the return to lobby transaction (§26.3).
+fn return_to_lobby(play: &mut Play, out: &mut Vec<Effect>) -> io::Result<()> {
+    // Step 2 of §26.1: no user or no PC id → log only, no reply.
+    let (Some(pcid), Some(client_key)) = (play.pcid, play.client_key) else {
+        eprintln!("gamed: return to lobby without a user, ignored");
+        return Ok(());
+    };
+    // Step 4 of §26.1: `LogoutUser` fails when the user already left → 28/1954.
+    // ❓ A second request: the spec gives no clear reply. Local choice: 1954.
+    if play.logged_out {
+        return rtl_fail(RTL_REASON_PLAY, out);
+    }
+    eprintln!("gamed: return to lobby, pc {pcid}, key {client_key}");
+    play.logged_out = true;
+    // TODO ❓ step 1: stop charge (`tryStopCharge`; Lobby 33), no charge system in the port.
+    // TODO ❓ step 2: zone leave (`tryLeaveZone`), the zone shard does not hold PC objects yet.
+    // TODO ❓ step 3: character update (`tryUpdateCharacterInfo`; Lobby 39).
+    // TODO ❓ step 4: time-based reward (`AutoTakeTimeBasedReward`).
+    // TODO ❓ step 5: account update (`tryUpdateAccountInfo`; Lobby 42).
+    // TODO ❓ step 6: unload character (`tryUnloadCharacter`; Cached 35).
+    out.push(Effect::LeaveWorld { pcid, client_key });
+    Ok(())
+}
+
+/// Result of [`Effect::LeaveWorld`]: the lobby token key, or the reason of LobbyDaemon.
+/// 1952 is a link failure or a timeout of GameDaemon.
+pub fn left(_play: &mut Play, result: Result<u64, i16>, out: &mut Vec<Effect>) -> io::Result<()> {
+    match result {
+        Ok(token) => {
+            let fields = [
+                Value::I16(ids::G_ReturnToLobbyOkCmd as i16),
+                Value::U64(token),
+            ];
+            out.push(Effect::Send(compose("hq", &fields).map_err(bad)?.into()));
+            Ok(())
+        }
+        Err(21..=23) => rtl_fail(RTL_REASON_PLAY, out),
+        Err(crate::link::LEAVE_LINK_FAIL) => rtl_fail(crate::link::LEAVE_LINK_FAIL, out),
+        Err(_) => rtl_fail(RTL_REASON_OTHER, out),
+    }
 }
 
 /// Result of [`Effect::LoadPc`]. `None`: no row or a database error. Then there is no reply.

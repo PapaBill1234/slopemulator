@@ -18,6 +18,15 @@ const ENTER_OK: &str = "hiqqocbbbbssQhhiQCQiqqihcc;Cqhs;iQQQsCiiiii;iCiiQiqq;Ciq
 const FAILURE: &str = "hqE";
 const CREATE: &str = "hqqobisbQh";
 const CREATE_OK: &str = "hqhhb";
+/// Original LobbyDaemon numbers (`07-gamed-link.md` §3): 8 LeaveWorldReq `hqqq`,
+/// 9 LeaveWorldOk `hqq`, 10 LeaveWorldFail `hqE`, 12 LogoutNotify `hqq`.
+const LEAVE: &str = "hqqq";
+const LEAVE_OK: &str = "hqq";
+const LOGOUT_NOTIFY: &str = "hqq";
+const LEAVE_COMMAND: i16 = 8;
+const LEAVE_OK_COMMAND: i16 = 9;
+const LEAVE_FAIL_COMMAND: i16 = 10;
+const LOGOUT_NOTIFY_COMMAND: i16 = 12;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Message {
@@ -49,6 +58,18 @@ pub enum Message {
     },
     /// 7. Reasons 16, 15, 17, 4, 2, 6.
     EnterFail { transaction: u64, reason: i16 },
+    /// 8 LeaveWorldReq (GameDaemon → LobbyDaemon). Return to lobby: step 7 of the transaction.
+    Leave {
+        transaction: u64,
+        pc_db_id: u64,
+        cli_key: u64,
+    },
+    /// 9 LeaveWorldOk. `token` is the key of the new type-2 lobby token.
+    LeaveOk { transaction: u64, token: u64 },
+    /// 10 LeaveWorldFail. Reasons 2, 5, 6, 21, 22, 23.
+    LeaveFail { transaction: u64, reason: i16 },
+    /// 12 LogoutNotify (GameDaemon → LobbyDaemon). No reply.
+    LogoutNotify { pc_db_id: u64, cli_key: u64 },
     /// 20. ❓ `external` is the external account data blob. ❓ `address` is the client IPv4.
     Create {
         transaction: u64,
@@ -178,6 +199,34 @@ impl Message {
                 transaction,
                 reason,
             } => compose(FAILURE, &[I16(7), U64(*transaction), I16(*reason)]),
+            Self::Leave {
+                transaction,
+                pc_db_id,
+                cli_key,
+            } => compose(
+                LEAVE,
+                &[
+                    I16(LEAVE_COMMAND),
+                    U64(*transaction),
+                    U64(*pc_db_id),
+                    U64(*cli_key),
+                ],
+            ),
+            Self::LeaveOk { transaction, token } => compose(
+                LEAVE_OK,
+                &[I16(LEAVE_OK_COMMAND), U64(*transaction), U64(*token)],
+            ),
+            Self::LeaveFail {
+                transaction,
+                reason,
+            } => compose(
+                FAILURE,
+                &[I16(LEAVE_FAIL_COMMAND), U64(*transaction), I16(*reason)],
+            ),
+            Self::LogoutNotify { pc_db_id, cli_key } => compose(
+                LOGOUT_NOTIFY,
+                &[I16(LOGOUT_NOTIFY_COMMAND), U64(*pc_db_id), U64(*cli_key)],
+            ),
             Self::Create {
                 transaction,
                 pcid,
@@ -239,7 +288,10 @@ impl Message {
             4 => WORLD,
             5 => ENTER,
             6 => ENTER_OK,
-            7 | 22 => FAILURE,
+            7 | 22 | LEAVE_FAIL_COMMAND => FAILURE,
+            LEAVE_COMMAND => LEAVE,
+            LEAVE_OK_COMMAND => LEAVE_OK,
+            LOGOUT_NOTIFY_COMMAND => LOGOUT_NOTIFY,
             20 => CREATE,
             21 => CREATE_OK,
             _ => return Ok(None),
@@ -282,6 +334,23 @@ impl Message {
             (22, [U64(transaction), I16(reason)]) => Self::CreateFail {
                 transaction: *transaction,
                 reason: *reason,
+            },
+            (LEAVE_COMMAND, [U64(transaction), U64(pc_db_id), U64(cli_key)]) => Self::Leave {
+                transaction: *transaction,
+                pc_db_id: *pc_db_id,
+                cli_key: *cli_key,
+            },
+            (LEAVE_OK_COMMAND, [U64(transaction), U64(token)]) => Self::LeaveOk {
+                transaction: *transaction,
+                token: *token,
+            },
+            (LEAVE_FAIL_COMMAND, [U64(transaction), I16(reason)]) => Self::LeaveFail {
+                transaction: *transaction,
+                reason: *reason,
+            },
+            (LOGOUT_NOTIFY_COMMAND, [U64(pc_db_id), U64(cli_key)]) => Self::LogoutNotify {
+                pc_db_id: *pc_db_id,
+                cli_key: *cli_key,
             },
             (
                 20,
@@ -375,5 +444,41 @@ mod tests {
             2 + 2 + 2 + 2 * 31 + 28
         );
         assert_eq!(Message::decode(&[4, 0, 99, 0]).unwrap(), None);
+    }
+
+    #[test]
+    fn leave_messages_round_trip() {
+        let messages = [
+            Message::Leave {
+                transaction: 1,
+                pc_db_id: 60005,
+                cli_key: 77,
+            },
+            Message::LeaveOk {
+                transaction: 2,
+                token: 99,
+            },
+            Message::LeaveFail {
+                transaction: 3,
+                reason: 22,
+            },
+            Message::LogoutNotify {
+                pc_db_id: 60005,
+                cli_key: 77,
+            },
+        ];
+        for message in messages {
+            let packet = message.encode().unwrap();
+            assert_eq!(Message::decode(&packet).unwrap(), Some(message));
+        }
+        // A short body is an error, not a panic.
+        let mut short = Message::LeaveOk {
+            transaction: 2,
+            token: 99,
+        }
+        .encode()
+        .unwrap();
+        short.truncate(short.len() - 3);
+        assert!(Message::decode(&short).is_err());
     }
 }

@@ -8,7 +8,49 @@ pub(super) struct WorldToken {
     pub world: i16,
     pub pcid: u64,
 }
+/// The character that plays in a game world (state 4.0).
+#[derive(Clone, Copy, Debug)]
+pub(super) struct Playing {
+    pub world: i16,
+    pub pcid: u64,
+}
 impl<S: Store, N: Np> Jobs<S, N> {
+    /// LeaveGameWorldJob (`13-jobs-a.md` §3.6; `23-return-to-lobby.md` §3). `world` is the
+    /// world of the GameDaemon link. `Ok` is the key of the new type-2 lobby token (state 5.1).
+    /// `Err` is the reason for LeaveWorldFail: 5 no session for the PC id, 6 state is not 4.0,
+    /// 21 no playing character, 23 PC id differs, 22 world differs, 2 token issue failed.
+    pub fn leave_world(&mut self, key: u64, pcid: u64, world: i16) -> Result<u64, i16> {
+        // Any zero input ends the job. A zero PC id or key has no session.
+        let session = self
+            .sessions
+            .get_mut(&key)
+            .filter(|s| pcid != 0 && s.characters.iter().any(|c| c.pcid == pcid))
+            .ok_or(5i16)?;
+        if session.state != State::World {
+            return Err(6);
+        }
+        let playing = session.playing.ok_or(21i16)?;
+        if playing.pcid != pcid {
+            return Err(23);
+        }
+        if playing.world != world {
+            return Err(22);
+        }
+        // `Character::EndGameWorldPlay`. `OnLeave` of the service location has no local state.
+        session.playing = None;
+        let issued = self
+            .settings
+            .lobby_token_lifetime
+            .ok_or_else(|| wire::invalid("no lobby token lifetime"))
+            .and_then(|lifetime| self.issue_lobby_token(key, lifetime));
+        issued.map_err(|_| {
+            // 6.0: the session ends. The presence is closed in `finish`.
+            if let Some(session) = self.sessions.remove(&key) {
+                self.finish(key, session);
+            }
+            2
+        })
+    }
     pub fn with_game_daemon(mut self, gamed: Arc<dyn crate::gamed::GameDaemon>) -> Self {
         self.gamed = gamed;
         self
@@ -190,6 +232,10 @@ impl<S: Store, N: Np> Jobs<S, N> {
             return Err(17);
         }
         session.state = State::World;
+        session.playing = Some(Playing {
+            world,
+            pcid: pending.pcid,
+        });
         Ok(pending.pcid)
     }
 }

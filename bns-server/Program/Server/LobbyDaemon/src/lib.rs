@@ -64,6 +64,13 @@ enum Control {
         lifetime: Duration,
         reply: oneshot::Sender<io::Result<u64>>,
     },
+    /// LeaveWorldReq of the GameDaemon link. The reply is the token key or the reason.
+    LeaveWorld {
+        key: u64,
+        pcid: u64,
+        world: i16,
+        reply: oneshot::Sender<Result<u64, i16>>,
+    },
 }
 impl Control {
     fn key(&self) -> u64 {
@@ -72,7 +79,8 @@ impl Control {
             | Self::PromoteWorld { key, .. }
             | Self::CloseAnonymous { key, .. }
             | Self::Kick { key, .. }
-            | Self::Retain { key, .. } => *key,
+            | Self::Retain { key, .. }
+            | Self::LeaveWorld { key, .. } => *key,
         }
     }
 }
@@ -81,7 +89,9 @@ enum Item {
     Control(Control),
 }
 type Directory = SyncMutex<HashMap<LinkId, mpsc::Sender<Control>>>;
-type Job<S, N> = (u64, Jobs<S, Arc<N>>, io::Result<Vec<Output>>);
+/// A reply that a job holds back until its session copy is merged.
+type After = Box<dyn FnOnce() + Send>;
+type Job<S, N> = (u64, Jobs<S, Arc<N>>, io::Result<Vec<Output>>, Option<After>);
 
 pub struct Server<S, N> {
     store: S,
@@ -168,6 +178,31 @@ impl<S: Store, N: Np> Server<S, N> {
         })
         .await
         .unwrap_or_else(|| Err(io::Error::other("session absent")))
+    }
+    /// LeaveWorldReq of the GameDaemon link (`23-return-to-lobby.md` §3). The link task that
+    /// owns the session runs the leave job on a copy. `Ok` is the lobby token key.
+    /// `Err`: 5 no session for the key, 2 the job cannot start, else the reason of the job.
+    /// `world` is the world of the GameDaemon link.
+    pub async fn leave_world(&self, key: u64, pcid: u64, world: i16) -> Result<u64, i16> {
+        let owner = self.owners.lock().unwrap().get(&key).copied().ok_or(5i16)?;
+        let link = self
+            .links
+            .lock()
+            .unwrap()
+            .get(&owner)
+            .cloned()
+            .ok_or(5i16)?;
+        let (reply, answer) = oneshot::channel();
+        let control = Control::LeaveWorld {
+            key,
+            pcid,
+            world,
+            reply,
+        };
+        // The send fails when the link ends. The answer fails when the job does not run.
+        // Both are "job cannot start": LeaveWorldFail (not EnterWorldFail), `quirk_leave_fail_as_enter_fail`.
+        link.send(control).await.map_err(|_| 2i16)?;
+        answer.await.unwrap_or(Err(2))
     }
     pub async fn session_count(&self) -> usize {
         self.owners.lock().unwrap().len()
@@ -292,8 +327,8 @@ impl<S: Store, N: Np> LinkTask<S, N> {
                     self.submit(control.key(), Item::Control(control), &mut out)?;
                 }
                 Some(done) = self.running.join_next(), if !self.running.is_empty() => {
-                    let (key, job, result) = done.map_err(io::Error::other)?;
-                    self.done(key, job, result, &mut out)?;
+                    let (key, job, result, after) = done.map_err(io::Error::other)?;
+                    self.done(key, job, result, after, &mut out)?;
                 }
                 _ = tick.tick() => self.expire(&mut out)?,
             }
@@ -339,11 +374,30 @@ impl<S: Store, N: Np> LinkTask<S, N> {
                             result = job.handle(link, &packet) => result,
                             _ = shutdown => Err(io::Error::other("shutdown")),
                         };
-                        (key, job, result)
+                        (key, job, result, None)
                     });
                 } else {
                     out.extend(self.jobs.handle_fast(link, &packet)?);
                 }
+            }
+            Item::Control(Control::LeaveWorld {
+                key,
+                pcid,
+                world,
+                reply,
+            }) => {
+                // The leave job runs on a private copy, as a slow command does (rule 3).
+                // The reply goes out after the merge: the state 5.1 is then visible to the
+                // LobbyGate packets that the client sends after it got the token.
+                self.busy.insert(key, VecDeque::new());
+                let mut job = self.jobs.checkout(link, key);
+                self.running.spawn(async move {
+                    let result = job.leave_world(key, pcid, world);
+                    let after: After = Box::new(move || {
+                        let _ = reply.send(result);
+                    });
+                    (key, job, Ok(vec![]), Some(after))
+                });
             }
             Item::Control(control) => self.control(control, out),
         }
@@ -380,6 +434,10 @@ impl<S: Store, N: Np> LinkTask<S, N> {
             } => {
                 let _ = reply.send(jobs.retain(key, lifetime));
             }
+            // `start` runs this control message as a job task. Not reached here.
+            Control::LeaveWorld { reply, .. } => {
+                let _ = reply.send(Err(2));
+            }
         }
     }
     /// Rule 4: merge, write, then run the queue of the key until a new job starts.
@@ -388,9 +446,13 @@ impl<S: Store, N: Np> LinkTask<S, N> {
         key: u64,
         job: Jobs<S, Arc<N>>,
         result: io::Result<Vec<Output>>,
+        after: Option<After>,
         out: &mut Vec<Output>,
     ) -> io::Result<()> {
         self.jobs.merge(key, job);
+        if let Some(after) = after {
+            after();
+        }
         let mut queue = self.busy.remove(&key).unwrap_or_default();
         out.extend(result?);
         while let Some(item) = queue.pop_front() {
@@ -425,8 +487,11 @@ impl<S: Store, N: Np> LinkTask<S, N> {
     /// an NP presence that only its own end releases.
     async fn close(&mut self) {
         while let Some(done) = self.running.join_next().await {
-            if let Ok((key, job, _)) = done {
+            if let Ok((key, job, _, after)) = done {
                 self.jobs.merge(key, job);
+                if let Some(after) = after {
+                    after();
+                }
             }
         }
         self.busy.clear();

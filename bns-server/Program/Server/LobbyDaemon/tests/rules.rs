@@ -326,17 +326,19 @@ async fn r13_retained_rebind_single_use_cache_and_link_checks() {
     let token = j.retain(key, Duration::from_secs(10)).unwrap();
     assert!(j.retain(key, Duration::from_secs(10)).is_err());
     send(&mut j, 2, hello(58)).await;
+    // No token found (other link, other key): 20. Only an expired token gives 19
+    // (`23-return-to-lobby.md` §3, InitSessionWithLobbyTokenReq).
     fail(
         &send(&mut j, 2, retained_init(200, key, token, 7)).await,
         14,
         200,
-        19,
+        20,
     );
     fail(
         &send(&mut j, 1, retained_init(200, key, token + 1, 7)).await,
         14,
         200,
-        19,
+        20,
     );
     fail(
         &send(&mut j, 1, retained_init(200, key + 999, token, 7)).await,
@@ -365,7 +367,7 @@ async fn r13_retained_rebind_single_use_cache_and_link_checks() {
         &send(&mut j, 1, retained_init(201, key, token, 7)).await,
         14,
         201,
-        19,
+        20,
     );
     fail(&send(&mut j, 1, request(35, key)).await, 37, key, 5);
     j.store.lock().characters.clear();
@@ -401,7 +403,8 @@ async fn r13_retained_expiry_boundary_sweep_and_cleanup() {
             &send(&mut j, 1, retained_init(200, key, token, 7)).await,
             14,
             200,
-            19,
+            // Expired and not swept: 19. Swept: the token is gone, 20.
+            if sweep { 20 } else { 19 },
         );
         assert_eq!(j.session_count(), 0);
         assert_eq!(j.store.lock().logout_updates.len(), 1);
@@ -842,7 +845,7 @@ async fn r13_retained_and_rebound_cleanup_release_presence_once() {
                     &send(&mut j, 1, retained_init(201, key, token, 7)).await,
                     14,
                     201,
-                    19,
+                    20,
                 );
             }
             match trigger {

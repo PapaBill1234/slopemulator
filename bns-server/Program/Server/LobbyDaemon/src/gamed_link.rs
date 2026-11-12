@@ -1,6 +1,7 @@
 //! GameDaemon link, LobbyDaemon side. Spec: Docs/Server/LobbyDaemon/07-gamed-link.md.
 //! The GameDaemon dials this listener. Hello 1 → 2 or 3; 4 sets the world live;
-//! create character 20 → 21 or 22; world entry 5 → 6 or 7.
+//! create character 20 → 21 or 22; world entry 5 → 6 or 7; return to lobby 8 → 9 or 10;
+//! 12 LogoutNotify only logs (❓ lp2-4-rust).
 //! ❓ Local: delete, restore, eligibility and admission have no link message here.
 //! ❓ Local: the transaction time limit is 10 s. The original value is not verified.
 use crate::{
@@ -36,10 +37,18 @@ pub type Consume = Arc<
         + Sync,
 >;
 
+/// Return to lobby: PC id, client key, world → lobby token key or LeaveWorldFail reason.
+/// `Server::leave_world` is the usual implementation.
+pub type Leave = Arc<
+    dyn Fn(u64, u64, i16) -> Pin<Box<dyn Future<Output = Result<u64, i16>> + Send>> + Send + Sync,
+>;
+
 type Pending = oneshot::Sender<Result<CreatedCharacter, i16>>;
 
 #[derive(Default)]
 pub struct LinkGameDaemon {
+    /// Leave-world hook. None: every LeaveWorldReq gets LeaveWorldFail reason 2.
+    leave: Mutex<Option<Leave>>,
     /// Live worlds: world id → frame queue of its GameDaemon.
     worlds: Mutex<HashMap<i16, Outbox>>,
     pending: Mutex<HashMap<u64, Pending>>,
@@ -51,6 +60,12 @@ pub struct LinkGameDaemon {
 impl LinkGameDaemon {
     pub fn live(&self, world: i16) -> bool {
         self.worlds.lock().unwrap().contains_key(&world)
+    }
+
+    /// Set the hook for LeaveWorldReq (message 8). ❓ `main.rs` must call this with
+    /// `Server::leave_world`; `main.rs` is outside the slice `lp2-3-rust`.
+    pub fn set_leave(&self, leave: Leave) {
+        *self.leave.lock().unwrap() = Some(leave);
     }
 
     pub async fn serve(self: Arc<Self>, listener: TcpListener, consume: Consume) -> io::Result<()> {
@@ -128,6 +143,42 @@ impl LinkGameDaemon {
                         };
                         eprintln!("lobbyd: gamed link, world entry key {client_key}: {reply:?}");
                         send(reply);
+                    }
+                    // 8 LeaveWorldReq (`23-return-to-lobby.md` §3). The reply is 9 or 10.
+                    // A job start failure is a 10 too, not a 7 (`quirk_leave_fail_as_enter_fail`).
+                    Some(Message::Leave {
+                        transaction,
+                        pc_db_id,
+                        cli_key,
+                    }) => {
+                        let leave = self.leave.lock().unwrap().clone();
+                        let (sender, world) = (sender.clone(), live);
+                        // The reader goes on while the job runs.
+                        tokio::spawn(async move {
+                            let result = match (leave, world) {
+                                (Some(leave), Some(world)) => leave(pc_db_id, cli_key, world).await,
+                                _ => Err(2),
+                            };
+                            let reply = match result {
+                                Ok(token) => Message::LeaveOk { transaction, token },
+                                Err(reason) => Message::LeaveFail {
+                                    transaction,
+                                    reason,
+                                },
+                            };
+                            eprintln!("lobbyd: gamed link, leave world key {cli_key}: {reply:?}");
+                            if let Ok(frame) = reply.encode() {
+                                let _ = sender.try_send(frame);
+                            }
+                        });
+                    }
+                    // 12 LogoutNotify. ❓ The logout job for a session in the game world
+                    // (task 118) is not ported: `Jobs::logout` ignores state 4.0.
+                    // TODO ❓ lp2-4-rust: run the logout path for `cli_key`.
+                    Some(Message::LogoutNotify { pc_db_id, cli_key }) => {
+                        eprintln!(
+                            "lobbyd: gamed link, logout notify pc {pc_db_id} key {cli_key}: not ported yet"
+                        );
                     }
                     Some(Message::CreateOk {
                         transaction,

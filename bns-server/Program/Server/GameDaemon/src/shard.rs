@@ -19,7 +19,10 @@ use bytes::Bytes;
 use std::{
     collections::{HashMap, VecDeque},
     io,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex,
+    },
     time::Duration,
 };
 use tokio::{
@@ -61,6 +64,8 @@ pub enum Event {
     Entered { conn: u32, result: Result<u64, i16> },
     /// Result of [`Effect::LoadPc`].
     Loaded { conn: u32, pc: Option<Box<Pc>> },
+    /// Result of [`Effect::LeaveWorld`]: the lobby token key or a reason.
+    Left { conn: u32, result: Result<u64, i16> },
     /// Another shard gives a session to this shard.
     Join { conn: u32, session: Box<Session> },
     /// The connection task got [`ToConn::Route`]. No more packets come to the old shard.
@@ -72,7 +77,7 @@ pub enum Event {
 #[derive(Debug, PartialEq, Eq)]
 enum Wait {
     None,
-    /// For [`Event::Entered`] or [`Event::Loaded`].
+    /// For [`Event::Entered`], [`Event::Loaded`] or [`Event::Left`].
     Result,
     /// For [`Event::HandoverDone`].
     Handover,
@@ -96,6 +101,8 @@ pub struct World {
     pub rules: Vec<Bytes>,
     pub link: Option<Arc<Link>>,
     pub db: Option<Ordered>,
+    /// Transaction ids of the leave requests (link command 8).
+    transactions: AtomicU64,
     /// Directory only (zone → inbox). It holds no game state. A shard reads it at a zone change.
     shards: Mutex<HashMap<u32, Inbox>>,
 }
@@ -106,6 +113,7 @@ impl World {
             rules,
             link,
             db,
+            transactions: AtomicU64::new(0),
             shards: Mutex::new(HashMap::new()),
         })
     }
@@ -218,6 +226,9 @@ impl Shard {
                 self.result(conn, |play, _, out| {
                     play::loaded(play, pc.map(|pc| *pc), out)
                 });
+            }
+            Event::Left { conn, result } => {
+                self.result(conn, |play, _, out| play::left(play, result, out));
             }
             Event::Join { conn, mut session } => {
                 session.wait = Wait::Handover;
@@ -335,6 +346,27 @@ impl Shard {
                         play::loaded(&mut session.play, None, &mut effects)
                     }
                 }
+                Effect::LeaveWorld { pcid, client_key } => match &self.world.link {
+                    Some(link) => {
+                        session.wait = Wait::Result;
+                        let transaction =
+                            self.world.transactions.fetch_add(1, Ordering::Relaxed) + 1;
+                        let (link, own) = (link.clone(), self.own.clone());
+                        // The link has the timeout (`quirk_rtl_no_timeout`, fixed). The shard
+                        // does not wait.
+                        tokio::spawn(async move {
+                            let result = link.leave(transaction, pcid, client_key).await;
+                            eprintln!("gamed: client {conn}: leave world, result {result:?}");
+                            let _ = own.send(Event::Left { conn, result }).await;
+                        });
+                        Ok(())
+                    }
+                    None => play::left(
+                        &mut session.play,
+                        Err(crate::link::LEAVE_LINK_FAIL),
+                        &mut effects,
+                    ),
+                },
                 Effect::EnterZone(to) if to == self.zone => {
                     play::joined(&mut session.play, &mut effects)
                 }
