@@ -5,7 +5,8 @@
 //! kick 14 → 15 or 16 (`18-jobs-f.md` §5). A closed world link ends all sessions of the world.
 //! Hello must come from a configured GameDaemon (`LinkPeer`): world, cluster, peer address.
 //! One channel for each world.
-//! ❓ Local: delete, restore, eligibility and admission have no link message here.
+//! Delete 23 → 24 or 25; restore 26 → 27 or 28 (`16-jobs-d.md` §2.5, §3, §4).
+//! ❓ Local: eligibility and admission have no link message here.
 //! ❓ Local: the transaction time limit is 10 s. The original value is not verified.
 use crate::{
     character::{CreateCharacter, CreatedCharacter},
@@ -62,6 +63,8 @@ pub type WorldClosed = Arc<dyn Fn(i16) -> Pin<Box<dyn Future<Output = ()> + Send
 type Pending = (i16, oneshot::Sender<Result<CreatedCharacter, i16>>);
 /// A kick that waits for 15 or 16: the world of its link and the reply.
 type PendingKick = (i16, oneshot::Sender<Result<(), i16>>);
+/// A delete that waits for 24 or 25: the world of its link and the reply (result of 24).
+type PendingDelete = (i16, oneshot::Sender<Result<i16, i16>>);
 
 /// One configured GameDaemon (`gamed-list.config.xml` row in the original: wid, ip-address).
 /// Hello must match the world, the cluster and the peer address (`0x140086D50 -> 0x14003F920`).
@@ -90,6 +93,10 @@ pub struct LinkGameDaemon {
     closed: Mutex<Option<WorldClosed>>,
     /// Kick requests (14) that wait for 15 or 16, by transaction.
     kicks: Mutex<HashMap<u64, PendingKick>>,
+    /// Delete requests (23) that wait for 24 or 25, by transaction.
+    deletes: Mutex<HashMap<u64, PendingDelete>>,
+    /// Restore requests (26) that wait for 27 or 28, by transaction.
+    restores: Mutex<HashMap<u64, PendingKick>>,
     /// Worlds with a channel after Hello. One connection for each world.
     channels: Mutex<HashMap<i16, Outbox>>,
     /// Live worlds: world id → frame queue of its GameDaemon.
@@ -313,6 +320,22 @@ impl LinkGameDaemon {
                         transaction,
                         reason,
                     }) => self.finish_kick(live, transaction, Err(reason)),
+                    // 24 and 25 end the wait of a delete; 27 and 28 end the wait of a restore.
+                    Some(Message::DeleteCharacterOk {
+                        transaction,
+                        result,
+                    }) => self.finish_delete(live, transaction, Ok(result)),
+                    Some(Message::DeleteCharacterFail {
+                        transaction,
+                        reason,
+                    }) => self.finish_delete(live, transaction, Err(reason)),
+                    Some(Message::RestoreCharacterOk { transaction }) => {
+                        self.finish_restore(live, transaction, Ok(()));
+                    }
+                    Some(Message::RestoreCharacterFail {
+                        transaction,
+                        reason,
+                    }) => self.finish_restore(live, transaction, Err(reason)),
                     Some(Message::CreateOk {
                         transaction,
                         job,
@@ -396,10 +419,73 @@ impl LinkGameDaemon {
         }
     }
 
-    /// The link of `world` closed: its waiting kicks fail with reason 2 (result 2) at once.
-    /// A dropped reply sender gives the waiting kick an error, which `kick` maps to reason 2.
+    /// A reply 24 or 25 counts only on the link of the world that got the delete request.
+    fn finish_delete(&self, world: Option<i16>, transaction: u64, result: Result<i16, i16>) {
+        let mut deletes = self.deletes.lock().unwrap();
+        if deletes
+            .get(&transaction)
+            .is_some_and(|(w, _)| Some(*w) == world)
+        {
+            if let Some((_, reply)) = deletes.remove(&transaction) {
+                let _ = reply.send(result);
+            }
+        }
+    }
+
+    /// A reply 27 or 28 counts only on the link of the world that got the restore request.
+    fn finish_restore(&self, world: Option<i16>, transaction: u64, result: Result<(), i16>) {
+        let mut restores = self.restores.lock().unwrap();
+        if restores
+            .get(&transaction)
+            .is_some_and(|(w, _)| Some(*w) == world)
+        {
+            if let Some((_, reply)) = restores.remove(&transaction) {
+                let _ = reply.send(result);
+            }
+        }
+    }
+
+    /// RestoreCharacterReq 26 and the wait for 27 or 28. No live link, a full queue, a closed
+    /// link or no reply in the time limit: reason 2. The gamed reason of 28 is the error.
+    async fn restore_request(&self, world: i16, pcid: u64) -> Result<(), i16> {
+        let sender = self
+            .worlds
+            .lock()
+            .unwrap()
+            .get(&world)
+            .cloned()
+            .ok_or(2i16)?;
+        let transaction = self.next.fetch_add(1, Ordering::Relaxed) + 1;
+        let frame = Message::RestoreCharacter { transaction, pcid }
+            .encode()
+            .map_err(|_| 2i16)?;
+        let (reply, result) = oneshot::channel();
+        self.restores
+            .lock()
+            .unwrap()
+            .insert(transaction, (world, reply));
+        let result = if sender.try_send(frame).is_err() {
+            Err(2)
+        } else {
+            match tokio::time::timeout(TRANSACTION_LIMIT, result).await {
+                Ok(Ok(result)) => result,
+                _ => Err(2),
+            }
+        };
+        self.restores.lock().unwrap().remove(&transaction);
+        result
+    }
+
+    /// The link of `world` closed: its waiting kicks, deletes and restores fail with reason 2
+    /// at once. A dropped reply sender gives the waiting call an error, which the call maps
+    /// to reason 2.
     fn fail_kicks(&self, world: i16) {
         self.kicks.lock().unwrap().retain(|_, (w, _)| *w != world);
+        self.deletes.lock().unwrap().retain(|_, (w, _)| *w != world);
+        self.restores
+            .lock()
+            .unwrap()
+            .retain(|_, (w, _)| *w != world);
     }
 }
 
@@ -487,17 +573,53 @@ impl GameDaemon for LinkGameDaemon {
             result
         })
     }
-    fn delete_character(&self, _world: i16, _pcid: u64) -> GameFuture<'_, i16> {
-        Box::pin(async { Ok(1) })
+    /// DeleteCharacterReq 23 and the wait for 24 or 25 (`16-jobs-d.md` §2.5). No live link
+    /// for the world, a full queue, a closed link or no reply in the time limit: reason 2.
+    /// The gamed reason of 25 is the error. ❓ The 23 external key blob is empty and the
+    /// client IPv4 is 0: the `GameDaemon` trait has no session data.
+    fn delete_character(&self, world: i16, pcid: u64) -> GameFuture<'_, i16> {
+        Box::pin(async move {
+            let sender = self
+                .worlds
+                .lock()
+                .unwrap()
+                .get(&world)
+                .cloned()
+                .ok_or(2i16)?;
+            let transaction = self.next.fetch_add(1, Ordering::Relaxed) + 1;
+            let frame = Message::DeleteCharacter {
+                transaction,
+                pcid,
+                external: Vec::new(),
+                address: 0,
+            }
+            .encode()
+            .map_err(|_| 2i16)?;
+            let (reply, result) = oneshot::channel();
+            self.deletes
+                .lock()
+                .unwrap()
+                .insert(transaction, (world, reply));
+            let result = if sender.try_send(frame).is_err() {
+                Err(2)
+            } else {
+                match tokio::time::timeout(TRANSACTION_LIMIT, result).await {
+                    Ok(Ok(result)) => result,
+                    _ => Err(2),
+                }
+            };
+            self.deletes.lock().unwrap().remove(&transaction);
+            result
+        })
     }
-    fn restore_character(&self, _world: i16, _pcid: u64) -> GameFuture<'_, ()> {
-        Box::pin(async { Ok(()) })
+    fn restore_character(&self, world: i16, pcid: u64) -> GameFuture<'_, ()> {
+        Box::pin(self.restore_request(world, pcid))
     }
     fn eligibility(&self, _character: &Character) -> Result<Eligibility, i16> {
         Ok(Eligibility::Ready)
     }
-    fn restore(&self, _world: i16, _pcid: u64) -> GameFuture<'_, ()> {
-        Box::pin(async { Ok(()) })
+    fn restore(&self, world: i16, pcid: u64) -> GameFuture<'_, ()> {
+        Box::pin(self.restore_request(world, pcid))
     }
     fn admit(
         &self,

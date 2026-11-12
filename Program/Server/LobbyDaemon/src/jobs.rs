@@ -23,7 +23,8 @@ use tokio::time::Instant;
 mod characters;
 mod services;
 mod world;
-use world::{Playing, WorldToken};
+pub(crate) use world::sync_failure;
+use world::{AccountCache, Playing, WorldToken};
 
 pub type LinkId = u64;
 /// Kick reason that goes to the client or to the GameDaemon.
@@ -79,6 +80,8 @@ struct Session {
     playing: Option<Playing>,
     admission: Option<Arc<crate::gamed::Admission>>,
     restored: HashSet<u64>,
+    /// Account data from the login loads and the gamed updates (381 `EnterWorldOk` lists).
+    cache: AccountCache,
     expires: Option<Instant>,
     _permit: Arc<tokio::sync::OwnedSemaphorePermit>,
 }
@@ -118,6 +121,12 @@ pub struct Settings {
     /// Rows of one scheduler tick (`character-deletion-scheduler-concurrent-processing-count`).
     /// ❓ The original default is not verified. Local value 16.
     pub deletion_scheduler_batch: u32,
+    /// The two time-based play season schedules of `HelloOk` (`07-gamed-link.md` §HelloOk
+    /// schedules). Default: two empty schedules.
+    pub play_schedules: [packet::gamed_link::PlaySchedule; 2],
+    /// `game-mileage-effective-duration-in-days` of `HelloOk`. ❓ The original default is not
+    /// verified. Local value 0.
+    pub mileage_days: i32,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -137,6 +146,8 @@ impl Default for Settings {
             clock: std::time::SystemTime::now,
             deletion_scheduler_period: Duration::from_secs(60),
             deletion_scheduler_batch: 16,
+            play_schedules: packet::gamed_link::HelloData::default().schedules,
+            mileage_days: 0,
         }
     }
 }
@@ -152,6 +163,15 @@ pub struct Jobs<S, N> {
     owners: Arc<std::sync::Mutex<HashMap<u64, LinkId>>>,
     /// Last-logout writes that wait for [`Jobs::flush`] or [`Jobs::take_logouts`].
     logouts: Vec<(crate::store::AccountId, i32)>,
+    /// Play-start writes (PC id, client IPv4) and play-end writes (PC id) that wait for
+    /// [`Jobs::flush`] or [`Jobs::take_play_writes`]. The start of a PC always comes first.
+    play: PlayWrites,
+}
+/// `usp_UpdateLastPlayStart` and `usp_UpdateLastPlayEnd` writes of the jobs (`EndGameWorldPlay`).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PlayWrites {
+    pub starts: Vec<(u64, u32)>,
+    pub ends: Vec<u64>,
 }
 impl<S: Store, N: Np + Clone> Jobs<S, N> {
     /// The session that a packet is for. Command 18 names the gate id and command 12 the
@@ -191,11 +211,14 @@ impl<S: Store, N: Np + Clone> Jobs<S, N> {
             owners: self.owners.clone(),
             sessions: session.map(|s| (key, s)).into_iter().collect(),
             logouts: Vec::new(),
+            play: PlayWrites::default(),
         }
     }
     /// Take back the result of a job that ran on [`Jobs::checkout`].
     pub fn merge(&mut self, key: u64, mut job: Self) {
         self.logouts.append(&mut job.logouts);
+        self.play.starts.append(&mut job.play.starts);
+        self.play.ends.append(&mut job.play.ends);
         match job.sessions.remove(&key) {
             Some(session) => self.sessions.insert(key, session),
             // The job ended the session (its `finish` ran in the job).
@@ -232,6 +255,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
             next_key: Arc::new(AtomicU64::new(1)),
             owners: Arc::default(),
             logouts: Vec::new(),
+            play: PlayWrites::default(),
         })
     }
     pub(crate) fn set_resources(
@@ -297,6 +321,10 @@ impl<S: Store, N: Np> Jobs<S, N> {
     /// End a session. No wait: the last-logout write goes to the logout list.
     fn finish(&mut self, key: u64, session: Session) {
         self.owners.lock().unwrap().remove(&key);
+        // A session that ends in the world ends its play (`EndGameWorldPlay`).
+        if let Some(playing) = session.playing {
+            self.play.ends.push(playing.pcid);
+        }
         if let Some(account) = session.account {
             self.np.logout_presence(account.id, key);
             self.logouts.push((account.id, account.bot_score));
@@ -304,6 +332,13 @@ impl<S: Store, N: Np> Jobs<S, N> {
     }
     /// Write the last-logout rows of the sessions that ended.
     pub async fn flush(&mut self) {
+        let play = self.take_play_writes();
+        for (pcid, address) in play.starts {
+            let _ = self.store.update_last_play_start(pcid, address).await;
+        }
+        for pcid in play.ends {
+            let _ = self.store.update_last_play_end(pcid).await;
+        }
         for (id, bot_score) in std::mem::take(&mut self.logouts) {
             let _ = self.store.update_last_logout(id, bot_score).await;
         }
@@ -311,6 +346,10 @@ impl<S: Store, N: Np> Jobs<S, N> {
     /// The last-logout rows that wait. The caller writes them (`Store::update_last_logout`).
     pub fn take_logouts(&mut self) -> Vec<(crate::store::AccountId, i32)> {
         std::mem::take(&mut self.logouts)
+    }
+    /// The play-start and play-end rows that wait. The caller writes them, starts first.
+    pub fn take_play_writes(&mut self) -> PlayWrites {
+        std::mem::take(&mut self.play)
     }
     pub async fn disconnect(&mut self, link: LinkId) {
         self.disconnect_now(link);
@@ -732,6 +771,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 playing: None,
                 admission: None,
                 restored: HashSet::new(),
+                cache: AccountCache::default(),
                 expires: self
                     .settings
                     .init_timeout
@@ -847,6 +887,9 @@ impl<S: Store, N: Np> Jobs<S, N> {
             return Err(2);
         }
         session.services = services;
+        // The account data for `EnterWorldOk`. A failed load gives an empty list: the
+        // 381 loads are not a condition of the login.
+        session.cache = AccountCache::load(&self.store, account.id).await;
         // Validate cached data before sending login success.
         wire::characters(key, &account, &characters).map_err(|_| 2i16)?;
         let packets = wire::start(key, &account).map_err(|_| 2i16)?;

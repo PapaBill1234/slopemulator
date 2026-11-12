@@ -77,6 +77,19 @@ enum Control {
     /// The GameDaemon link of `world` closed. Each link task ends its sessions of the world.
     /// It has no key: `LinkTask::run` expands it into one `LogoutInWorld` for each session.
     WorldClosed { world: i16 },
+    /// A sync request of the GameDaemon link (11, 39, 42, 107, 110, 113). A job task runs it.
+    /// The reply is the message for the GameDaemon (`None` for 11).
+    WorldSync {
+        key: u64,
+        world: i16,
+        message: packet::gamed_link::Message,
+        reply: oneshot::Sender<Option<packet::gamed_link::Message>>,
+    },
+    /// The account lists of the session for `EnterWorldOk`.
+    AccountLists {
+        key: u64,
+        reply: oneshot::Sender<Option<packet::gamed_link::AccountLists>>,
+    },
 }
 impl Control {
     fn key(&self) -> u64 {
@@ -87,10 +100,18 @@ impl Control {
             | Self::Kick { key, .. }
             | Self::Retain { key, .. }
             | Self::LeaveWorld { key, .. }
+            | Self::WorldSync { key, .. }
+            | Self::AccountLists { key, .. }
             | Self::LogoutInWorld { key, .. } => *key,
             Self::WorldClosed { .. } => 0,
         }
     }
+}
+/// The writes that a link task hands to its writer task: play start and end rows first, then
+/// last-logout rows (a logout row of a PC never goes before its play end).
+struct Writes {
+    play: jobs::PlayWrites,
+    logouts: Vec<(AccountId, i32)>,
 }
 enum Item {
     Packet(Vec<u8>),
@@ -252,6 +273,57 @@ impl<S: Store, N: Np> Server<S, N> {
             let _ = link.send(Control::WorldClosed { world }).await;
         }
     }
+    /// A sync request of the GameDaemon link of `world` (11, 39, 42, 107, 110, 113). The call
+    /// ends when the job is queued for the link task of the session, so the order of the
+    /// requests of one session stays the order of the link (also against LeaveWorld and
+    /// LogoutNotify). The receiver gets the reply message (`None` for 11). No session for the
+    /// key: the receiver holds the Fail reply with reason 5.
+    pub async fn world_sync(
+        &self,
+        key: u64,
+        world: i16,
+        message: packet::gamed_link::Message,
+    ) -> oneshot::Receiver<Option<packet::gamed_link::Message>> {
+        let (reply, answer) = oneshot::channel();
+        let owner = self.owners.lock().unwrap().get(&key).copied();
+        let link = owner.and_then(|owner| self.links.lock().unwrap().get(&owner).cloned());
+        let Some(link) = link else {
+            let _ = reply.send(jobs::sync_failure(&message, 5));
+            return answer;
+        };
+        let control = Control::WorldSync {
+            key,
+            world,
+            message,
+            reply,
+        };
+        if let Err(mpsc::error::SendError(Control::WorldSync { message, reply, .. })) =
+            link.send(control).await
+        {
+            let _ = reply.send(jobs::sync_failure(&message, 5));
+        }
+        answer
+    }
+    /// The account lists of the session for `EnterWorldOk`. `None`: no session.
+    pub async fn account_lists(&self, key: u64) -> Option<packet::gamed_link::AccountLists> {
+        self.control(key, |reply| Control::AccountLists { key, reply })
+            .await
+            .flatten()
+    }
+    /// The data of `HelloOk`: the schedules and the mileage days from the settings and the
+    /// random store schedule from the store. A store error gives three zero values.
+    pub async fn hello_data(&self) -> packet::gamed_link::HelloData {
+        let random_store = self
+            .store
+            .load_random_store_schedule()
+            .await
+            .unwrap_or([0; 3]);
+        packet::gamed_link::HelloData {
+            schedules: self.settings.play_schedules.clone(),
+            random_store,
+            mileage_days: self.settings.mileage_days,
+        }
+    }
     pub async fn session_count(&self) -> usize {
         self.owners.lock().unwrap().len()
     }
@@ -325,12 +397,19 @@ impl<S: Store, N: Np> Server<S, N> {
     }
 }
 
-/// Write the last-logout rows of one link in order (rule 8).
+/// Write the play rows and the last-logout rows of one link in order (rule 8): the play starts,
+/// the play ends, then the last-logout rows.
 /// Known limit: a last-logout write and a new login of the same account at the same moment
 /// can change order. ❓ Not seen as a problem.
-async fn write_logouts<S: Store>(store: S, mut pending: mpsc::Receiver<Vec<(AccountId, i32)>>) {
+async fn write_logouts<S: Store>(store: S, mut pending: mpsc::Receiver<Writes>) {
     while let Some(batch) = pending.recv().await {
-        for (id, bot_score) in batch {
+        for (pcid, address) in batch.play.starts {
+            let _ = store.update_last_play_start(pcid, address).await;
+        }
+        for pcid in batch.play.ends {
+            let _ = store.update_last_play_end(pcid).await;
+        }
+        for (id, bot_score) in batch.logouts {
             let _ = store.update_last_logout(id, bot_score).await;
         }
     }
@@ -343,7 +422,7 @@ struct LinkTask<S, N> {
     busy: HashMap<u64, VecDeque<Item>>,
     running: JoinSet<Job<S, N>>,
     writer: OwnedWriteHalf,
-    logouts: mpsc::Sender<Vec<(AccountId, i32)>>,
+    logouts: mpsc::Sender<Writes>,
     stop: watch::Receiver<bool>,
 }
 impl<S: Store, N: Np> LinkTask<S, N> {
@@ -460,6 +539,35 @@ impl<S: Store, N: Np> LinkTask<S, N> {
                     (key, job, Ok(vec![]), Some(after))
                 });
             }
+            Item::Control(Control::WorldSync {
+                key,
+                world,
+                message,
+                reply,
+            }) => {
+                // The database wait runs on a private copy in a job task (rule 3). The reply
+                // goes out after the merge, so a later request sees the cached rows.
+                self.busy.insert(key, VecDeque::new());
+                let mut job = self.jobs.checkout(link, key);
+                let mut stop = self.stop.clone();
+                self.running.spawn(async move {
+                    let shutdown = async {
+                        if stop.wait_for(|stop| *stop).await.is_err() {
+                            std::future::pending::<()>().await;
+                        }
+                    };
+                    // A shutdown stops the wait. The reply is then the Fail reason 2.
+                    let fallback = jobs::sync_failure(&message, 2);
+                    let answer = tokio::select! {
+                        answer = job.world_sync(key, world, message) => answer,
+                        _ = shutdown => fallback,
+                    };
+                    let after: After = Box::new(move || {
+                        let _ = reply.send(answer);
+                    });
+                    (key, job, Ok(vec![]), Some(after))
+                });
+            }
             Item::Control(Control::Kick { key, reason, reply })
                 if self.jobs.state(key) == Some(State::World) =>
             {
@@ -527,6 +635,13 @@ impl<S: Store, N: Np> LinkTask<S, N> {
             Control::LeaveWorld { reply, .. } => {
                 let _ = reply.send(Err(2));
             }
+            // `start` runs this control message as a job task. Not reached here.
+            Control::WorldSync { message, reply, .. } => {
+                let _ = reply.send(jobs::sync_failure(&message, 2));
+            }
+            Control::AccountLists { key, reply } => {
+                let _ = reply.send(jobs.account_lists(key));
+            }
             Control::LogoutInWorld { key, pcid, world } => {
                 jobs.logout_in_world(key, pcid, world);
             }
@@ -572,9 +687,10 @@ impl<S: Store, N: Np> LinkTask<S, N> {
         Ok(())
     }
     async fn send_logouts(&mut self) {
-        let batch = self.jobs.take_logouts();
-        if !batch.is_empty() {
-            let _ = self.logouts.send(batch).await;
+        let play = self.jobs.take_play_writes();
+        let logouts = self.jobs.take_logouts();
+        if !logouts.is_empty() || !play.starts.is_empty() || !play.ends.is_empty() {
+            let _ = self.logouts.send(Writes { play, logouts }).await;
         }
     }
     /// Rule 9: wait for all jobs and merge them. Never abort a job: a `start` job can hold
