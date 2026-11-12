@@ -23,7 +23,7 @@ use tokio::time::Instant;
 mod characters;
 mod services;
 mod world;
-use world::WorldToken;
+use world::{Playing, WorldToken};
 
 pub type LinkId = u64;
 #[derive(Clone, Debug)]
@@ -66,6 +66,8 @@ struct Session {
     services: Vec<IncompleteService>,
     lobby_token: Option<u64>,
     world_token: Option<WorldToken>,
+    /// The character in the game world (state 4.0): world and PC id. Set by `consume_world`.
+    playing: Option<Playing>,
     admission: Option<Arc<crate::gamed::Admission>>,
     restored: HashSet<u64>,
     expires: Option<Instant>,
@@ -79,6 +81,10 @@ pub struct Settings {
     /// Local deadlines. World entry needs an explicit lifetime.
     pub world_timeout: Duration,
     pub world_token_lifetime: Option<Duration>,
+    /// Life time of a lobby token (`lobby-token-life-time`, msec in the original).
+    /// ❓ The original default is not verified (`23-return-to-lobby.md` §3). Local value 120 s.
+    /// `None`: the leave job cannot issue a token (reason 2).
+    pub lobby_token_lifetime: Option<Duration>,
     /// Local opt-in policy until the original anonymous lifetime is checked.
     pub init_timeout: Option<Duration>,
     /// Local safety policy for retained tokens; original config +264 is optional.
@@ -103,6 +109,7 @@ impl Default for Settings {
             character_policy: None,
             world_timeout: Duration::from_secs(5),
             world_token_lifetime: None,
+            lobby_token_lifetime: Some(Duration::from_secs(120)),
             init_timeout: None,
             check_retained_ipv4: true,
             max_sessions: 1024,
@@ -201,6 +208,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
         if settings.np_timeout.is_zero()
             || settings.world_timeout.is_zero()
             || settings.world_token_lifetime.is_some_and(|v| v.is_zero())
+            || settings.lobby_token_lifetime.is_some_and(|v| v.is_zero())
             || settings.init_timeout.is_some_and(|v| v.is_zero())
             || settings.max_sessions == 0
             || settings.max_links == 0
@@ -581,6 +589,14 @@ impl<S: Store, N: Np> Jobs<S, N> {
     /// Local world-return control. The real GameDaemon return link is deferred.
     /// The caller must supply the lifetime; no binary default is assumed.
     pub fn retain(&mut self, key: u64, lifetime: Duration) -> io::Result<u64> {
+        if self.state(key) != Some(State::Lobby) {
+            return Err(wire::invalid("lobby session required"));
+        }
+        self.issue_lobby_token(key, lifetime)
+    }
+    /// Issue a type-2 lobby token for the session and move it to 5.1 (`Retained`).
+    /// The caller checks the state of the session. `23-return-to-lobby.md` §3 (`Issue`).
+    fn issue_lobby_token(&mut self, key: u64, lifetime: Duration) -> io::Result<u64> {
         if lifetime.is_zero() {
             return Err(wire::invalid("token lifetime must be positive"));
         }
@@ -590,8 +606,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
         let session = self
             .sessions
             .get_mut(&key)
-            .filter(|s| s.state == State::Lobby)
-            .ok_or_else(|| wire::invalid("lobby session required"))?;
+            .ok_or_else(|| wire::invalid("session required"))?;
         let token = self
             .next_key
             .try_update(Ordering::Relaxed, Ordering::Relaxed, |v| v.checked_add(1))
@@ -623,7 +638,9 @@ impl<S: Store, N: Np> Jobs<S, N> {
             .iter()
             .find(|(_, s)| s.link == link && s.lobby_token == Some(token))
         else {
-            return Ok(vec![wire::failure(14, gate, 19)?]);
+            // No token: used before, or never issued. Reason 20 (`23-return-to-lobby.md` §3
+            // InitSessionWithLobbyTokenReq). Only an expired token gives 19.
+            return Ok(vec![wire::failure(14, gate, 20)?]);
         };
         if session.expires.is_some_and(|v| v <= Instant::now()) {
             let session = self.sessions.remove(&owner).unwrap();
@@ -719,6 +736,7 @@ impl<S: Store, N: Np> Jobs<S, N> {
                 services: vec![],
                 lobby_token: None,
                 world_token: None,
+                playing: None,
                 admission: None,
                 restored: HashSet::new(),
                 expires: self

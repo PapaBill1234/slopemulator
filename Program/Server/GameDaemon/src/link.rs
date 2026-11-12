@@ -31,6 +31,10 @@ pub const START_YAW: u16 = 45;
 /// ❓ HP of a level-1 PC. Source: local note; the pc data record (table 2007) is not read.
 pub const START_HP: u64 = 303;
 const LIMIT: Duration = Duration::from_secs(10);
+/// ❓ Local choice: wait time for LeaveWorldOk or LeaveWorldFail (`quirk_rtl_no_timeout`, fixed).
+const LEAVE_LIMIT_MS: u64 = 10_000;
+/// Reason for a link failure or timeout of the leave request (GameDaemon only).
+pub const LEAVE_LINK_FAIL: i16 = 1952;
 
 type Pending = oneshot::Sender<Result<u64, i16>>;
 
@@ -41,6 +45,9 @@ pub struct Link {
     db: Option<Arc<Db>>,
     sender: Mutex<Option<Outbox>>,
     pending: Mutex<HashMap<u64, Pending>>,
+    /// Leave requests (8) that wait for 9 or 10, by transaction.
+    leaves: Mutex<HashMap<u64, Pending>>,
+    leave_limit_ms: AtomicU64,
     next: AtomicU64,
 }
 
@@ -53,6 +60,8 @@ impl Link {
             db,
             sender: Mutex::new(None),
             pending: Mutex::new(HashMap::new()),
+            leaves: Mutex::new(HashMap::new()),
+            leave_limit_ms: AtomicU64::new(LEAVE_LIMIT_MS),
             next: AtomicU64::new(0),
         })
     }
@@ -63,6 +72,7 @@ impl Link {
             let result = self.clone().session(&lobby).await;
             *self.sender.lock().unwrap() = None;
             self.pending.lock().unwrap().clear();
+            self.leaves.lock().unwrap().clear();
             eprintln!("gamed: lobbyd link closed: {result:?}");
             tokio::time::sleep(Duration::from_secs(2)).await;
         }
@@ -120,6 +130,13 @@ impl Link {
                     transaction,
                     reason,
                 }) => self.finish(transaction, Err(reason)),
+                Some(Message::LeaveOk { transaction, token }) => {
+                    self.finish_leave(transaction, Ok(token));
+                }
+                Some(Message::LeaveFail {
+                    transaction,
+                    reason,
+                }) => self.finish_leave(transaction, Err(reason)),
                 Some(create @ Message::Create { .. }) => {
                     let link = self.clone();
                     tokio::spawn(async move {
@@ -146,6 +163,18 @@ impl Link {
         if let Some(reply) = self.pending.lock().unwrap().remove(&transaction) {
             let _ = reply.send(result);
         }
+    }
+
+    fn finish_leave(&self, transaction: u64, result: Result<u64, i16>) {
+        if let Some(reply) = self.leaves.lock().unwrap().remove(&transaction) {
+            let _ = reply.send(result);
+        }
+    }
+
+    /// Set the wait time for the reply to a leave request.
+    pub fn set_leave_limit(&self, limit: Duration) {
+        let ms = u64::try_from(limit.as_millis()).unwrap_or(u64::MAX);
+        self.leave_limit_ms.store(ms, Ordering::Relaxed);
     }
 
     /// Command 20. Reasons: 25 invalid race, sex or job; 2 data or store failure.
@@ -227,5 +256,38 @@ impl Link {
         };
         self.pending.lock().unwrap().remove(&transaction);
         result
+    }
+
+    /// Command 8: ask LobbyDaemon to take the PC out of the world and issue a lobby token.
+    /// `Ok` is the token key. `Err(r)` is the LobbyDaemon reason (2, 5, 6, 21, 22, 23).
+    /// A send failure, a closed link or a timeout give `Err(1952)` (`quirk_rtl_no_timeout`, fixed).
+    pub async fn leave(&self, transaction: u64, pc_db_id: u64, cli_key: u64) -> Result<u64, i16> {
+        let (reply, result) = oneshot::channel();
+        self.leaves.lock().unwrap().insert(transaction, reply);
+        let sent = self.send(Message::Leave {
+            transaction,
+            pc_db_id,
+            cli_key,
+        });
+        let limit = Duration::from_millis(self.leave_limit_ms.load(Ordering::Relaxed));
+        let result = if sent {
+            match tokio::time::timeout(limit, result).await {
+                Ok(Ok(result)) => result,
+                _ => Err(LEAVE_LINK_FAIL),
+            }
+        } else {
+            Err(LEAVE_LINK_FAIL)
+        };
+        self.leaves.lock().unwrap().remove(&transaction);
+        result
+    }
+
+    /// Command 12: tell LobbyDaemon that the client left the world (socket closed).
+    pub async fn logout_notify(&self, pc_db_id: u64, cli_key: u64) -> io::Result<()> {
+        if self.send(Message::LogoutNotify { pc_db_id, cli_key }) {
+            Ok(())
+        } else {
+            Err(io::ErrorKind::NotConnected.into())
+        }
     }
 }

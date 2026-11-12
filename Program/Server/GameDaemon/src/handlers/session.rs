@@ -228,7 +228,10 @@ pub fn handle_lobby_token_auth(ctx: &mut Context<'_>, req: &[u8]) -> Outcome {
     out
 }
 
-/// parity: 26 10-session-handlers.md#26--g_returntolobbyreqcmd--partial partial
+/// parity: 26 10-session-handlers.md#26--g_returntolobbyreqcmd ported
+///
+/// The gates (arena 28/5, logout 28/1954) run here. Steps 1–7 of the transaction run in
+/// `play::packet` (`Effect::LeaveWorld`, link command 8) in the live path.
 pub fn handle_return_to_lobby(ctx: &mut Context<'_>, _: &[u8]) -> Outcome {
     if ctx.world.arena {
         return Outcome::reason(28, 5);
@@ -237,12 +240,11 @@ pub fn handle_return_to_lobby(ctx: &mut Context<'_>, _: &[u8]) -> Outcome {
     match ctx.services.logout() {
         Gate::Fail => Outcome::reason(28, 1954),
         Gate::Unknown => Outcome::unsupported("TODO ❓ LogoutUser, 0x1403F0340"),
-        Gate::Pass => ctx.queue(
-            26,
-            28,
-            2,
-            "TODO ❓ ReturnToLobbyTran completion / rollback / close",
-        ),
+        // TODO ❓ steps 1–6 (stop charge, zone leave, character update, time reward,
+        // account update, unload): stubs, see `play::return_to_lobby`.
+        // TODO ❓ step 7: a `DaemonRequest::LobbyLeaveWorld` needs `handlers/mod.rs`, which
+        // is outside the files of slice lp2-3-rust. The queue marker stays.
+        Gate::Pass => ctx.queue(26, 28, 2, "step 7 runs as play::Effect::LeaveWorld"),
     }
 }
 
