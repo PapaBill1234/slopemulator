@@ -10,7 +10,7 @@ Date: 2026-11-12. Read `Docs/Architecture/scale-rules.md` first (section 10 has 
 | 5 GameDaemon shards | Done for the structure (`conn.rs`, `shard.rs`, `play.rs`, `entry.rs`, `db::Ordered`). |
 | 6 part 1a: job split in `Jobs` | **Done, in this commit.** |
 | 6 part 1b: link task without the lane lock | **Done 2026-11-12.** 84 tests pass with `--features mssql`. Deviation from rule 9: a shutdown stops a job at its next wait (the old test `shutdown_cancels_pending_np_without_retained_init_session` needs this). `start` now puts the account into the stored session when it takes the presence, so the link end releases it. |
-| 6 part 2: job port from specs `13` to `22` | Open. Start only after the user tests login. |
+| 6 part 2: job port from specs `13` to `22` | Started 2026-11-12 (user decision: before the login test). Plan and slices: `step6-part2.md`. Cards `lp2-1-rust` … `lp2-5-rust`, `lp2-3` in the queue. |
 
 No real client has tested steps 2 to 6. The play stack runs the build of step 5, not part 1a or 1b.
 

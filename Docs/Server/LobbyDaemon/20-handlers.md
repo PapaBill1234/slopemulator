@@ -69,6 +69,31 @@ Job start facts not in the job specs:
 | `GetChargeInfoReq`, `ActivateGradeReq` | Code 7 in the handler (feature off ❓). |
 | `DeleteCharacterReq`, `CancelWaitCharacterDeletionReq`, `RecoverCharacterReq` | The handler composes the Fail packet itself (`PacketBufferPool::allocate`). |
 
+### 4.1 Handler checks and reply formats (build 307, read 2026-11-12)
+
+Source: build 307 handlers (Hex-Rays, `ida/LobbyDaemon_2020/LobbyDaemon.exe.i64`) and the `LobbyGateChannel::Send*` senders (format string in the sender). The sender addresses come from `fn-map-307.json`.
+
+The Ok / Fail command numbers come from `02-links.md` (command numbering ❓). All handlers below: a decode failure gives no reply. "Job start fail" is `LobbyJobManager::Register` false.
+
+| Req | Handler | Order of checks → Fail code | Ok / Fail cmd | Ok format | Fail format |
+| --- | --- | --- | --- | --- | --- |
+| 28 GetWaitInfo | `0x1400c0520` | no session → 4; `GetGameWorldWaitInfo` error → that error | 29 / 30 | `hqiiCch;` (`0x1400b8ff0`) | `hqE` |
+| 31 GiveupWait | `0x1400c0770` | no session → 4; job start fail → 2; one more path → 6 ❓ | 32 / 33 | `hq` | `hqE` |
+| 57 BindCharacterSlot | `0x1400c2ca0` | no session → 4; job start fail → 2 | 58 / 59 | `hqoq` (`20-handlers` §4 table above) | `hqoqE` (clikey, slot id, pcid, code) |
+| 60 GetChargeInfo | `0x1400c3250` | no session → 4; config byte +400 = 0 → 7; job start fail → 2 | 61 / 62 | `hqQQihQiQQQ` | `hqE` |
+| 106 ActivateGrade | `0x1400c6af0` | config byte +413 (`useGrade`) = 0 → 7, before the session lookup; no session → 4; job start fail → 2 | 107 / 108 | `hqiiqq` | `hqQiE` (clikey, game grade key, grade id, code) |
+| 82 appearance | `0x1400c44c0` | no session → 4; job start fail → 2; then the job (`17-jobs-e.md` §3) | 83 / 84 | `hqobqq` | `hqoqqE` (clikey, slot id, label id, item instance id, code) |
+| 85 sex | `0x1400c4ac0` | as 82 | 86 / 87 | `hqobqq` | `hqoqqE` |
+| 88 race | `0x1400c5100` | as 82 | 89 / 90 | `hqobqq` | `hqoqqE` |
+| 91 rename | `0x1400c5780` | as 82 | 92 / 93 | `hqosqq` | `hqoqqE` |
+| 94 add slot | `0x1400c5d20` | as 82 | 95 / 96 | `hqqqo` | `hqqqE` (clikey, label id, item instance id, code) |
+| 97 user name | `0x1400c6070` | as 82 | 98 / 99 | `hqsqqi` | `hqqqE` |
+| 100 jumping quota | `0x1400c6430` | as 82 | 101 / 102 | `hqqqi` | `hqqqE` |
+
+Other senders: `CloseSessionNotify` `hq`; `StartWaitNotify` `hqiiCch;`; `EndWaitNotify` `hqq`.
+
+Bug, not ported: the 91 handler sends the job-start failure (code 2) with `SendChangeCharacterAppearanceWithAccountInventoryItemFail` (command 84). The port sends 93.
+
 ## 5. gamed, direct handlers
 
 Session lookup is by pcid (`CliSessionTable::Select_index_pcid`). "Key check" = the client key in the request must be the client key of the session; a mismatch → 5.
