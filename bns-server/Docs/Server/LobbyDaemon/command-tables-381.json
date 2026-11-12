@@ -1,0 +1,2741 @@
+{
+  "target_build": "0.0.381",
+  "guide_build": "0.0.348",
+  "old_target_build": "0.0.307",
+  "entry_layout": "handler pointer +0; channel-required byte +8; fragment byte +9; stride16",
+  "format_method": "format strings referenced by the handler and its direct callees (scratch tbl.py); the same method on 381, 348 and 307",
+  "tables": [
+    {
+      "name": "?LobbyManagePacketLobbySideHandlerList@@3PAULobbyManagePacketHandlerDef@@A",
+      "target_address": "0x140200180",
+      "guide_address": "0x140202530",
+      "target_max_command": 16,
+      "rows": [
+        {
+          "command": 1,
+          "target_handler": "0x140056740",
+          "target_slot": "0x140200190",
+          "guide_handler": "0x1400587d0",
+          "guide_slot": "0x140202540",
+          "name": "HandleLobbyManage_HelloReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015ed10",
+              "format": "hhh"
+            },
+            {
+              "address": "0x14012b370",
+              "format": "hh"
+            },
+            {
+              "address": "0x140158b84",
+              "format": "h"
+            }
+          ],
+          "channel_required": false,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 4,
+          "target_handler": "0x140056910",
+          "target_slot": "0x1402001c0",
+          "guide_handler": "0x1400589b0",
+          "guide_slot": "0x140202570",
+          "name": "HandleLobbyManage_AnnounceNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015eb7c",
+              "format": "hs"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 5,
+          "target_handler": "0x140056b90",
+          "target_slot": "0x1402001d0",
+          "guide_handler": "0x140058b00",
+          "guide_slot": "0x140202580",
+          "name": "HandleLobbyManage_KickReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140129428",
+              "format": "hqo"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 8,
+          "target_handler": "0x1400570f0",
+          "target_slot": "0x140200200",
+          "guide_handler": "0x1400590a0",
+          "guide_slot": "0x1402025b0",
+          "name": "HandleLobbyManage_CleanupGameAccountIdIndexReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140129428",
+              "format": "hqo"
+            },
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 11,
+          "target_handler": "0x1400575d0",
+          "target_slot": "0x140200230",
+          "guide_handler": "0x140059470",
+          "guide_slot": "0x1402025e0",
+          "name": "HandleLobbyManage_CleanupPcidIndexReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015ffc8",
+              "format": "hqqh"
+            },
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 14,
+          "target_handler": "0x140057bf0",
+          "target_slot": "0x140200260",
+          "guide_handler": "0x140059820",
+          "guide_slot": "0x140202610",
+          "name": "HandleLobbyManage_RetryMileageDepositReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        }
+      ]
+    },
+    {
+      "name": "?LobbyLobbyGatePacketLobbySideHandlerList@@3PAULobbyLobbyGatePacketHandlerDef@@A",
+      "target_address": "0x1401ffa90",
+      "guide_address": "0x140202640",
+      "target_max_command": 110,
+      "rows": [
+        {
+          "command": 1,
+          "target_handler": "0x1400c1730",
+          "target_slot": "0x1401ffaa0",
+          "guide_handler": "0x1400c25c0",
+          "guide_slot": "0x140202650",
+          "name": "HandleLobbyLobbyGate_HelloReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012918c",
+              "format": "hhhh"
+            },
+            {
+              "address": "0x14012b370",
+              "format": "hh"
+            },
+            {
+              "address": "0x1401c6138",
+              "format": "hiChhsQQiihhiQQQQQQQ;QQqCqqiQiic;"
+            }
+          ],
+          "channel_required": false,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 6,
+          "target_handler": "0x1400c2040",
+          "target_slot": "0x1401ffaf0",
+          "guide_handler": "0x1400c2d90",
+          "guide_slot": "0x1402026a0",
+          "name": "HandleLobbyLobbyGate_InitSessionWithNPTokenReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401c5544",
+              "format": "hqooi"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 9,
+          "target_handler": "0x1400c2740",
+          "target_slot": "0x1401ffb20",
+          "guide_handler": "0x1400c3380",
+          "guide_slot": "0x1402026d0",
+          "name": "HandleLobbyLobbyGate_StartSessionWithNPTokenReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401c5adc",
+              "format": "hqoo"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 12,
+          "target_handler": "0x1400c2d60",
+          "target_slot": "0x1401ffb50",
+          "guide_handler": "0x1400c3890",
+          "guide_slot": "0x140202700",
+          "name": "HandleLobbyLobbyGate_InitSessionWithLobbyTokenReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017c5e0",
+              "format": "hqqqi"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 15,
+          "target_handler": "0x1400c3460",
+          "target_slot": "0x1401ffb80",
+          "guide_handler": "0x1400c3e70",
+          "guide_slot": "0x140202730",
+          "name": "HandleLobbyLobbyGate_StartSessionWithLobbyTokenReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 18,
+          "target_handler": "0x1400c37f0",
+          "target_slot": "0x1401ffbb0",
+          "guide_handler": "0x1400c4180",
+          "guide_slot": "0x140202760",
+          "name": "HandleLobbyLobbyGate_LostAnonymousConnectionNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 19,
+          "target_handler": "0x1400c3a60",
+          "target_slot": "0x1401ffbc0",
+          "guide_handler": "0x1400c43f0",
+          "guide_slot": "0x140202770",
+          "name": "HandleLobbyLobbyGate_LostConnectionNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 23,
+          "target_handler": "0x1400c3cc0",
+          "target_slot": "0x1401ffc00",
+          "guide_handler": "0x1400c4650",
+          "guide_slot": "0x1402027b0",
+          "name": "HandleLobbyLobbyGate_LogoutNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 24,
+          "target_handler": "0x1400c3f20",
+          "target_slot": "0x1401ffc10",
+          "guide_handler": "0x1400c48b0",
+          "guide_slot": "0x1402027c0",
+          "name": "HandleLobbyLobbyGate_GetEnterWorldTokenReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140129428",
+              "format": "hqo"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 28,
+          "target_handler": "0x1400c4610",
+          "target_slot": "0x1401ffc50",
+          "guide_handler": "0x1400c4df0",
+          "guide_slot": "0x140202800",
+          "name": "HandleLobbyLobbyGate_GetWaitInfoReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            },
+            {
+              "address": "0x1401bc290",
+              "format": "hqiiCch;"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 31,
+          "target_handler": "0x1400c4860",
+          "target_slot": "0x1401ffc80",
+          "guide_handler": "0x1400c5040",
+          "guide_slot": "0x140202830",
+          "name": "HandleLobbyLobbyGate_GiveupWaitReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 35,
+          "target_handler": "0x1400c4c00",
+          "target_slot": "0x1401ffcc0",
+          "guide_handler": "0x1400c5360",
+          "guide_slot": "0x140202870",
+          "name": "HandleLobbyLobbyGate_GetCharacterInfoListReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            },
+            {
+              "address": "0x1401bdcc8",
+              "format": "hiqqhCqohsbqQQi;"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 38,
+          "target_handler": "0x1400c50a0",
+          "target_slot": "0x1401ffcf0",
+          "guide_handler": "0x1400c5630",
+          "guide_slot": "0x1402028a0",
+          "name": "HandleLobbyLobbyGate_GetCharacterInfoReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140129428",
+              "format": "hqo"
+            },
+            {
+              "address": "0x140178d20",
+              "format": "hqoE"
+            },
+            {
+              "address": "0x1401be078",
+              "format": "hqqohsbqQQi"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 41,
+          "target_handler": "0x1400c5730",
+          "target_slot": "0x1401ffd20",
+          "guide_handler": "0x1400c5ae0",
+          "guide_slot": "0x1402028d0",
+          "name": "HandleLobbyLobbyGate_CheckCharacterNameReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 44,
+          "target_handler": "0x1400c5760",
+          "target_slot": "0x1401ffd50",
+          "guide_handler": "0x1400c5b10",
+          "guide_slot": "0x140202900",
+          "name": "HandleLobbyLobbyGate_CreateCharacterReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401bf2e8",
+              "format": "hqohsbQ"
+            },
+            {
+              "address": "0x140178d20",
+              "format": "hqoE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 47,
+          "target_handler": "0x1400c5e10",
+          "target_slot": "0x1401ffd80",
+          "guide_handler": "0x1400c6190",
+          "guide_slot": "0x140202930",
+          "name": "HandleLobbyLobbyGate_DeleteCharacterReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140129428",
+              "format": "hqo"
+            },
+            {
+              "address": "0x1401bc288",
+              "format": "hqoQE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 51,
+          "target_handler": "0x1400c6510",
+          "target_slot": "0x1401ffdc0",
+          "guide_handler": "0x1400c67e0",
+          "guide_slot": "0x140202970",
+          "name": "HandleLobbyLobbyGate_CancelWaitCharacterDeletionReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140129428",
+              "format": "hqo"
+            },
+            {
+              "address": "0x1401bc288",
+              "format": "hqoQE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 54,
+          "target_handler": "0x1400c6c10",
+          "target_slot": "0x1401ffdf0",
+          "guide_handler": "0x1400c6e30",
+          "guide_slot": "0x1402029a0",
+          "name": "HandleLobbyLobbyGate_RecoverCharacterReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140129428",
+              "format": "hqo"
+            },
+            {
+              "address": "0x1401bc288",
+              "format": "hqoQE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 57,
+          "target_handler": "0x1400c7520",
+          "target_slot": "0x1401ffe20",
+          "guide_handler": "0x1400c7540",
+          "guide_slot": "0x1402029d0",
+          "name": "HandleLobbyLobbyGate_BindCharacterSlotReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140129874",
+              "format": "hqoq"
+            },
+            {
+              "address": "0x1401bbec4",
+              "format": "hqoqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 60,
+          "target_handler": "0x1400c7aa0",
+          "target_slot": "0x1401ffe50",
+          "guide_handler": "0x1400c7af0",
+          "guide_slot": "0x140202a00",
+          "name": "HandleLobbyLobbyGate_GetChargeInfoReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 64,
+          "target_handler": "0x1400c7db0",
+          "target_slot": "0x1401ffe90",
+          "guide_handler": "0x1400c7df0",
+          "guide_slot": "0x140202a40",
+          "name": "HandleLobbyLobbyGate_GetGoodsCountReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 67,
+          "target_handler": "0x1400c8040",
+          "target_slot": "0x1401ffec0",
+          "guide_handler": "0x1400c8080",
+          "guide_slot": "0x140202a70",
+          "name": "HandleLobbyLobbyGate_ListGoodsReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401c016c",
+              "format": "hqc"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 70,
+          "target_handler": "0x1400c82d0",
+          "target_slot": "0x1401ffef0",
+          "guide_handler": "0x1400c83d0",
+          "guide_slot": "0x140202aa0",
+          "name": "HandleLobbyLobbyGate_TakeGoodsReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 73,
+          "target_handler": "0x1400c84d0",
+          "target_slot": "0x1401fff20",
+          "guide_handler": "0x1400c85e0",
+          "guide_slot": "0x140202ad0",
+          "name": "HandleLobbyLobbyGate_ListLobbyServiceItemInfoReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401bbecc",
+              "format": "hqQq"
+            },
+            {
+              "address": "0x1401bc7dc",
+              "format": "hqQE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 76,
+          "target_handler": "0x1400c8740",
+          "target_slot": "0x1401fff50",
+          "guide_handler": "0x1400c8860",
+          "guide_slot": "0x140202b00",
+          "name": "HandleLobbyLobbyGate_GetLobbyServiceItemInfoReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            },
+            {
+              "address": "0x14013de5c",
+              "format": "hqqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 79,
+          "target_handler": "0x1400c8980",
+          "target_slot": "0x1401fff80",
+          "guide_handler": "0x1400c8aa0",
+          "guide_slot": "0x140202b30",
+          "name": "HandleLobbyLobbyGate_GetServiceEntryListReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            },
+            {
+              "address": "0x1401c24a8",
+              "format": "hiqCqQqohq;"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 82,
+          "target_handler": "0x1400c8da0",
+          "target_slot": "0x1401fffb0",
+          "guide_handler": "0x1400c8d00",
+          "guide_slot": "0x140202b60",
+          "name": "HandleLobbyLobbyGate_ChangeCharacterAppearanceWithAccountInventoryItemReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401c2618",
+              "format": "hqobqqi"
+            },
+            {
+              "address": "0x1401bc7ec",
+              "format": "hqoqqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 85,
+          "target_handler": "0x1400c92e0",
+          "target_slot": "0x1401fffe0",
+          "guide_handler": "0x1400c9300",
+          "guide_slot": "0x140202b90",
+          "name": "HandleLobbyLobbyGate_ChangeCharacterSexWithAccountInventoryItemReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401c1af0",
+              "format": "hqocbqqi"
+            },
+            {
+              "address": "0x1401bc7ec",
+              "format": "hqoqqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 88,
+          "target_handler": "0x1400c9860",
+          "target_slot": "0x140200010",
+          "guide_handler": "0x1400c9940",
+          "guide_slot": "0x140202bc0",
+          "name": "HandleLobbyLobbyGate_ChangeCharacterRaceWithAccountInventoryItemReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401c2330",
+              "format": "hqoccbqqi"
+            },
+            {
+              "address": "0x1401bc7ec",
+              "format": "hqoqqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 91,
+          "target_handler": "0x1400c9e20",
+          "target_slot": "0x140200040",
+          "guide_handler": "0x1400c9fc0",
+          "guide_slot": "0x140202bf0",
+          "name": "HandleLobbyLobbyGate_RenameCharacterWithAccountInventoryItemReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401c3db8",
+              "format": "hqosqqi"
+            },
+            {
+              "address": "0x1401bc7ec",
+              "format": "hqoqqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 94,
+          "target_handler": "0x1400ca310",
+          "target_slot": "0x140200070",
+          "guide_handler": "0x1400ca560",
+          "guide_slot": "0x140202c20",
+          "name": "HandleLobbyLobbyGate_AddSlotWithAccountInventoryItemReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017c5e0",
+              "format": "hqqqi"
+            },
+            {
+              "address": "0x1401bc7fc",
+              "format": "hqqqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 97,
+          "target_handler": "0x1400ca5a0",
+          "target_slot": "0x1402000a0",
+          "guide_handler": "0x1400ca8b0",
+          "guide_slot": "0x140202c50",
+          "name": "HandleLobbyLobbyGate_ChangeUserNameWithAccountInventoryItemReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401bc29c",
+              "format": "hqsqqi"
+            },
+            {
+              "address": "0x1401bc7fc",
+              "format": "hqqqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 100,
+          "target_handler": "0x1400ca890",
+          "target_slot": "0x1402000d0",
+          "guide_handler": "0x1400cac70",
+          "guide_slot": "0x140202c80",
+          "name": "HandleLobbyLobbyGate_ExtendJumpingCharacterCreationQuotaWithAccountInventoryItemReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017c5e0",
+              "format": "hqqqi"
+            },
+            {
+              "address": "0x1401bc7fc",
+              "format": "hqqqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 103,
+          "target_handler": "0x1400cab30",
+          "target_slot": "0x140200100",
+          "guide_handler": "0x1400cafd0",
+          "guide_slot": "0x140202cb0",
+          "name": "HandleLobbyLobbyGate_CreateInitialUserNameReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401bc514",
+              "format": "hqs"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 106,
+          "target_handler": "0x1400cadd0",
+          "target_slot": "0x140200130",
+          "guide_handler": "0x1400cb330",
+          "guide_slot": "0x140202ce0",
+          "name": "HandleLobbyLobbyGate_ActivateGradeReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140178118",
+              "format": "hqQi"
+            },
+            {
+              "address": "0x1401bcce4",
+              "format": "hqQiE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        }
+      ]
+    },
+    {
+      "name": "?LobbyInfoGatePacketLobbySideHandlerList@@3PAULobbyInfoGatePacketHandlerDef@@A",
+      "target_address": "0x1401ff9e0",
+      "guide_address": "0x140202d30",
+      "target_max_command": 10,
+      "rows": [
+        {
+          "command": 1,
+          "target_handler": "0x140054c90",
+          "target_slot": "0x1401ff9f0",
+          "guide_handler": "0x140056d40",
+          "guide_slot": "0x140202d40",
+          "name": "HandleLobbyInfoGate_HelloReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012918c",
+              "format": "hhhh"
+            },
+            {
+              "address": "0x14012b370",
+              "format": "hh"
+            },
+            {
+              "address": "0x140157f80",
+              "format": "hiChhQ;"
+            }
+          ],
+          "channel_required": false,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 4,
+          "target_handler": "0x140055430",
+          "target_slot": "0x1401ffa20",
+          "guide_handler": "0x140057350",
+          "guide_slot": "0x140202d70",
+          "name": "HandleLobbyInfoGate_AuthTokenReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14013db00",
+              "format": "hqqo"
+            },
+            {
+              "address": "0x14013de5c",
+              "format": "hqqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 7,
+          "target_handler": "0x140055bb0",
+          "target_slot": "0x1401ffa50",
+          "guide_handler": "0x140057880",
+          "guide_slot": "0x140202da0",
+          "name": "HandleLobbyInfoGate_GetWorldInfoListReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140158b84",
+              "format": "h"
+            },
+            {
+              "address": "0x14012b370",
+              "format": "hh"
+            },
+            {
+              "address": "0x140157f80",
+              "format": "hiChhQ;"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        }
+      ]
+    },
+    {
+      "name": "?LobbyGamePacketLobbySideHandlerList@@3PAULobbyGamePacketHandlerDef@@A",
+      "target_address": "0x1401ff2a0",
+      "guide_address": "0x140202de0",
+      "target_max_command": 115,
+      "rows": [
+        {
+          "command": 1,
+          "target_handler": "0x140083ee0",
+          "target_slot": "0x1401ff2b0",
+          "guide_handler": "0x140088260",
+          "guide_slot": "0x140202df0",
+          "name": "HandleLobbyGame_HelloReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017acd8",
+              "format": "hhhhh"
+            },
+            {
+              "address": "0x14012b370",
+              "format": "hh"
+            },
+            {
+              "address": "0x14017ba60",
+              "format": "hCQiiiqqChiiii;;qqqi"
+            }
+          ],
+          "channel_required": false,
+          "fragment": false,
+          "vs_307": "formats differ from 307"
+        },
+        {
+          "command": 4,
+          "target_handler": "0x1400849f0",
+          "target_slot": "0x1401ff2e0",
+          "guide_handler": "0x140088cd0",
+          "guide_slot": "0x140202e20",
+          "name": "HandleLobbyGame_ServiceOpenNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015ed10",
+              "format": "hhh"
+            }
+          ],
+          "channel_required": false,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 5,
+          "target_handler": "0x140085030",
+          "target_slot": "0x1401ff2f0",
+          "guide_handler": "0x140089270",
+          "guide_slot": "0x140202e30",
+          "name": "HandleLobbyGame_EnterWorldReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017c5e0",
+              "format": "hqqqi"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 8,
+          "target_handler": "0x1400858b0",
+          "target_slot": "0x1401ff320",
+          "guide_handler": "0x1400899a0",
+          "guide_slot": "0x140202e60",
+          "name": "HandleLobbyGame_LeaveWorldReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017cab0",
+              "format": "hqqq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 11,
+          "target_handler": "0x140085d60",
+          "target_slot": "0x1401ff350",
+          "guide_handler": "0x140089d90",
+          "guide_slot": "0x140202e90",
+          "name": "HandleLobbyGame_UpdateBotScoreNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017d368",
+              "format": "hqqi"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 12,
+          "target_handler": "0x140086050",
+          "target_slot": "0x1401ff360",
+          "guide_handler": "0x14008a060",
+          "guide_slot": "0x140202ea0",
+          "name": "HandleLobbyGame_LogoutNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 15,
+          "target_handler": "0x1400863e0",
+          "target_slot": "0x1401ff390",
+          "guide_handler": "0x14008a400",
+          "guide_slot": "0x140202ed0",
+          "name": "HandleLobbyGame_KickOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 16,
+          "target_handler": "0x140086540",
+          "target_slot": "0x1401ff3a0",
+          "guide_handler": "0x14008a560",
+          "guide_slot": "0x140202ee0",
+          "name": "HandleLobbyGame_KickFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 17,
+          "target_handler": "0x140084c40",
+          "target_slot": "0x1401ff3b0",
+          "guide_handler": "0x140088f30",
+          "guide_slot": "0x140202ef0",
+          "name": "HandleLobbyGame_NPPresenceKickReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017bee4",
+              "format": "hqQQ"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 21,
+          "target_handler": "0x140086720",
+          "target_slot": "0x1401ff3f0",
+          "guide_handler": "0x14008a7c0",
+          "guide_slot": "0x140202f30",
+          "name": "HandleLobbyGame_CreateCharacterOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017dfb8",
+              "format": "hqhhb"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 22,
+          "target_handler": "0x1400869b0",
+          "target_slot": "0x1401ff400",
+          "guide_handler": "0x14008aad0",
+          "guide_slot": "0x140202f40",
+          "name": "HandleLobbyGame_CreateCharacterFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 24,
+          "target_handler": "0x140086b90",
+          "target_slot": "0x1401ff420",
+          "guide_handler": "0x14008ad30",
+          "guide_slot": "0x140202f60",
+          "name": "HandleLobbyGame_DeleteCharacterOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017e470",
+              "format": "hqh"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 25,
+          "target_handler": "0x140086d70",
+          "target_slot": "0x1401ff430",
+          "guide_handler": "0x14008af90",
+          "guide_slot": "0x140202f70",
+          "name": "HandleLobbyGame_DeleteCharacterFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 27,
+          "target_handler": "0x140086f50",
+          "target_slot": "0x1401ff450",
+          "guide_handler": "0x14008b1f0",
+          "guide_slot": "0x140202f90",
+          "name": "HandleLobbyGame_RestoreCharacterOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 28,
+          "target_handler": "0x1400870b0",
+          "target_slot": "0x1401ff460",
+          "guide_handler": "0x14008b350",
+          "guide_slot": "0x140202fa0",
+          "name": "HandleLobbyGame_RestoreCharacterFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 30,
+          "target_handler": "0x140087290",
+          "target_slot": "0x1401ff480",
+          "guide_handler": "0x14008b5b0",
+          "guide_slot": "0x140202fc0",
+          "name": "HandleLobbyGame_StartChargeReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017cab0",
+              "format": "hqqq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 33,
+          "target_handler": "0x140087610",
+          "target_slot": "0x1401ff4b0",
+          "guide_handler": "0x14008b9b0",
+          "guide_slot": "0x140202ff0",
+          "name": "HandleLobbyGame_StopChargeReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017fa78",
+              "format": "hqqqs"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 38,
+          "target_handler": "0x140087ba0",
+          "target_slot": "0x1401ff500",
+          "guide_handler": "0x14008be60",
+          "guide_slot": "0x140203040",
+          "name": "HandleLobbyGame_AbandonChargeNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14018009c",
+              "format": "hqqs"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 39,
+          "target_handler": "0x140088070",
+          "target_slot": "0x1401ff510",
+          "guide_handler": "0x14008c250",
+          "guide_slot": "0x140203050",
+          "name": "HandleLobbyGame_UpdateCharacterDataReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017fb38",
+              "format": "hqqqhb"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            },
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 42,
+          "target_handler": "0x140088560",
+          "target_slot": "0x1401ff540",
+          "guide_handler": "0x14008c660",
+          "guide_slot": "0x140203080",
+          "name": "HandleLobbyGame_UpdateAccountDataReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140180318",
+              "format": "hqqqiCQiqqihcccc;qiqCihqq;Chq;"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            },
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "formats differ from 307"
+        },
+        {
+          "command": 45,
+          "target_handler": "0x140089130",
+          "target_slot": "0x1401ff570",
+          "guide_handler": "0x14008d590",
+          "guide_slot": "0x1402030b0",
+          "name": "HandleLobbyGame_TryRegisterGuildReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140181828",
+              "format": "hqcs"
+            },
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 48,
+          "target_handler": "0x1400895b0",
+          "target_slot": "0x1401ff5a0",
+          "guide_handler": "0x14008d9a0",
+          "guide_slot": "0x1402030e0",
+          "name": "HandleLobbyGame_FinishRegisterGuildNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 49,
+          "target_handler": "0x140089700",
+          "target_slot": "0x1401ff5b0",
+          "guide_handler": "0x14008db10",
+          "guide_slot": "0x1402030f0",
+          "name": "HandleLobbyGame_CancelRegisterGuildNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 50,
+          "target_handler": "0x140089850",
+          "target_slot": "0x1401ff5c0",
+          "guide_handler": "0x14008dc80",
+          "guide_slot": "0x140203100",
+          "name": "HandleLobbyGame_TryRenameGuildReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140181af0",
+              "format": "hqqcs"
+            },
+            {
+              "address": "0x140177774",
+              "format": "hqqcE"
+            },
+            {
+              "address": "0x14017776c",
+              "format": "hqqcq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 53,
+          "target_handler": "0x140089c90",
+          "target_slot": "0x1401ff5f0",
+          "guide_handler": "0x14008e010",
+          "guide_slot": "0x140203130",
+          "name": "HandleLobbyGame_FinishRenameGuildNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017cab0",
+              "format": "hqqq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 54,
+          "target_handler": "0x140089e60",
+          "target_slot": "0x1401ff600",
+          "guide_handler": "0x14008e220",
+          "guide_slot": "0x140203140",
+          "name": "HandleLobbyGame_CancelRenameGuildNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 55,
+          "target_handler": "0x140089fd0",
+          "target_slot": "0x1401ff610",
+          "guide_handler": "0x14008e390",
+          "guide_slot": "0x140203150",
+          "name": "HandleLobbyGame_DeleteGuildNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 58,
+          "target_handler": "0x14008a130",
+          "target_slot": "0x1401ff640",
+          "guide_handler": "0x14008e520",
+          "guide_slot": "0x140203180",
+          "name": "HandleLobbyGame_ChangeCharacterAppearanceOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401829e4",
+              "format": "hqb"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 59,
+          "target_handler": "0x14008a4e0",
+          "target_slot": "0x1401ff650",
+          "guide_handler": "0x14008e820",
+          "guide_slot": "0x140203190",
+          "name": "HandleLobbyGame_ChangeCharacterAppearanceFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 61,
+          "target_handler": "0x14008a6e0",
+          "target_slot": "0x1401ff670",
+          "guide_handler": "0x14008eab0",
+          "guide_slot": "0x1402031b0",
+          "name": "HandleLobbyGame_ChangeCharacterSexOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401829e4",
+              "format": "hqb"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 62,
+          "target_handler": "0x14008aa90",
+          "target_slot": "0x1401ff680",
+          "guide_handler": "0x14008edb0",
+          "guide_slot": "0x1402031c0",
+          "name": "HandleLobbyGame_ChangeCharacterSexFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 64,
+          "target_handler": "0x14008ac90",
+          "target_slot": "0x1401ff6a0",
+          "guide_handler": "0x14008f040",
+          "guide_slot": "0x1402031e0",
+          "name": "HandleLobbyGame_ChangeCharacterRaceOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401829e4",
+              "format": "hqb"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 65,
+          "target_handler": "0x14008b040",
+          "target_slot": "0x1401ff6b0",
+          "guide_handler": "0x14008f340",
+          "guide_slot": "0x1402031f0",
+          "name": "HandleLobbyGame_ChangeCharacterRaceFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 67,
+          "target_handler": "0x14008b240",
+          "target_slot": "0x1401ff6d0",
+          "guide_handler": "0x14008f5d0",
+          "guide_slot": "0x140203210",
+          "name": "HandleLobbyGame_RenameCharacterOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 68,
+          "target_handler": "0x14008b450",
+          "target_slot": "0x1401ff6e0",
+          "guide_handler": "0x14008f870",
+          "guide_slot": "0x140203220",
+          "name": "HandleLobbyGame_RenameCharacterFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 69,
+          "target_handler": "0x14008b650",
+          "target_slot": "0x1401ff6f0",
+          "guide_handler": "0x14008fb00",
+          "guide_slot": "0x140203230",
+          "name": "HandleLobbyGame_ExtendJumpingCharacterCreationQuotaWithAccountInventoryItemReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140183cb8",
+              "format": "hqqqqqi"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 72,
+          "target_handler": "0x14008ba30",
+          "target_slot": "0x1401ff720",
+          "guide_handler": "0x14008ffc0",
+          "guide_slot": "0x140203260",
+          "name": "HandleLobbyGame_UpgradeJumpingCharacterStateWithCreationQuotaReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017cab0",
+              "format": "hqqq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 75,
+          "target_handler": "0x14008bd60",
+          "target_slot": "0x1401ff750",
+          "guide_handler": "0x1400903d0",
+          "guide_slot": "0x140203290",
+          "name": "HandleLobbyGame_UpdateJumpingCharacterStateReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14017cab0",
+              "format": "hqqq"
+            },
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 78,
+          "target_handler": "0x14008c090",
+          "target_slot": "0x1401ff780",
+          "guide_handler": "0x1400907e0",
+          "guide_slot": "0x1402032c0",
+          "name": "HandleLobbyGame_SetAppDataNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140184c7c",
+              "format": "hqCss;"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 79,
+          "target_handler": "0x14008c920",
+          "target_slot": "0x1401ff790",
+          "guide_handler": "0x140090f70",
+          "guide_slot": "0x1402032d0",
+          "name": "HandleLobbyGame_FriendMessageNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140185e98",
+              "format": "hqsCss;"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 80,
+          "target_handler": "0x14008d7a0",
+          "target_slot": "0x1401ff7a0",
+          "guide_handler": "0x140091ab0",
+          "guide_slot": "0x1402032e0",
+          "name": "HandleLobbyGame_SecondPasswordGetStatusReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140186a50",
+              "format": "hqqc"
+            },
+            {
+              "address": "0x14013de5c",
+              "format": "hqqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 83,
+          "target_handler": "0x14008da80",
+          "target_slot": "0x1401ff7d0",
+          "guide_handler": "0x140091e80",
+          "guide_slot": "0x140203310",
+          "name": "HandleLobbyGame_SecondPasswordIsVerifiedReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140187454",
+              "format": "hqqcQ"
+            },
+            {
+              "address": "0x14013de5c",
+              "format": "hqqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 87,
+          "target_handler": "0x14008dda0",
+          "target_slot": "0x1401ff810",
+          "guide_handler": "0x140092280",
+          "guide_slot": "0x140203350",
+          "name": "HandleLobbyGame_AuctionEscrowOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 88,
+          "target_handler": "0x14008df30",
+          "target_slot": "0x1401ff820",
+          "guide_handler": "0x140092400",
+          "guide_slot": "0x140203360",
+          "name": "HandleLobbyGame_AuctionEscrowFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 89,
+          "target_handler": "0x14008e140",
+          "target_slot": "0x1401ff830",
+          "guide_handler": "0x1400926a0",
+          "guide_slot": "0x140203370",
+          "name": "HandleLobbyGame_AuctionBidReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14018795c",
+              "format": "hqohq"
+            },
+            {
+              "address": "0x140178d20",
+              "format": "hqoE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 92,
+          "target_handler": "0x14008e6f0",
+          "target_slot": "0x1401ff860",
+          "guide_handler": "0x140092ca0",
+          "guide_slot": "0x1402033a0",
+          "name": "HandleLobbyGame_GetGradeListReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401880f8",
+              "format": "hqQqi"
+            },
+            {
+              "address": "0x140178a08",
+              "format": "hqQqE"
+            },
+            {
+              "address": "0x140144090",
+              "format": "hiqQqiiiiiiCiiQiqq;"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 97,
+          "target_handler": "0x14008e950",
+          "target_slot": "0x1401ff8b0",
+          "guide_handler": "0x140092f00",
+          "guide_slot": "0x1402033f0",
+          "name": "HandleLobbyGame_ActivateGradeReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140187ddc",
+              "format": "hqqQi"
+            },
+            {
+              "address": "0x140178d64",
+              "format": "hqqQiE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 100,
+          "target_handler": "0x14008f030",
+          "target_slot": "0x1401ff8e0",
+          "guide_handler": "0x140093540",
+          "guide_slot": "0x140203420",
+          "name": "HandleLobbyGame_DepositGameMileageReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x1401885c8",
+              "format": "hqQQqqoqqqqqsQccc"
+            },
+            {
+              "address": "0x140178d38",
+              "format": "hqQQqqqoEi"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 103,
+          "target_handler": "0x1400901d0",
+          "target_slot": "0x1401ff910",
+          "guide_handler": "0x140094780",
+          "guide_slot": "0x140203450",
+          "name": "HandleLobbyGame_BoastEventInWorldNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14013e164",
+              "format": "hhsh"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 104,
+          "target_handler": "0x1400904e0",
+          "target_slot": "0x1401ff920",
+          "guide_handler": "0x140094910",
+          "guide_slot": "0x140203460",
+          "name": "HandleLobbyGame_TakeAccountTimeBasedPlayRewardReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140188f30",
+              "format": "hqqiQhq"
+            },
+            {
+              "address": "0x140179040",
+              "format": "hqqiQhqEi"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 107,
+          "target_handler": "0x1400908d0",
+          "target_slot": "0x1401ff950",
+          "guide_handler": "0x140094df0",
+          "guide_slot": "0x140203490",
+          "name": "HandleLobbyGame_UpdateAccountExpReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x140189a98",
+              "format": "hqqqqiq"
+            },
+            {
+              "address": "0x14013de5c",
+              "format": "hqqE"
+            },
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 110,
+          "target_handler": "0x140090dc0",
+          "target_slot": "0x1401ff980",
+          "guide_handler": "0x1400951f0",
+          "guide_slot": "0x1402034c0",
+          "name": "HandleLobbyGame_UpdateAccountContentQuotaReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14018a400",
+              "format": "hqqqCihqq;"
+            },
+            {
+              "address": "0x14013de5c",
+              "format": "hqqE"
+            },
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "new in 381 (not in 307)"
+        },
+        {
+          "command": 113,
+          "target_handler": "0x1400913f0",
+          "target_slot": "0x1401ff9b0",
+          "guide_handler": "0x140095890",
+          "guide_slot": "0x1402034f0",
+          "name": "HandleLobbyGame_UpdateAccountRecycleTimeReq",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14018aba8",
+              "format": "hqqqChq;"
+            },
+            {
+              "address": "0x14013de5c",
+              "format": "hqqE"
+            },
+            {
+              "address": "0x14015fcc4",
+              "format": "hqq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "new in 381 (not in 307)"
+        }
+      ]
+    },
+    {
+      "name": "?AccountInventoryLobbyPacketLobbySideHandlerList@@3PAUAccountInventoryLobbyPacketHandlerDef@@A",
+      "target_address": "0x1401ff050",
+      "guide_address": "0x140203520",
+      "target_max_command": 36,
+      "rows": [
+        {
+          "command": 2,
+          "target_handler": "0x140009bd0",
+          "target_slot": "0x1401ff070",
+          "guide_handler": "0x1400087d0",
+          "guide_slot": "0x140203540",
+          "name": "HandleAccountInventoryLobby_HelloOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 3,
+          "target_handler": "0x140009c20",
+          "target_slot": "0x1401ff080",
+          "guide_handler": "0x140008820",
+          "guide_slot": "0x140203550",
+          "name": "HandleAccountInventoryLobby_HelloFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b370",
+              "format": "hh"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 5,
+          "target_handler": "0x140009cb0",
+          "target_slot": "0x1401ff0a0",
+          "guide_handler": "0x1400088b0",
+          "guide_slot": "0x140203570",
+          "name": "HandleAccountInventoryLobby_GetGoodsCountOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b49c",
+              "format": "hqi"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 6,
+          "target_handler": "0x140009e40",
+          "target_slot": "0x1401ff0b0",
+          "guide_handler": "0x140008ad0",
+          "guide_slot": "0x140203580",
+          "name": "HandleAccountInventoryLobby_GetGoodsCountFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 8,
+          "target_handler": "0x140009fd0",
+          "target_slot": "0x1401ff0d0",
+          "guide_handler": "0x140008d00",
+          "guide_slot": "0x1402035a0",
+          "name": "HandleAccountInventoryLobby_ListGoodsOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b938",
+              "format": "hiqCqiQQqqssissbbCiiibb;;"
+            }
+          ],
+          "channel_required": true,
+          "fragment": true,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 9,
+          "target_handler": "0x14000a760",
+          "target_slot": "0x1401ff0e0",
+          "guide_handler": "0x140009550",
+          "guide_slot": "0x1402035b0",
+          "name": "HandleAccountInventoryLobby_ListGoodsFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 11,
+          "target_handler": "0x14000a8e0",
+          "target_slot": "0x1401ff100",
+          "guide_handler": "0x140009750",
+          "guide_slot": "0x1402035d0",
+          "name": "HandleAccountInventoryLobby_TakeGoodsOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012c3f0",
+              "format": "hiqCqqqiQ;"
+            }
+          ],
+          "channel_required": true,
+          "fragment": true,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 12,
+          "target_handler": "0x14000ab70",
+          "target_slot": "0x1401ff110",
+          "guide_handler": "0x140009a60",
+          "guide_slot": "0x1402035e0",
+          "name": "HandleAccountInventoryLobby_TakeGoodsFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 14,
+          "target_handler": "0x14000acf0",
+          "target_slot": "0x1401ff130",
+          "guide_handler": "0x140009c60",
+          "guide_slot": "0x140203600",
+          "name": "HandleAccountInventoryLobby_RetrieveLobbyServiceItemListOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012c920",
+              "format": "hiqiCqqqiQ;"
+            }
+          ],
+          "channel_required": true,
+          "fragment": true,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 15,
+          "target_handler": "0x14000af80",
+          "target_slot": "0x1401ff140",
+          "guide_handler": "0x140009f60",
+          "guide_slot": "0x140203610",
+          "name": "HandleAccountInventoryLobby_RetrieveLobbyServiceItemListFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 17,
+          "target_handler": "0x14000b100",
+          "target_slot": "0x1401ff160",
+          "guide_handler": "0x14000a160",
+          "guide_slot": "0x140203630",
+          "name": "HandleAccountInventoryLobby_RetrieveSingleWarehouseItemOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012cee0",
+              "format": "hqqqqiQ"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 18,
+          "target_handler": "0x14000b350",
+          "target_slot": "0x1401ff170",
+          "guide_handler": "0x14000a440",
+          "guide_slot": "0x140203640",
+          "name": "HandleAccountInventoryLobby_RetrieveSingleWarehouseItemFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 20,
+          "target_handler": "0x14000b4f0",
+          "target_slot": "0x1401ff190",
+          "guide_handler": "0x14000a680",
+          "guide_slot": "0x140203660",
+          "name": "HandleAccountInventoryLobby_TryWarehouseItemConsumptionOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 21,
+          "target_handler": "0x14000b600",
+          "target_slot": "0x1401ff1a0",
+          "guide_handler": "0x14000a780",
+          "guide_slot": "0x140203670",
+          "name": "HandleAccountInventoryLobby_TryWarehouseItemConsumptionFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 23,
+          "target_handler": "0x14000b7b0",
+          "target_slot": "0x1401ff1c0",
+          "guide_handler": "0x14000a9c0",
+          "guide_slot": "0x140203690",
+          "name": "HandleAccountInventoryLobby_FinishWarehouseItemConsumptionOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 24,
+          "target_handler": "0x14000b8c0",
+          "target_slot": "0x1401ff1d0",
+          "guide_handler": "0x14000aac0",
+          "guide_slot": "0x1402036a0",
+          "name": "HandleAccountInventoryLobby_FinishWarehouseItemConsumptionFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 26,
+          "target_handler": "0x14000ba70",
+          "target_slot": "0x1401ff1f0",
+          "guide_handler": "0x14000ad00",
+          "guide_slot": "0x1402036c0",
+          "name": "HandleAccountInventoryLobby_CancelWarehouseItemConsumptionOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 27,
+          "target_handler": "0x14000bab0",
+          "target_slot": "0x1401ff200",
+          "guide_handler": "0x14000ad40",
+          "guide_slot": "0x1402036d0",
+          "name": "HandleAccountInventoryLobby_CancelWarehouseItemConsumptionFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 29,
+          "target_handler": "0x14000baf0",
+          "target_slot": "0x1401ff220",
+          "guide_handler": "0x14000ad80",
+          "guide_slot": "0x1402036f0",
+          "name": "HandleAccountInventoryLobby_ConsumeWarehouseItemOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012d588",
+              "format": "hq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 30,
+          "target_handler": "0x14000bc00",
+          "target_slot": "0x1401ff230",
+          "guide_handler": "0x14000ae80",
+          "guide_slot": "0x140203700",
+          "name": "HandleAccountInventoryLobby_ConsumeWarehouseItemFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 32,
+          "target_handler": "0x14000bdb0",
+          "target_slot": "0x1401ff250",
+          "guide_handler": "0x14000b0c0",
+          "guide_slot": "0x140203720",
+          "name": "HandleAccountInventoryLobby_RetrieveCharacterGoodsCountOk",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012e4a8",
+              "format": "hqii"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 33,
+          "target_handler": "0x14000bf60",
+          "target_slot": "0x1401ff260",
+          "guide_handler": "0x14000b310",
+          "guide_slot": "0x140203730",
+          "name": "HandleAccountInventoryLobby_RetrieveCharacterGoodsCountFail",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012b6e4",
+              "format": "hqE"
+            }
+          ],
+          "channel_required": true,
+          "fragment": false,
+          "vs_307": "same as 307"
+        },
+        {
+          "command": 34,
+          "target_handler": "0x14000c0e0",
+          "target_slot": "0x1401ff270",
+          "guide_handler": "0x14000b510",
+          "guide_slot": "0x140203740",
+          "name": "HandleAccountInventoryLobby_GoodsInventoryChangedNotify",
+          "name_status": "PDB name; same command and formats in 348",
+          "target_formats": [
+            {
+              "address": "0x14012ea28",
+              "format": "hioQCqqi;Qqq"
+            },
+            {
+              "address": "0x1401bbecc",
+              "format": "hqQq"
+            }
+          ],
+          "channel_required": true,
+          "fragment": true,
+          "vs_307": "same as 307 (the format hqQq is in all 3 builds; 381 inlines the callee that uses it)"
+        }
+      ]
+    }
+  ],
+  "np_dispatch": {
+    "function": "DispatchNPLobbyMessageHandler",
+    "target_address": "0x1400cb0e0",
+    "guide_address": "0x1400cb710",
+    "rows": [
+      {
+        "message": 1502,
+        "target_handler": "0x1400cc4b0",
+        "name": "Handle_CommonSlot_GetSlot"
+      },
+      {
+        "message": 1651,
+        "target_handler": "0x1400cf680",
+        "name": "Handle_SrvPromotionStamp_ListCurrentPromotions"
+      },
+      {
+        "message": 1652,
+        "target_handler": "0x1400cf720",
+        "name": "Handle_SrvPromotionStamp_GetPromotionPolicy"
+      },
+      {
+        "message": 1653,
+        "target_handler": "0x1400cf7c0",
+        "name": "Handle_SrvPromotionStamp_GetUserPromotionStatus"
+      },
+      {
+        "message": 1655,
+        "target_handler": "0x1400cf860",
+        "name": "Handle_SrvPromotionStamp_AttendPromotionSecured"
+      },
+      {
+        "message": 1711,
+        "target_handler": "0x1400cde80",
+        "name": "Handle_CommonSecondPassword_GetStatus"
+      },
+      {
+        "message": 1721,
+        "target_handler": "0x1400ce1c0",
+        "name": "Handle_CommonGrade_ListGrades"
+      },
+      {
+        "message": 1722,
+        "target_handler": "0x1400ce300",
+        "name": "Handle_CommonGrade_GetLevel"
+      },
+      {
+        "message": 1725,
+        "target_handler": "0x1400ce260",
+        "name": "Handle_CommonGrade_ListAllGrades"
+      },
+      {
+        "message": 2106,
+        "target_handler": "0x1400cb9d0",
+        "name": "Handle_SrvAuth_IsUserNameChangeableIncomplete"
+      },
+      {
+        "message": 2107,
+        "target_handler": "0x1400cbb10",
+        "name": "Handle_SrvAuth_GetUserNameChangeableIncomplete"
+      },
+      {
+        "message": 2108,
+        "target_handler": "0x1400cbc50",
+        "name": "Handle_SrvAuth_ChangeMyUserNameIncomplete"
+      },
+      {
+        "message": 2201,
+        "target_handler": "0x1400cc730",
+        "name": "Handle_SrvPres_Login"
+      },
+      {
+        "message": 2202,
+        "target_handler": "0x1400cc7d0",
+        "name": "Handle_SrvPres_Logout"
+      },
+      {
+        "message": 2205,
+        "target_handler": "0x1400cc910",
+        "name": "Handle_SrvPres_GetUserInfo"
+      },
+      {
+        "message": 2207,
+        "target_handler": "0x1400cbd90",
+        "name": "Handle_SrvPres_LogoutUser"
+      },
+      {
+        "message": 2208,
+        "target_handler": "0x1400cc370",
+        "name": "Handle_SrvPres_SetAppData"
+      },
+      {
+        "message": 2209,
+        "target_handler": "0x1400ccb10",
+        "name": "Handle_SrvPres_Message"
+      },
+      {
+        "message": 2210,
+        "target_handler": "0x1400ccc70",
+        "name": "Handle_SrvPres_Kick"
+      },
+      {
+        "message": 2251,
+        "target_handler": "0x1400ce120",
+        "name": "Handle_SrvGameAccount_ListUserLastPresences"
+      },
+      {
+        "message": 2261,
+        "target_handler": "0x1400cb7f0",
+        "name": "Handle_SrvProfile_GetUserProfile"
+      },
+      {
+        "message": 2271,
+        "target_handler": "0x1400cb890",
+        "name": "Handle_SrvGameTime_GetGameTime"
+      },
+      {
+        "message": 2501,
+        "target_handler": "0x1400cc5f0",
+        "name": "Handle_SrvSlot_CreateSlots"
+      },
+      {
+        "message": 2503,
+        "target_handler": "0x1400cc690",
+        "name": "Handle_SrvSlot_SetData"
+      },
+      {
+        "message": 2591,
+        "target_handler": "0x1400cf540",
+        "name": "Handle_SrvRMS_Inquiry"
+      },
+      {
+        "message": 2602,
+        "target_handler": "0x1400cb680",
+        "name": "Handle_SrvGate_RegisterService"
+      },
+      {
+        "message": 2711,
+        "target_handler": "0x1400cdfd0",
+        "name": "Handle_SrvSecondPassword_IsVerified"
+      },
+      {
+        "message": 2721,
+        "target_handler": "0x1400ce3a0",
+        "name": "Handle_SrvGrade_ActivateGrade"
+      },
+      {
+        "message": 2723,
+        "target_handler": "0x1400ce440",
+        "name": "Handle_SrvGrade_NotifyGradeChanged"
+      },
+      {
+        "message": 2724,
+        "target_handler": "0x1400ce990",
+        "name": "Handle_SrvGrade_NotifyScoreChanged"
+      },
+      {
+        "message": 2751,
+        "target_handler": "0x1400cdd30",
+        "name": "Handle_SrvFriend_SendMessage"
+      },
+      {
+        "message": 2781,
+        "target_handler": "0x1400cf4a0",
+        "name": "Handle_SrvContentBan_ListUserBans"
+      },
+      {
+        "message": 2901,
+        "target_handler": "0x1400ccdd0",
+        "name": "Handle_SrvCharge_GetInfo"
+      },
+      {
+        "message": 2902,
+        "target_handler": "0x1400cce70",
+        "name": "Handle_SrvCharge_Start"
+      },
+      {
+        "message": 2903,
+        "target_handler": "0x1400ccf10",
+        "name": "Handle_SrvCharge_Stop"
+      },
+      {
+        "message": 2904,
+        "target_handler": "0x1400cd0f0",
+        "name": "Handle_SrvCharge_RequestStop"
+      },
+      {
+        "message": 2905,
+        "target_handler": "0x1400cd050",
+        "name": "Handle_SrvCharge_Abandon"
+      },
+      {
+        "message": 2906,
+        "target_handler": "0x1400cd9f0",
+        "name": "Handle_SrvCharge_NotifyRemainTime"
+      },
+      {
+        "message": 2907,
+        "target_handler": "0x1400cd700",
+        "name": "Handle_SrvCharge_NotifyApplyNewChargeItem",
+        "note": "381 IDB name is a wrong port name (Handle_SrvCharge_RequestStop); strings prove this handler"
+      },
+      {
+        "message": 2961,
+        "target_handler": "0x1400cee90",
+        "name": "Handle_SrvAuction_Escrow"
+      },
+      {
+        "message": 2962,
+        "target_handler": "0x1400cf020",
+        "name": "Handle_SrvAuction_RollbackEscrow"
+      },
+      {
+        "message": 2963,
+        "target_handler": "0x1400cf1e0",
+        "name": "Handle_SrvAuction_Deliver"
+      },
+      {
+        "message": 2964,
+        "target_handler": "0x1400cf3f0",
+        "name": "Handle_SrvAuction_Bid"
+      },
+      {
+        "message": 2981,
+        "target_handler": "0x1400cf5e0",
+        "name": "Handle_SrvVirtualCurrency_Deposit"
+      }
+    ]
+  }
+}
