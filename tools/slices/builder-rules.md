@@ -16,17 +16,23 @@ Packet names:
 - Client protocols: `packet-ids` (`GameCmd`, `LobbyCmd`, `StsCmd`, `InfoGateCmd`). GameDaemon: the `ids::` constants. LobbyDaemon link commands: the `packet-ids` LobbyDaemon enums. Our own protocols (`packet::gamed_link`): their Rust enum names.
 - If no official name exists for an ID, keep the number, add `// ❓ no verified name`, and list it in the handoff under "❓". Never invent a name.
 
-Original bugs (quirks):
-- The spec marks original bugs as "Quirk" (out-of-bounds reads, uninitialized reads, wrong indexes, overflow). Copy the behaviour. Do not fix it. Game data and scripts can depend on it.
-- Put each quirk in a named function or branch `quirk_<name>`, with a comment that cites the spec section.
-- Never panic on bad input. An out-of-bounds index gives the value that the spec says (for example the neighbour field or zero), not a panic and not an error.
-- Add one test for each quirk with the input that triggers it.
+Original bugs and exploits (`Docs/Architecture/scale-rules.md` §1):
+- Do not port original bugs or exploits. Write the correct behaviour.
+- The spec marks each original bug ("Quirk" row or "bug, not ported") with a "Port" value:
 
+| Port | What you do |
+| --- | --- |
+| `fixed` | Write the correct behaviour. Add one test with the input that triggered the original bug. The test expects the correct result. |
+| `keep value` | Game data or scripts need the value that the bug returns. Give this value in a safe way (no out-of-bounds read, no uninitialized memory). Put it in a function `quirk_<name>` with a comment that cites the spec section. Add one test. |
+
+- If a bug has no "Port" value, fix it. Write it in the handoff under "❓".
+- If a fix changes what a correct client sees in normal play (tier 1), keep the fix and write it in the handoff under "❓".
+- Never panic on bad input.
 
 Abuse notes (all slices):
-- The port copies the original behaviour, also when a player can abuse it. Full parity comes first.
-- If you see a way that a player can abuse the code (dupe, skipped check, trusted client value, missing rate limit, race), do not fix it and do not ignore it. Write it in `Docs/Plan/abuse-notes/<slice id>.md`.
-- One table row for each case: | name | file:line or address | what a player can do | how to fix it later |
+- If you see a way that a player can abuse the code (dupe, skipped check, trusted client value, missing rate limit, race), fix it when the code is in your "Files" paths. If the code is outside your paths, do not change it.
+- In both cases, write it in `Docs/Plan/abuse-notes/<slice id>.md`. The runner keeps this file local. It never goes to GitHub.
+- One table row for each case: | name | file:line or address | what a player can do | fixed in file:line, or open: how to fix |
 - Use the names in `Docs/Plan/known-exploits.md` if one fits. Else give a new name `exploit_<name>`.
 - This file is always an allowed path. Write it in addition to the handoff.
 
