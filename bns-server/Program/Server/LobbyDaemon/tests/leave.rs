@@ -4,7 +4,7 @@
 use bloodlib::packet::Value;
 use lobbydaemon::{
     gamed::{ChargeMode, Eligibility, StubGameDaemon, WorldFixture},
-    gamed_link::{Leave, LinkGameDaemon},
+    gamed_link::{Leave, LinkGameDaemon, LinkPeer},
     jobs::{Jobs, Settings, State},
     np::StubNp,
     protocol as w,
@@ -238,7 +238,11 @@ async fn write_message(stream: &mut TcpStream, message: Message) {
 }
 /// A GameDaemon link that is live for world 1. `None` for `server`: no leave hook.
 async fn game_link(server: Option<Arc<Server<Shared<MemoryStore>, StubNp>>>) -> TcpStream {
-    let gamed = Arc::new(LinkGameDaemon::default());
+    let gamed = Arc::new(LinkGameDaemon::new(vec![LinkPeer {
+        world: 1,
+        cluster: 1,
+        address: std::net::Ipv4Addr::LOCALHOST.into(),
+    }]));
     if let Some(server) = server {
         let leave: Leave = Arc::new(move |pcid, key, world| {
             let server = server.clone();
