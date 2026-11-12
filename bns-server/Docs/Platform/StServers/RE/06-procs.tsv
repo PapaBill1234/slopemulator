@@ -1,0 +1,12 @@
+service	database	proc	call_site	params	note
+RoleSrv	RoleDb v2016072601	AddNetAddressRoles	0x1400C46E0	AppGroupId, RoleId, First, Last+1, type	txn 1
+RoleSrv	RoleDb v2016072601	RemoveNetAddressRoles	0x1400C59D0	AppGroupId, RoleId, First, Last+1, type	txn 1
+RoleSrv	RoleDb v2016072601	CreateRole	0x1400C4C60	RoleId, RoleName, RoleType	txn 1
+RoleSrv	RoleDb v2016072601	DeleteRole	0x1400C4DF0	RoleId	txn 1
+RoleSrv	RoleDb v2016072601	RemoveUserRolesByUserId	0x1400C4F40	UserId	txn 1
+RoleSrv	RoleDb v2016072601	ListRoles	0x1400C5640	RoleType (0 = NULL)	txn 2
+RoleSrv	RoleDb v2016072601	ListNetAddressRoles	0x1400C52F0; 0x1400C6150	group list, address, type	txn 3
+RoleSrv	RoleDb v2016072601	ListUserRoles	0x1400C5780; 0x1400C6150	UserId, group list	txn 3
+RoleSrv	RoleDb v2016072601	GetLoginRoles	0x1400C6150	group list, address, type, UserId	txn 3 (Inquiry)
+RoleSrv	RoleDb v2016072601	AddUserRole	0x1400C5F70	UserId, AppGroupId, RoleId	txn 1 (after GetGroupInfo)
+RoleSrv	RoleDb v2016072601	RemoveUserRole	0x1400C5DF0	UserId, AppGroupId, RoleId	txn 1
