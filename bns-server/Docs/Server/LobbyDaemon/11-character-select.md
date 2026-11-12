@@ -529,17 +529,28 @@ used until the original caller map is checked. Missing session uses 4; missing
 slot uses 6; wrong ordinary session state drops; D103 wrong state uses 5.
 Local service conflict uses reason 2. Unsupported recovery uses reason 2.
 ❓ Failure state byte uses the current local wire state, not a proved 307 argument.
-Internal lifecycle states are stored separately from existing wire-ready rows:
-1 creating, 2 normal, 3 deleting, 4 waiting, 5 restoring, 6 deleted.
-Serialize normal as 1, waiting as 2, and deleting/restoring as 3.
-Local wait deadlines use monotonic time and explicit seconds. D36/D38 compute
-remaining seconds from these deadlines. Keep the opaque row qword zero.
-❓ SQL datetime conversion and legacy D36 prefix gaps remain. SQL finish-deletion
-returns timestamp components as `Option<SqlTimestamp>`. R15 uses its own explicit
-monotonic deadline, not a guessed epoch conversion. SQL reload still rejects
-non-NULL character times. Loaded legacy rows have no R15 internal-state metadata
-and reject mutation. This limits lifecycle operations to rows created in this lane.
-D54 does not need ExpireWaiting. No deletion scheduler is implemented.
+The lifecycle is stored with the character row (`Character.state`,
+`Character.deletion_time`), not kept per LobbyGate link. The store is the truth.
+`CharacterState` in LobbyDB: 1 creating, 2 normal, 3 deleting, 4 waiting,
+5 restoring, 6 deleted. `usp_LoadCharacterList` returns only states 2 to 5; the
+columns are 8 state, 9 DeletionDelayTime, 10 LastPlayEndTime, 13 Blocked.
+A row with another state code is refused at load (never a panic).
+Serialize normal as 1, waiting as 2, and deleting/restoring as 3 (this is the
+wire value, not the DB code). Keep the opaque row qword zero.
+A character that one link loaded can be deleted, restored or recovered through
+another link. Each transition procedure checks the stored state. A stale link
+that holds an old cache gets a failure (reason 2) and changes nothing.
+D36/D38 compute the remaining seconds from the stored wall-clock deletion time
+(`deletion_time - now`, 0 when it has passed). Cancel after the time has passed fails.
+❓ SQL `datetime` is read as UTC. LobbyDB writes `GETDATE()` (server local time),
+so the SQL Server host must run in UTC. `usp_FinishCharacterDeletion` returns
+`Option<SqlTimestamp>`; the cache after a delete uses `now + seconds`.
+Deletion scheduler (`20-handlers.md` §9): one timer task in lobbyd. Each tick calls
+`usp_RetrieveExpiredDeletionWaitingList(count)` (state 4, time passed), then
+`usp_ExpireCharacterDeletionWaiting(pcid)` for each row (state 4 to 6; it refuses a
+row whose time has not passed). ❓ Local defaults: period 60 s, batch 16. The first
+tick runs at once. The task uses only the store. An open session keeps an expired
+row with countdown 0 until the player logs in again. The GameDaemon is not told.
 Game rejection cancels pending create/delete. Restore failure leaves state 5 for
 D54 recovery. Timeout leaves uncertain Store state; no automatic write retry.
 D103 requires an explicit local initial-name control because normal local login

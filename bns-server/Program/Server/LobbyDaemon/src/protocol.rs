@@ -204,8 +204,8 @@ pub fn start_retained(key: u64) -> io::Result<Vec<Vec<u8>>> {
     )
     .map_err(invalid)
 }
-/// Current local cache fields are wire-ready fixtures, not target DB states/times.
-/// See spec/lobbyd/11-character-select.md before adding nonzero timestamp support.
+/// The wire state comes from the stored lifecycle state (`InternalState::wire`). The opaque
+/// row qword stays zero. The deletion countdown is `last_play_end` (`11-character-select.md` §15).
 pub(crate) fn character_row(c: &Character) -> io::Result<Vec<Value>> {
     if c.name.len() > 32 || c.showcase.len() > 512 {
         return Err(invalid("character exceeds DB bounds"));
@@ -216,8 +216,8 @@ pub(crate) fn character_row(c: &Character) -> io::Result<Vec<Value>> {
         Value::I16(c.world),
         Value::String(c.name.clone()),
         Value::Bytes(c.showcase.clone()),
-        Value::U64(c.deletion_time),
-        Value::I8(c.state),
+        Value::U64(0),
+        Value::I8(c.state.wire()),
         Value::I8(c.jumping_state),
         Value::U32(c.last_play_end),
     ])

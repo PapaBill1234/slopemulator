@@ -191,8 +191,8 @@ async fn generated_client_logs_in_through_existing_gate_and_loads_cached_charact
             world: 1,
             name: "generated-character".encode_utf16().collect(),
             showcase: vec![7; 512],
-            deletion_time: 0,
-            state: 0,
+            deletion_time: None,
+            state: lobbydaemon::character::InternalState::Normal,
             jumping_state: 0,
             last_play_end: 0,
         };
@@ -271,7 +271,7 @@ async fn generated_client_logs_in_through_existing_gate_and_loads_cached_charact
                 Value::String(row.name),
                 Value::Bytes(row.showcase),
                 Value::U64(0),
-                Value::I8(0),
+                Value::I8(1), // Normal row: wire state 1.
                 Value::I8(0),
                 Value::U32(0)
             ]
