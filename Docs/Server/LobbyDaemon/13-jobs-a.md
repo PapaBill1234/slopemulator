@@ -106,6 +106,8 @@ Inputs: gamed channel, game transaction id, pcid. Any zero input ends the job.
 | 4 | Issue a `LeaveGameWorldToken`. Failure → Fail 2, state 6.0, close presence, `finalize`. |
 | 5 | State 5.1. `LeaveWorldOk(gametid, token key)`. |
 
+Checked (lp2-3): handler `HandleLobbyGame_LeaveWorldReq` `0x140088470` — no session by pcid → Fail 5 (line 142); client key differs from session +32 → Fail 5 (line 124); job init failure → **7** `EnterWorldFail` reason 2 (line 82); job start failure → **7** reason 4 (line 101). Job body `0x140086980` confirms steps 3–5 (token type 2, key from token +48). End-to-end: `23-return-to-lobby.md`.
+
 ### 3.7 LogoutInGameWorldJob (task 118, fin 2) — `0x14005ACC0`, `0x14005AF30`
 
 Input: world id (not 0).
