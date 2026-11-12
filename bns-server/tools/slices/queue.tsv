@@ -62,3 +62,11 @@ st-15	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	ready	StServers RE: ApiG
 st-16	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	ready	StServers RE: ApiSrv
 st-17	spec	opus	-	Docs/Platform/StServers/RE/,Docs/Platform/StServers/README.md	st-01,st-02,st-03,st-04,st-05,st-06,st-07,st-08,st-09,st-10,st-11,st-12,st-13,st-14,st-15,st-16	150	ready	StServers RE: coverage audit and open items
 gmt-1	spec	fable	-	Docs/Client/GmTools/,Docs/DataFile/11-gm-dev-tools.md,Docs/Plan/cards/gmt-1-rust.md	-	450	ready	GM tools and Builder tools: full RE (debugger, commands, Builder protocol, data pipeline)
+ld381-1	spec	opus	-	Docs/Server/LobbyDaemon/24-compare-381.md,Docs/Server/LobbyDaemon/command-tables-381.json,Docs/Server/LobbyDaemon/fn-map-381.json,Docs/Plan/cards/ld381-1-rust.md	-	150	ready	LobbyDaemon 381 packets and logic changes against the 2019 + PDB specs (IDA)
+ld381-1-rust	rust	sonnet	lobbydaemon,packet-ids	Program/Server/LobbyDaemon/,Program/Server/PacketIds/,Cargo.lock	ld381-1	120	ready	LobbyDaemon: apply the 381 packet and logic changes
+ld381-2	spec	opus	-	Docs/Server/LobbyDaemon/25-rust-coverage.md,Docs/Plan/cards/ld381-r1.md,Docs/Plan/cards/ld381-r2.md,Docs/Plan/cards/ld381-r3.md,Docs/Plan/cards/ld381-r4.md,Docs/Plan/cards/ld381-r5.md	ld381-1-rust	120	ready	LobbyDaemon Rust coverage audit; writes the last 5 Rust cards
+ld381-r1	rust	sonnet	lobbydaemon,gamedaemon,packet	Program/Server/LobbyDaemon/,Program/Server/GameDaemon/,Program/Server/Packet/,Cargo.lock	ld381-2	150	ready	LobbyDaemon gamed link: world entry, leave, logout notify, kick (replaces lp2-4-rust)
+ld381-r2	rust	sonnet	lobbydaemon,packet	Program/Server/LobbyDaemon/,Program/Server/Packet/,Cargo.lock	ld381-r1	150	ready	LobbyDaemon account inventory link and its jobs
+ld381-r3	rust	sonnet	lobbydaemon	Program/Server/LobbyDaemon/,Cargo.lock	ld381-r2	150	ready	LobbyDaemon manage port, InfoGate, timers
+ld381-r4	rust	sonnet	lobbydaemon	Program/Server/LobbyDaemon/,Cargo.lock	ld381-r3	150	ready	LobbyDaemon NP requests and notifies, charge, goods, grade
+ld381-r5	rust	sonnet	lobbydaemon	Program/Server/LobbyDaemon/,Cargo.lock	ld381-r4	150	ready	LobbyDaemon database: live SQL, error maps, time conversion, last wrappers
