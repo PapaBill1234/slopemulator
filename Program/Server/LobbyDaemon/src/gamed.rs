@@ -56,6 +56,12 @@ pub trait GameDaemon: Send + Sync + 'static {
     fn restore_character(&self, _world: i16, _pcid: u64) -> GameFuture<'_, ()> {
         Box::pin(async { Err(2) })
     }
+    /// World kick (KickReq 14 → KickOk 15 or KickFail 16): disconnect the PC `pcid` of the
+    /// client `client` in `world`. `Err(24)` is a kick that is done already. The default has no
+    /// GameDaemon channel for the world: the kick is done at once (`18-jobs-f.md` §5, result 1).
+    fn kick(&self, _world: i16, _client: u64, _pcid: u64, _reason: i8) -> GameFuture<'_, ()> {
+        Box::pin(async { Ok(()) })
+    }
     fn eligibility(&self, character: &Character) -> Result<Eligibility, i16>;
     fn restore(&self, world: i16, pcid: u64) -> GameFuture<'_, ()>;
     fn admit(
