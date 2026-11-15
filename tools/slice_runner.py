@@ -6,7 +6,7 @@ Usage: slice_runner.py status
 
 Queue: tools/slices/queue.tsv (tab-separated)
   id     slice id, also the card name: Docs/Plan/cards/<id>.md
-  kind   rust (Sonnet builder, no IDA) or spec (Opus, IDA)
+  kind   rust (Sonnet builder, no IDA), spec (Opus, IDA) or lift (Opus, IDA + C++ build, repo bns-lift)
   model  sonnet or opus
   crate  cargo package to check (rust), or - (spec)
   paths  comma-separated path prefixes the session may change
@@ -31,13 +31,23 @@ LEDGER = PROJECT / "notes/slice-usage.jsonl"
 WT_ROOT = PROJECT.parent / "bns-wt"                   # outside private-project: no supervisor CLAUDE.md or memory
 TARGET = Path.home() / ".cache/bns-wt-target"         # one builder at a time, so one shared target dir
 MCP = PROJECT / ".mcp.json"
+LIFT = PROJECT / "bns-lift"                          # PRIVATE repo: C++ lift of the 2019 + PDB servers
 GATEWAY_KEY = Path.home() / ".local/state/nl-parts-pipeline/operator-access/home-gateway/codex-handover/worker-api-key"
 TOOLS = "Read,Edit,Write,Bash,Grep,Glob"
 ALLOW = {
     "rust": "Read,Grep,Glob,Bash(cargo:*),Bash(rg:*),Bash(git diff:*),Bash(git status:*),Bash(python3 tools/spec_index.py:*),Bash(python3 tools/rust_api.py:*)",
     "spec": "Read,Grep,Glob,mcp__ida__*,Bash(rg:*),Bash(git diff:*),Bash(git status:*),Bash(python3 tools/spec_index.py:*),Bash(python3 tools/rust_api.py:*)",
+    "lift": ("Read,Grep,Glob,mcp__ida__*,Bash(tools/gate.sh),Bash(bash tools/gate.sh),Bash(cmake:*),Bash(ninja:*),Bash(clang-cl:*),"
+             "Bash(lld-link:*),Bash(llvm-pdbutil:*),Bash(llvm-objdump:*),Bash(llvm-dlltool:*),Bash(llvm-nm:*),Bash(python3 tools/:*),"
+             "Bash(rg:*),Bash(git diff:*),Bash(git status:*),Bash(wine64:*),Bash(bash tools/:*),Bash(tools/run_selftest.sh),Bash(tools/verify/:*)"),
 }
-RULES = {"rust": REPO / "tools/slices/builder-rules.md", "spec": REPO / "tools/slices/spec-rules.md"}
+RULES = {"rust": REPO / "tools/slices/builder-rules.md", "spec": REPO / "tools/slices/spec-rules.md",
+         "lift": REPO / "tools/slices/lift-rules.md"}
+
+
+def repo_of(row):
+    """Git repo of the card: lift cards live in bns-lift, all others in bns-server. The queue stays in bns-server."""
+    return LIFT if row["kind"] == "lift" else REPO
 BAD_EXT = re.compile(r"\.(exe|dll|pdb|i64|idb|bin|dat|pem|key|blob|mdf|ldf|rar|pfx|cer|crt)$", re.I)
 TAIL = 40
 WAIT_STEP_S, WAIT_MAX_S = 900, 12 * 3600   # loop: poll for quota every 15 min, up to 12 h
@@ -209,7 +219,7 @@ def session_cmd(row, prompt, resume=None, max_turns=None):
     cmd = ["claude", "-p", "--model", row["model"], "--max-turns", str(max_turns or row["turns"]), "--output-format", "json",
            "--disable-slash-commands", "--tools", TOOLS, "--permission-mode", "dontAsk",
            "--allowedTools", ALLOW[row["kind"]] + f",Edit(/{WT_ROOT}/{row['id']}/**),Write(/{WT_ROOT}/{row['id']}/**)", "--append-system-prompt-file", str(RULES[row["kind"]])]
-    cmd += ["--mcp-config", str(MCP), "--strict-mcp-config"] if row["kind"] == "spec" else ["--strict-mcp-config"]
+    cmd += ["--mcp-config", str(MCP), "--strict-mcp-config"] if row["kind"] in ("spec", "lift") else ["--strict-mcp-config"]
     if resume:
         cmd += ["--resume", resume]
     return cmd + [prompt]
@@ -318,6 +328,10 @@ def gate(row, wt):
                 rc, out = sh(cmd, wt)
                 if rc:
                     return f"$ {' '.join(cmd)}\n" + "\n".join(out.splitlines()[-TAIL:])
+    if row["kind"] == "lift":
+        rc, out = sh(["bash", "tools/gate.sh"], wt)
+        if rc:
+            return "$ tools/gate.sh\n" + "\n".join(out.splitlines()[-TAIL:])
     return ""
 
 
@@ -328,7 +342,8 @@ def run(sid, dry, push):
     if not row:
         print("nothing to run (no ready slice with done deps)")
         return 2
-    card = REPO / f"Docs/Plan/cards/{row['id']}.md"
+    repo = repo_of(row)
+    card = repo / f"Docs/Plan/cards/{row['id']}.md"
     prompt = card.read_text()
     wt = WT_ROOT / row["id"]
     if dry:
@@ -342,7 +357,7 @@ def run(sid, dry, push):
     WT_ROOT.mkdir(exist_ok=True)
     branch = f"slice/{row['id']}"
     if not wt.exists():
-        rc, out = sh(["git", "worktree", "add", "-q", "-b", branch, str(wt), "main"], REPO)
+        rc, out = sh(["git", "worktree", "add", "-q", "-b", branch, str(wt), "main"], repo)
         if rc:
             print(out)
             return 1
@@ -389,8 +404,8 @@ def run(sid, dry, push):
     if note.exists():
         note.unlink()  # working note only; the final handoff is the record
     fail = gate(row, wt)
-    if fail and (rec.get("session") or row["kind"] == "rust"):
-        if row["kind"] == "rust" or not rec.get("session"):
+    if fail and (rec.get("session") or row["kind"] in ("rust", "lift")):
+        if row["kind"] in ("rust", "lift") or not rec.get("session"):
             # Fresh session: a resumed one reads the whole old context again on every call.
             # A Rust gate error is concrete, so the card, the diff and the error are enough.
             rp = (REPAIR_FRESH.format(handoff=f"Docs/Plan/handoffs/{row['id']}.md") + fail
@@ -423,7 +438,7 @@ def run(sid, dry, push):
     rc, out = sh(["git", "rebase", "-q", "main"], wt)
     if rc:
         sh(["git", "rebase", "--abort"], wt)
-    rc, out = sh(["git", "merge", "-q", "--ff-only", branch], REPO)
+    rc, out = sh(["git", "merge", "-q", "--ff-only", branch], repo)
     if rc:
         set_status(row["id"], "blocked")
         print(f"merge into main failed; branch {branch} kept:\n{out}")
@@ -433,11 +448,15 @@ def run(sid, dry, push):
     sh(["git", "add", "tools/slices/queue.tsv"], REPO)
     sh(["git", "-c", "user.name=Claude", "-c", "user.email=noreply@anthropic.com", "commit", "-q", "-m",
         f"queue: {row['id']} done\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>", "--", "tools/slices/queue.tsv"], REPO)
-    sh(["git", "worktree", "remove", "--force", str(wt)], REPO)
-    sh(["git", "branch", "-q", "-D", branch], REPO)
+    sh(["git", "worktree", "remove", "--force", str(wt)], repo)
+    sh(["git", "branch", "-q", "-D", branch], repo)
     if row["kind"] == "spec":
         chain_rust(row)
-    if push:
+    if push and row["kind"] == "lift":
+        # PRIVATE repo: push bns-lift itself. Never through push_github.sh (public slopemulator).
+        rc, out = sh(["git", "push", "-q", "origin", "main"], LIFT)
+        print(f"push bns-lift rc={rc} {out.strip()[-300:]}")
+    elif push:
         rc, out = sh(["bash", "tools/push_github.sh"], REPO)
         print(out.strip().splitlines()[-1] if out.strip() else f"push rc={rc}")
     attention(row["id"], None)
@@ -476,10 +495,10 @@ def salvage():
     last = {r["slice"]: r.get("gate") for r in recs}
     _, rows = load()
     for row in rows:
-        wt, branch = WT_ROOT / row["id"], f"slice/{row['id']}"
+        wt, branch, repo = WT_ROOT / row["id"], f"slice/{row['id']}", repo_of(row)
         if row["status"] != "blocked" or last.get(row["id"]) != "pass" or not wt.is_dir():
             continue
-        _, ahead = sh(["git", "rev-list", "--count", f"main..{branch}"], REPO)
+        _, ahead = sh(["git", "rev-list", "--count", f"main..{branch}"], repo)
         if ahead.strip() in ("", "0"):
             continue
         rc, _ = sh(["git", "rebase", "-q", "main"], wt)
@@ -487,17 +506,19 @@ def salvage():
             sh(["git", "rebase", "--abort"], wt)
             print(f"salvage: {row['id']} rebase conflict, left blocked")
             continue
-        rc, out = sh(["git", "merge", "-q", "--ff-only", branch], REPO)
+        rc, out = sh(["git", "merge", "-q", "--ff-only", branch], repo)
         if rc:
             print(f"salvage: {row['id']} merge failed:\n{out}")
             continue
         set_status(row["id"], "done")
         sh(["git", "-c", "user.name=Claude", "-c", "user.email=noreply@anthropic.com", "commit", "-q", "-m",
             f"queue: {row['id']} done (salvaged)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>", "--", "tools/slices/queue.tsv"], REPO)
-        sh(["git", "worktree", "remove", "--force", str(wt)], REPO)
-        sh(["git", "branch", "-q", "-D", branch], REPO)
+        sh(["git", "worktree", "remove", "--force", str(wt)], repo)
+        sh(["git", "branch", "-q", "-D", branch], repo)
         if row["kind"] == "spec":
             chain_rust(row)
+        if row["kind"] == "lift":
+            sh(["git", "push", "-q", "origin", "main"], LIFT)
         attention(row["id"], None)
         print(f"salvage: {row['id']} merged")
 
