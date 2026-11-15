@@ -12,18 +12,19 @@
 //! message of another shard → the session ends. A connection task waits for the inbox.
 use crate::{
     db::{Ordered, Pc},
+    entry::rule_list,
     link::{Link, KICK_FAIL, KICK_NOT_FOUND},
-    play::{self, Effect, Play},
+    play::{self, Effect, PingConfig, Play},
 };
 use bytes::Bytes;
 use std::{
     collections::{HashMap, VecDeque},
     io,
     sync::{
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicU32, AtomicU64, Ordering},
         Arc, Mutex, Weak,
     },
-    time::Duration,
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tokio::{
     sync::{mpsc, oneshot},
@@ -40,6 +41,8 @@ const INBOX: usize = 8192;
 const SESSION_QUEUE: usize = 64;
 /// Time for the search of a PC to kick. LobbyDaemon waits 10 s for the reply. ❓ Local value.
 const KICK_LIMIT: Duration = Duration::from_secs(5);
+/// One game hour of the world clock: 450,000 ms (05 "World clock").
+const HOUR_MS: u64 = 450_000;
 
 pub type Inbox = mpsc::Sender<Event>;
 
@@ -111,10 +114,18 @@ struct Moved {
 
 /// Read-only data and the shard directory. Shared by all shards.
 pub struct World {
-    /// Frames of command 930.
+    /// Frames of command 930. Built one time at start.
     pub rules: Vec<Bytes>,
     pub link: Option<Arc<Link>>,
     pub db: Option<Ordered>,
+    /// Options of the server ping. Default: off.
+    pub ping: PingConfig,
+    /// Server start. The time of command 929 and of the ping counts from here.
+    start: Instant,
+    /// World clock hour at the server start. ❓ The source of the original is not traced.
+    start_hour: u8,
+    /// Global counter of the spawn keys. It skips 0 (05 "Command 41").
+    spawn_keys: AtomicU32,
     /// Transaction ids of the leave requests (link command 8).
     transactions: AtomicU64,
     /// Directory only (zone → inbox). It holds no game state. A shard reads it at a zone change.
@@ -122,7 +133,23 @@ pub struct World {
 }
 
 impl World {
+    /// `rules` empty: the default rule list (no config file).
     pub fn new(rules: Vec<Bytes>, link: Option<Arc<Link>>, db: Option<Ordered>) -> Arc<Self> {
+        Self::with_options(rules, link, db, PingConfig::default(), 0)
+    }
+
+    pub fn with_options(
+        mut rules: Vec<Bytes>,
+        link: Option<Arc<Link>>,
+        db: Option<Ordered>,
+        ping: PingConfig,
+        start_hour: u8,
+    ) -> Arc<Self> {
+        if rules.is_empty() {
+            rules = rule_list("")
+                .map(|frames| frames.into_iter().map(Bytes::from).collect())
+                .unwrap_or_default();
+        }
         Arc::new_cyclic(|weak: &Weak<World>| {
             if let Some(link) = &link {
                 // The link holds a weak reference: no cycle.
@@ -141,10 +168,40 @@ impl World {
                 rules,
                 link,
                 db,
+                ping,
+                start: Instant::now(),
+                start_hour: start_hour % 24,
+                spawn_keys: AtomicU32::new(0),
                 transactions: AtomicU64::new(0),
                 shards: Mutex::new(HashMap::new()),
             }
         })
+    }
+
+    /// The next spawn key. Never 0.
+    fn next_spawn_key(&self) -> u32 {
+        loop {
+            let key = self
+                .spawn_keys
+                .fetch_add(1, Ordering::Relaxed)
+                .wrapping_add(1);
+            if key != 0 {
+                return key;
+            }
+        }
+    }
+
+    /// Set the time fields of a session before a step (`play.rs` has no clock) and reserve a
+    /// spawn key if it has none.
+    fn stamp(&self, play: &mut Play) {
+        play.now_ms = self.start.elapsed().as_millis() as u64;
+        play.hour = ((u64::from(self.start_hour) + play.now_ms / HOUR_MS) % 24) as u8;
+        play.utc_secs = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        if play.spawn_next == 0 {
+            play.spawn_next = self.next_spawn_key();
+        }
     }
 
     /// Link command 14: end the session of the PC with this client key and PC id.
@@ -233,8 +290,23 @@ impl Shard {
         }
     }
 
-    /// Simulation step. Empty: movement, skills and timers come with the handler port.
-    fn step(&mut self) {}
+    /// Simulation step. The server ping runs here (06 "Ping interval"). Movement, skills and
+    /// other timers come with the handler port.
+    fn step(&mut self) {
+        let config = self.world.ping;
+        if !config.enabled {
+            return;
+        }
+        let due: Vec<u32> = self
+            .sessions
+            .iter()
+            .filter(|(_, s)| s.play.pcid.is_some() && s.wait == Wait::None)
+            .map(|(conn, _)| *conn)
+            .collect();
+        for conn in due {
+            self.run_step(conn, |play, _, out| play::ping_tick(play, &config, out));
+        }
+    }
 
     fn event(&mut self, event: Event) {
         match event {
@@ -419,6 +491,7 @@ impl Shard {
         let Some(session) = self.sessions.get_mut(&conn) else {
             return;
         };
+        self.world.stamp(&mut session.play);
         let mut result = step(&mut session.play, &self.world.rules, &mut effects);
         let mut zone = None;
         // An effect without a link or a database gives its result at once. The list can grow.
@@ -581,7 +654,7 @@ mod tests {
             out,
         };
         shard.send(open).await.ok().unwrap();
-        let mut spawn = crate::entry::SPAWN_KEY.to_le_bytes().to_vec();
+        let mut spawn = 1u32.to_le_bytes().to_vec();
         spawn.extend([0; 14]);
         for packet in [
             request(23, &[0; 18]),
@@ -595,10 +668,21 @@ mod tests {
                 .ok()
                 .unwrap();
         }
-        assert_eq!(command(&mut inbox).await, 24);
+        // 23 without a link: 25 (LobbyDaemon is not reachable).
+        assert_eq!(command(&mut inbox).await, 25);
         assert_eq!(command(&mut inbox).await, 930);
-        // 31 without a PC: no reply. 42: zone 0 is this shard.
-        assert_eq!(command(&mut inbox).await, 43);
+        // 31 without a PC id: no reply. 42 without a spawn action: 44.
+        assert_eq!(command(&mut inbox).await, 44);
+    }
+
+    /// The spawn keys come from one counter that skips 0.
+    #[test]
+    fn spawn_keys_skip_zero() {
+        let world = World::new(vec![request(930, &[])], None, None);
+        world.spawn_keys.store(u32::MAX - 1, Ordering::Relaxed);
+        assert_eq!(world.next_spawn_key(), u32::MAX);
+        assert_eq!(world.next_spawn_key(), 1);
+        assert_eq!(world.next_spawn_key(), 2);
     }
 
     /// A zone change: packets that reach the old shard late run before direct packets.
@@ -625,6 +709,10 @@ mod tests {
         };
         let play = Play {
             pc: Some(pc),
+            spawn: Some(play::Spawn {
+                key: 9,
+                state: crate::entry::SPAWN_STATE_WAIT,
+            }),
             ..Play::default()
         };
         let session = Box::new(Session {
@@ -634,7 +722,7 @@ mod tests {
             queue: VecDeque::new(),
         });
         old.send(Event::Join { conn, session }).await.ok().unwrap();
-        let mut spawn = crate::entry::SPAWN_KEY.to_le_bytes().to_vec();
+        let mut spawn = 9u32.to_le_bytes().to_vec();
         spawn.extend([0; 14]);
         let late = vec![request(42, &spawn)];
         old.send(Event::HandoverDone { conn, late })
@@ -663,7 +751,7 @@ mod tests {
         .unwrap();
         old.send(Event::Switched { conn }).await.ok().unwrap();
         assert_eq!(command(&mut inbox).await, 43);
-        assert_eq!(command(&mut inbox).await, 24);
+        assert_eq!(command(&mut inbox).await, 25);
         assert_eq!(command(&mut inbox).await, 930);
     }
 }
