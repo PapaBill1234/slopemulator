@@ -344,8 +344,16 @@ def run(sid, dry, push):
         return 2
     repo = repo_of(row)
     card = repo / f"Docs/Plan/cards/{row['id']}.md"
-    prompt = card.read_text()
     wt = WT_ROOT / row["id"]
+    if not card.is_file():
+        if dry:
+            print(f"missing card {card}")
+            return 1
+        set_status(row["id"], "blocked")
+        print(f"BLOCKED {row['id']}: missing card {card}")
+        attention(row["id"], "blocked", f"Missing card {card}. An earlier spec card did not write it.", wt)
+        return 1
+    prompt = card.read_text()
     if dry:
         print(" ".join(session_cmd(row, f"<{card.name}>")))
         print(f"cwd={wt}")
