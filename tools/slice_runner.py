@@ -444,7 +444,7 @@ def run(sid, dry, push):
         attention(row["id"], "blocked", "commit failed:\n" + out, wt)
         return 1
     # main may have moved while the slice ran (queue or card commits). Rebase first.
-    rc, out = sh(["git", "rebase", "-q", "main"], wt)
+    rc, out = sh(["git", "-c", "user.name=Claude", "-c", "user.email=noreply@anthropic.com", "rebase", "-q", "main"], wt)
     if rc:
         sh(["git", "rebase", "--abort"], wt)
     rc, out = sh(["git", "merge", "-q", "--ff-only", branch], repo)
@@ -541,7 +541,7 @@ def salvage():
         _, ahead = sh(["git", "rev-list", "--count", f"main..{branch}"], repo)
         if ahead.strip() in ("", "0"):
             continue
-        rc, _ = sh(["git", "rebase", "-q", "main"], wt)
+        rc, _ = sh(["git", "-c", "user.name=Claude", "-c", "user.email=noreply@anthropic.com", "rebase", "-q", "main"], wt)
         if rc:
             sh(["git", "rebase", "--abort"], wt)
             print(f"salvage: {row['id']} rebase conflict, left blocked")
