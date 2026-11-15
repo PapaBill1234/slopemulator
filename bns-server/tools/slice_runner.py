@@ -460,6 +460,8 @@ def run(sid, dry, push):
     sh(["git", "branch", "-q", "-D", branch], repo)
     if row["kind"] == "spec":
         chain_rust(row)
+    if row["kind"] == "lift":
+        chain_lift(row)
     if push and row["kind"] == "lift":
         # PRIVATE repo: push bns-lift itself. Never through push_github.sh (public slopemulator).
         rc, out = sh(["git", "push", "-q", "origin", "main"], LIFT)
@@ -470,6 +472,35 @@ def run(sid, dry, push):
     attention(row["id"], None)
     print(f"DONE {row['id']} ({tokens:,} tokens, {sum(r['s'] for r in log)} s)")
     return 0
+
+
+def chain_lift(row):
+    """After a lift slice: add the rows in bns-lift Docs/Plan/queue/<id>.tsv (written by a planner card)."""
+    f = LIFT / f"Docs/Plan/queue/{row['id']}.tsv"
+    if not f.is_file():
+        return
+    head, rows = load()
+    have = {r["id"] for r in rows}
+    added = []
+    for line in f.read_text().splitlines():
+        c = line.rstrip("\n").split("\t")
+        if not line.strip() or line.startswith("#") or c[0] == "id":
+            continue
+        if len(c) != len(head) or not c[0].startswith("lift-") or c[1] != "lift" or not c[4].strip() or c[0] in have:
+            print(f"chain: lift row skipped: {line[:120]}")
+            continue
+        r = dict(zip(head, c))
+        r["status"] = "ready"
+        rows.append(r)
+        have.add(c[0])
+        added.append(c[0])
+    if not added:
+        return
+    save(head, rows)
+    sh(["git", "-c", "user.name=Claude", "-c", "user.email=noreply@anthropic.com", "commit", "-q", "-m",
+        f"queue: add {len(added)} lift rows from {row['id']}\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+        "--", "tools/slices/queue.tsv"], REPO)
+    print(f"chain: queued {', '.join(added)}")
 
 
 def chain_rust(row):
@@ -526,6 +557,7 @@ def salvage():
         if row["kind"] == "spec":
             chain_rust(row)
         if row["kind"] == "lift":
+            chain_lift(row)
             sh(["git", "push", "-q", "origin", "main"], LIFT)
         attention(row["id"], None)
         print(f"salvage: {row['id']} merged")
