@@ -74,7 +74,7 @@ st-16	spec	opus	-	Docs/Platform/StServers/RE/	st-00	150	hold	StServers RE: ApiSr
 st-17	spec	opus	-	Docs/Platform/StServers/RE/,Docs/Platform/StServers/README.md	st-01,st-02,st-03,st-04,st-05,st-06,st-07,st-08,st-09,st-10,st-11,st-12,st-13,st-14,st-15,st-16	150	hold	StServers RE: coverage audit and open items
 gmt-1	spec	fable	-	Docs/Client/GmTools/,Docs/DataFile/11-gm-dev-tools.md,Docs/Plan/cards/gmt-1-rust.md	-	450	hold	GM tools and Builder tools: full RE (debugger, commands, Builder protocol, data pipeline)
 lift-0	lift	opus	-	CMakeLists.txt,cmake/,src/crt/,src/selftest/,tools/run_selftest.sh,tools/gate_extra.sh	-	120	done	Lift: clang-cl Wine toolchain, CMake skeleton, crt0
-lift-1	lift	opus	-	tools/pdb2h.py,include/vs2010/,include/pdb/,src/selftest/,CMakeLists.txt	lift-0	150	running	Lift: PDB type generator and VS2010 STL subset
+lift-1	lift	opus	-	tools/pdb2h.py,include/vs2010/,include/pdb/,src/selftest/,CMakeLists.txt	lift-0	150	ready	Lift: PDB type generator and VS2010 STL subset
 lift-cg-1	lift	opus	-	src/common/,CMakeLists.txt,include/vs2010/	lift-1	150	ready	Lift CacheGate: memory, thread, timer, log, crash
 lift-cg-2	lift	opus	-	src/common/,CMakeLists.txt,include/vs2010/	lift-cg-1	150	ready	Lift CacheGate: console, daemon, config
 lift-cg-3	lift	opus	-	src/common/,CMakeLists.txt,include/vs2010/	lift-cg-2	150	ready	Lift CacheGate: network, session, packet

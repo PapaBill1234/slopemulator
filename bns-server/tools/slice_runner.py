@@ -39,7 +39,8 @@ ALLOW = {
     "spec": "Read,Grep,Glob,mcp__ida__*,Bash(rg:*),Bash(git diff:*),Bash(git status:*),Bash(python3 tools/spec_index.py:*),Bash(python3 tools/rust_api.py:*)",
     "lift": ("Read,Grep,Glob,mcp__ida__*,Bash(tools/gate.sh),Bash(bash tools/gate.sh),Bash(cmake:*),Bash(ninja:*),Bash(clang-cl:*),"
              "Bash(lld-link:*),Bash(llvm-pdbutil:*),Bash(llvm-objdump:*),Bash(llvm-dlltool:*),Bash(llvm-nm:*),Bash(python3 tools/:*),"
-             "Bash(rg:*),Bash(git diff:*),Bash(git status:*),Bash(wine64:*),Bash(bash tools/:*),Bash(tools/run_selftest.sh),Bash(tools/verify/:*)"),
+             "Bash(rg:*),Bash(git diff:*),Bash(git status:*),Bash(wine64:*),Bash(bash tools/:*),Bash(tools/run_selftest.sh),Bash(tools/verify/:*),"
+             "Bash(python3:*),Bash(grep:*),Bash(wine:*),Bash(rm tools/:*),Bash(rm .scratch/:*),Bash(rm -f .scratch/:*),Bash(rm -rf build:*),Bash(rm -rf .scratch/:*),Bash(ls:*),Bash(head:*),Bash(wc:*)"),
 }
 RULES = {"rust": REPO / "tools/slices/builder-rules.md", "spec": REPO / "tools/slices/spec-rules.md",
          "lift": REPO / "tools/slices/lift-rules.md"}
