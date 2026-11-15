@@ -115,7 +115,21 @@ The value text depends on the rule type:
 | 4 (bool) | 56 | `yes` or `no` |
 | 6 (text) | 4 | `%s` |
 
-❓ The exact header and option element text was not copied. Get it from the format strings in `0x140087D40` before you write golden bytes.
+Element text (381 `ContentsRuleConfig::MakeListPacket` `0x140087D40`, gw-enter stage 3):
+
+| Element | Format string | Address | Arguments |
+| --- | --- | --- | --- |
+| Header | `<?xml version="1.0" encoding="utf-8"?><config major-version="%d" minor-version="%d" module="contents-rule-config" release-module="LocalizationData" release-side="client">` (wide format) | `0x14091AC90` | 74, 0 |
+| Option, int32 | `<option name='%s' value='%d'/>` | `0x14091ADE8` | row name, value |
+| Option, int64 | Same text with `%I64d` | `0x14091AEB0` | row name, value |
+| Option, float | Same text with `%f` | `0x14091AEF8` | row name, value (no row in 381) |
+| Option, bool and text | Same text with `%s` | `0x14091AE58` | row name, `yes` / `no` or the text |
+| Last | `</config>` | — | — |
+
+- The header uses double quotes. The option elements use single quotes.
+- The server converts each element to UTF-8 (code page 65001). There is no terminator byte.
+- The server writes each element as `b`: i16 byte length, then the bytes.
+- Example for row 1: `<option name='limit-money-market-sale-price' value='15000000000'/>`.
 
 Revision `dword_140EE586C`:
 
